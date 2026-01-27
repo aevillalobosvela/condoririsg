@@ -1,0 +1,130 @@
+
+    <h2>Division</h2>
+    <div class="container-fluid">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-12">
+                    <h1 class="m-0 page-title">Gestionar Usuarios</h1>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row g-2">
+                <!-- KPI para Usuarios Registrados -->
+                <div class=" col-sm-6 col-lg-3">
+                    <div class="info-box bg-info">
+                        <span class="info-box-icon"><i class="fas fa-users"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total de Usuarios</span>
+                            <span class="info-box-number"><?= $totalUsuarios ?? '0' ?></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- KPI para Administradores -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="info-box bg-success">
+                        <span class="info-box-icon"><i class="fas fa-user-shield"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Administradores</span>
+                            <span class="info-box-number"><?= $totalAdmins ?? '0' ?></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- KPI para Vendedores -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="info-box bg-warning">
+                        <span class="info-box-icon"><i class="fas fa-store"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Vendedores</span>
+                            <span class="info-box-number"><?= $totalVendedores ?? '0' ?></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- KPI para Clientes -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="info-box bg-danger">
+                        <span class="info-box-icon"><i class="fas fa-shopping-cart"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Clientes</span>
+                            <span class="info-box-number"><?= $totalClientes ?? '0' ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h2>Mostrando los datos</h2>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+                            <h3 class="card-title mb-2 mb-md-0">Lista de Usuarios</h3>
+                            <div class="card-tools">
+                                <a href="<?= base_url('register') ?>" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-user-plus"></i> Añadir Nuevo Usuario
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover text-nowrap align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nombre Completo</th>
+                                            <th>Usuario</th>
+                                            <th>Correo</th>
+                                            <th>Rol</th>
+                                            <th>Teléfono</th>
+                                            <th>Dirección</th>
+                                            <th>Fecha de Registro</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($usuarios)): ?>
+                                            <?php foreach ($usuarios as $usuario): ?>
+                                                <tr>
+                                                    <td><?= esc($usuario['id']) ?></td>
+                                                    <td><?= esc($usuario['nombre']) . ' ' . esc($usuario['apellidos']) ?></td>
+                                                    <td><?= esc($usuario['usuario']) ?></td>
+                                                    <td><?= esc($usuario['correo']) ?></td>
+                                                    <td><?= esc(ucfirst($usuario['rol'])) ?></td>
+                                                    <td><?= esc($usuario['celular'] ?? 'N/A') ?></td>
+                                                    <td><?= esc($usuario['direccion'] ?? 'N/A') ?></td>
+                                                    <td><?= esc($usuario['created_at'] ?? 'N/A') ?></td>
+                                                    <td>
+                                                        <a href="<?= base_url('usuarios/edit/' . $usuario['id']) ?>" class="btn btn-sm btn-info btn-action" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <!-- Para eliminar, es mejor usar un formulario POST por seguridad -->
+                                                        <form action="<?= base_url('usuarios/delete/' . $usuario['id']) ?>" method="post" style="display:inline;">
+                                                            <?= csrf_field() ?>
+                                                            <input type="hidden" name="_method" value="DELETE"> <!-- Simula DELETE con POST -->
+                                                            <button type="submit" class="btn btn-sm btn-danger btn-action" title="Eliminar" onclick="return confirm('¿Está seguro de eliminar este usuario?');">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="9" class="text-center">No hay usuarios registrados.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer clearfix">
+                            <!-- Aquí puedes añadir la paginación de CodeIgniter si la usas -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>s

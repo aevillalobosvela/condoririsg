@@ -1,0 +1,27 @@
+CREATE TABLE productos_agro (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    
+    producto VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    cantidad INTEGER NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
+    categoria  VARCHAR(255) NOT NULL,
+    
+    unidad_id INTEGER NOT NULL,
+    precio_credito NUMERIC(10, 2) NOT NULL CHECK (precio_credito >= 0),
+    precio_contado NUMERIC(10, 2) NOT NULL CHECK (precio_contado >= 0),
+   
+    cantidad_inve INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_inve >= 0),
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_update TIMESTAMPTZ,
+    fecha_delete TIMESTAMPTZ,
+    
+    sucursal_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+
+
+   
+);
+ quiero la relaciones de unidad_id de tabla unidad_id
+ de sucursal_id de sucursales
+ de user_id de usuarios

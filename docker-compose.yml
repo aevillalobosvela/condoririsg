@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: condoririSG
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/app
+    command: php -S 0.0.0.0:80 -t /app/public
+   
+    networks:
+      - condoriri-network  # ← Misma red que PostgreSQL
+
+networks:
+  condoriri-network:
+    external: true  # ← Usar la red existente
+    name: condoriri-network

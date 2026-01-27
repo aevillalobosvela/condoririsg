@@ -1,0 +1,117 @@
+# -------------------------------------------------------------------
+# CodeIgniter 4 específico
+# -------------------------------------------------------------------
+/ci4/
+
+/env
+.env
+!.env.example
+
+# Si usas diferentes entornos
+.env.*.php
+!.env.example.php
+
+# -------------------------------------------------------------------
+# Archivos del sistema
+# -------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# -------------------------------------------------------------------
+# Directorios de dependencias y builds
+# -------------------------------------------------------------------
+/vendor/
+/node_modules/
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+
+# Composer
+/composer.lock
+/composer.phar
+
+# -------------------------------------------------------------------
+# Archivos de IDE/Editor
+# -------------------------------------------------------------------
+# PHPStorm
+.idea/
+*.iws
+
+# VSCode
+.vscode/
+*.swp
+*.swo
+
+# NetBeans
+nbproject/private/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# -------------------------------------------------------------------
+# Logs y archivos temporales
+# -------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+
+# -------------------------------------------------------------------
+# Cache y sesiones
+# -------------------------------------------------------------------
+
+# -------------------------------------------------------------------
+# Testing
+# -------------------------------------------------------------------
+/coverage/
+.phpunit.result.cache
+
+# -------------------------------------------------------------------
+# Archivos de desarrollo local
+# -------------------------------------------------------------------
+!.gitkeep
+!.gitempty
+
+# -------------------------------------------------------------------
+# Archivos de deployment
+# -------------------------------------------------------------------
+/build/
+/dist/
+
+# -------------------------------------------------------------------
+# Archivos de sistema operativo
+# -------------------------------------------------------------------
+# Windows
+[Tt]humbs.db
+*$*
+
+# Linux
+*~
+
+# Mac
+.AppleDouble
+.LSOverride
+
+writable/session/
+writable/cache/
+writable/logs/
+writable/uploads/
+writable/debugbar
+# Editar el archivo .gitignore
+nano .gitignore
+
+# Agregar estas líneas si no existen:
+public/writable/session/
+public/writable/cache/
+public/writable/logs/
+public/writable/uploads/
+
+# Luego intentar git add nuevamente
+git add .
