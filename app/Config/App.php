@@ -17,11 +17,13 @@ class App extends BaseConfig
      *
      *    http://example.com/
      */
-     public string $baseURL = 'http://localhost:8080/';
+    public string $baseURL = '';
     
-    // public string $baseURL = 'https://ceac.uto.edu.bo:8080';
-
-    // public string $baseURL = 'https://5793f53f7619.ngrok-free.app';
+    public function __construct()
+    {
+        // Use environment variable or fallback to localhost
+        $this->baseURL = $_ENV['app.baseURL'] ?? 'http://localhost:8080/';
+    }
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
