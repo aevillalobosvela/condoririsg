@@ -24,19 +24,20 @@ class Database extends Config
     /**
      * The default database connection.
      */
-    public $default = [
+ public $default = [
         'DSN'      => '',
-        'hostname' => 'postgres-dev',
-        'username' => 'devadmin',
-        'password' => 'devpass',
-        'database' => 'devdb',
+        'hostname' => 'postgres96',
+        'username' => 'postgres',
+        'password' => 'postgres',
+        'database' => 'postgres96',
         'DBDriver' => 'Postgre',
         'DBPrefix' => '',
         'pConnect' => false,
-        'DBDebug'  => false,
+        // 'DBDebug'  => true,
+        'DBDebug'  => (ENVIRONMENT !== 'development'),
         'charset'  => 'UTF8',
-        'schema'   => 'condoriri',
-        'DBCollat' => '',
+        'schema'   => 'condoriri', // Add this line
+        'DBCollat' => '', // PostgreSQL no necesita esta configuración
         'swapPre'  => '',
         'encrypt'  => false,
         'compress' => false,
@@ -73,32 +74,6 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
-
-        // Override with environment variables if available
-        if (isset($_ENV['database.default.hostname'])) {
-            $this->default['hostname'] = $_ENV['database.default.hostname'];
-        }
-        if (isset($_ENV['database.default.username'])) {
-            $this->default['username'] = $_ENV['database.default.username'];
-        }
-        if (isset($_ENV['database.default.password'])) {
-            $this->default['password'] = $_ENV['database.default.password'];
-        }
-        if (isset($_ENV['database.default.database'])) {
-            $this->default['database'] = $_ENV['database.default.database'];
-        }
-        if (isset($_ENV['database.default.DBDriver'])) {
-            $this->default['DBDriver'] = $_ENV['database.default.DBDriver'];
-        }
-        if (isset($_ENV['database.default.port'])) {
-            $this->default['port'] = (int)$_ENV['database.default.port'];
-        }
-        if (isset($_ENV['database.default.charset'])) {
-            $this->default['charset'] = $_ENV['database.default.charset'];
-        }
-        if (isset($_ENV['database.default.schema'])) {
-            $this->default['schema'] = $_ENV['database.default.schema'];
-        }
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
