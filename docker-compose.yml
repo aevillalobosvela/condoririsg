@@ -12,6 +12,10 @@ services:
     environment:
       - APACHE_RUN_USER=www-data
       - APACHE_RUN_GROUP=www-data
+    command: >
+      bash -c "chown -R www-data:www-data /var/www/html/writable &&
+               chmod -R 755 /var/www/html/writable &&
+               apache2-foreground"
     networks:
       - condoriri-network
 
