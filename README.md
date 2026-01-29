@@ -131,6 +131,105 @@ database.default.DBDriver = SQLite3
 2. Configurar base de datos de producción
 3. Ejecutar migraciones si es necesario
 
+## 🗄️ Base de Datos
+
+### Migraciones
+
+El sistema incluye migraciones completas para crear todas las tablas necesarias:
+
+```bash
+# Ejecutar todas las migraciones
+php spark migrate
+
+# Ver estado de migraciones
+php spark migrate:status
+
+# Rollback (si es necesario)
+php spark migrate:rollback
+```
+
+**Tablas creadas:**
+- `roles` - Roles de usuario (admin, vendedor, almacen, etc.)
+- `sucursales` - Sucursales del sistema
+- `usuarios` - Usuarios del sistema
+- `categorias` - Categorías de productos
+- `unidades` - Unidades de medida
+- `estados` - Estados del sistema
+- `inventarios` - Inventarios por sucursal
+- `productos` - Productos lácteos
+- `clientes` - Clientes del sistema
+- `stock_sucursales` - Stock por sucursal
+- `ventas` - Registro de ventas
+- `detalle_venta` - Detalles de cada venta
+- `productos_agro` - Productos agropecuarios
+- `transferencias_productos` - Transferencias entre sucursales
+- `bajas` - Registro de bajas de productos
+- `envios` - Gestión de envíos
+
+### Seeders (Datos de Prueba)
+
+El sistema incluye seeders completos con datos de ejemplo:
+
+```bash
+# Ejecutar todos los seeders
+php spark db:seed DatabaseSeeder
+
+# O ejecutar seeders individuales en orden:
+php spark db:seed RolesSeeder
+php spark db:seed InitialDataSeeder
+php spark db:seed UsuariosCompletosSeeder
+php spark db:seed CategoriasSeeder
+php spark db:seed UnidadesSeeder
+php spark db:seed EstadosSeeder
+php spark db:seed InventariosSeeder
+php spark db:seed ClientesSeeder
+php spark db:seed ProductosSeeder
+php spark db:seed StockSucursalesSeeder
+php spark db:seed VentasSeeder
+php spark db:seed DetalleVentaSeeder
+```
+
+**Usuarios creados por los seeders:**
+
+| Usuario | Contraseña | Rol | Sucursal |
+|---------|------------|-----|----------|
+| `admin` | `admin123` | Administrador | Oruro |
+| `vendedor1` | `vend123` | Vendedor | Oruro |
+| `almacen1` | `alm123` | Almacén | Condoriri |
+| `contador1` | `cont123` | Contabilidad | Oruro |
+| `agro1` | `agro123` | Agropecuario | Condoriri |
+| `ganadero1` | `gan123` | Ganadería | Condoriri |
+| `dev1` | `dev123` | Desarrollador | Oruro |
+| `envios1` | `env123` | Envíos | Ventas Oruro |
+
+**Datos incluidos:**
+- 8 roles de usuario
+- 3 sucursales (Oruro, Condoriri, Ventas Oruro)
+- 8 usuarios (uno por cada rol)
+- 3 categorías de productos
+- 4 unidades de medida
+- 4 estados del sistema
+- 3 inventarios
+- 3 clientes de ejemplo
+- 4 productos lácteos
+- Stock distribuido en sucursales
+- 5 ventas de ejemplo con detalles
+
+### Configuración Inicial Completa
+
+```bash
+# 1. Ejecutar migraciones
+php spark migrate
+
+# 2. Poblar con datos de ejemplo
+php spark db:seed DatabaseSeeder
+
+# 3. Verificar que todo funciona
+php spark serve --port=8080
+```
+
+Después de esto, puedes acceder al sistema con cualquiera de los usuarios creados.
+
 ## 📋 Módulos del Sistema
 
 - **Inventarios** - Control de stock y productos
@@ -157,6 +256,18 @@ docker exec -it condoririSG bash
 docker-compose up --build
 ```
 
+### Base de datos
+```bash
+# Ejecutar migraciones
+php spark migrate
+
+# Poblar con datos de ejemplo
+php spark db:seed DatabaseSeeder
+
+# Ver estado de migraciones
+php spark migrate:status
+```
+
 ### PHP Local
 ```bash
 # Instalar dependencias
@@ -180,6 +291,8 @@ writable/session/
 ### Error de base de datos
 - **Docker:** Verificar que `postgres-dev` esté ejecutándose
 - **PHP local:** Verificar extensiones PostgreSQL o cambiar a SQLite
+- **Migraciones:** Si hay errores, ejecutar `php spark migrate:refresh` y luego los seeders
+- **Seeders:** Si fallan, ejecutar individualmente en el orden especificado
 
 ### Error de permisos
 ```bash
