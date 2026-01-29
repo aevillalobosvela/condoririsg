@@ -10,20 +10,7 @@ class UsuariosCompletosSeeder extends Seeder
     public function run()
     {
         $usuarios = [
-            [
-                'nombre' => 'Carlos',
-                'apellidos' => 'Administrador',
-                'usuario' => 'admin',
-                'correo' => 'admin@condoriri.com',
-                'password' => password_hash('admin123', PASSWORD_DEFAULT),
-                'celular' => '70123456',
-                'direccion' => 'Av. 6 de Octubre #123',
-                'rol_id' => 1,
-                'sucursal_id' => 1,
-                'estado' => true,
-                'ci' => 12345678,
-                'created_at' => Time::now()
-            ],
+            // Saltamos admin porque ya se crea en InitialDataSeeder
             [
                 'nombre' => 'María',
                 'apellidos' => 'Ventas López',

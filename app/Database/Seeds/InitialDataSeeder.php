@@ -54,7 +54,7 @@ class InitialDataSeeder extends Seeder
             'apellidos' => 'Sistema',
             'usuario' => 'admin',
             'correo' => 'admin@condoriri.com',
-            'password' => password_hash('password123', PASSWORD_DEFAULT),
+            'password' => password_hash('admin123', PASSWORD_DEFAULT),
             'rol_id' => 1,
             'sucursal_id' => 1,
             'estado' => true,
