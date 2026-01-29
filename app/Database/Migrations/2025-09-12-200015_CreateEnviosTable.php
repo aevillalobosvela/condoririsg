@@ -8,6 +8,7 @@ class CreateEnviosTable extends Migration
 {
     public function up()
     {
+        // SQL DIRECTO siguiendo estructura_DB.sql
         $sql = "CREATE TABLE condoriri.envios (
             id SERIAL PRIMARY KEY,
             code VARCHAR(100) NOT NULL UNIQUE,
@@ -22,13 +23,14 @@ class CreateEnviosTable extends Migration
             fecha_envio DATE NOT NULL,
             fecha_recepcion DATE NULL,
             
-            user_transporte_id INT NOT NULL, -- transportista
-            user_id INT NOT NULL,            -- usuario que crea el envío
-            user_recepcion_id INT NULL,      -- usuario que recibe
+            user_transporte_id INT NOT NULL,
+            user_id INT NOT NULL,
+            user_recepcion_id INT NULL,
             
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            deleted_at TIMESTAMP NULL
+            deleted_at TIMESTAMP NULL,
+            tipo VARCHAR NULL
         )";
         
         $this->db->query($sql);
