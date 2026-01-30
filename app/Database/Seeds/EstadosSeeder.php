@@ -11,25 +11,36 @@ class EstadosSeeder extends Seeder
     {
         $data = [
             [
-                'nombre' => 'Activo',
+                'id' => 1,
+                'nombre' => 'activo',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
             ],
             [
-                'nombre' => 'Inactivo',
+                'id' => 2,
+                'nombre' => 'enviado',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
             ],
             [
-                'nombre' => 'Pendiente',
+                'id' => 10,
+                'nombre' => 'proceso',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
             ],
             [
-                'nombre' => 'Completado',
+                'id' => 11,
+                'nombre' => 'observado',
+                'estado' => true,
+                'user_id' => 1,
+                'created_at' => Time::now()
+            ],
+            [
+                'id' => 9,
+                'nombre' => 'aceptado',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
