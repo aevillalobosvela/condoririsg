@@ -13,6 +13,25 @@ $userRoleName = session()->get('rol_nombre');
   .logo-light span img {
     filter: none;
   }
+  
+  /* Force logo sizing in collapsed state */
+  .navbar-brand-box .logo-sm img {
+    max-height: 50px !important;
+    max-width: 50px !important;
+    object-fit: contain !important;
+  }
+  
+  /* Remove blue background from navbar-brand-box */
+  .navbar-brand-box {
+    background: transparent !important;
+  }
+  
+  /* Hide large logo when sidebar is narrow */
+  @media (max-width: 991px) {
+    .logo-lg {
+      display: none !important;
+    }
+  }
   .menu-title {
     color: #1e7e34 !important;
     font-weight: 700;
@@ -65,21 +84,21 @@ $userRoleName = session()->get('rol_nombre');
 </style>
 
 <div class="app-menu navbar-menu">
-  <div class="navbar-brand-box">
+  <div class="navbar-brand-box mt-3">
     <a href="<?= base_url('/') ?>" class="logo logo-dark">
       <span class="logo-sm">
-        <img src="/assets/img/condoriri.jpeg" alt="Condoriri" height="40">
+        <img src="/assets/img/condoriri1.png" alt="Condoriri" height="90">
       </span>
       <span class="logo-lg">
-        <img src="/assets/img/condoriri.jpeg" alt="Condoriri" height="40">
+        <img src="/assets/img/condoriri1.png" alt="Condoriri" height="90">
       </span>
     </a>
     <a href="<?= base_url('/') ?>" class="logo logo-light">
       <span class="logo-sm">
-        <img src="/assets/img/condoriri.jpeg" alt="Condoriri" height="40">
+        <img src="/assets/img/condoriri1.png" alt="Condoriri" height="90">
       </span>
       <span class="logo-lg">
-        <img src="/assets/img/condoriri.jpeg" alt="Condoriri" height="40">
+        <img src="/assets/img/condoriri1.png" alt="Condoriri" height="90">
       </span>
     </a>
     <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">

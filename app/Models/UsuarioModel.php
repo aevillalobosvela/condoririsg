@@ -116,7 +116,7 @@ class UsuarioModel extends Model
      */
     public function verificarCredenciales(string $identificador, string $password): ?object
     {
-        $user = $this->select('usuarios.*, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre, sucursales.id as sucursal_id')
+        $user = $this->select('usuarios.id, usuarios.nombre, usuarios.apellidos, usuarios.usuario, usuarios.correo, usuarios.rol_id, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre, sucursales.id as sucursal_id, usuarios.password')
             ->join('roles', 'roles.id = usuarios.rol_id', 'left')
             ->join('sucursales', 'sucursales.id = usuarios.sucursal_id', 'left')
             ->groupStart()

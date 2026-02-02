@@ -8,3 +8,5 @@
 <link href="<?= base_url('/assets/css/app.min.css') ?>" rel="stylesheet" type="text/css" />
 <!-- custom Css-->
 <link href="<?= base_url('/assets/css/custom.min.css') ?>" rel="stylesheet" type="text/css" />
+<!-- Sidebar Fix Css-->
+<link href="<?= base_url('/assets/css/sidebar-fix.css') ?>" rel="stylesheet" type="text/css" />

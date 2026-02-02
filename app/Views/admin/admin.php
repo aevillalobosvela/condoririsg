@@ -155,25 +155,25 @@
     <div class="quick-title">Acceso Rápido</div>
     <div class="quick-grid">
       <a href="<?= base_url('inventarios') ?>" class="quick-item" role="link" aria-label="Gestión de Inventario">
-        <div class="qi-icon"><i class="fa-solid fa-warehouse"></i></div>
+        <div class="qi-icon"><i class="mdi mdi-warehouse"></i></div>
         <div class="qi-title">Gestión de Inventario</div>
         <div class="qi-sub">Administra productos y stock</div>
       </a>
 
       <a href="<?= base_url('envios') ?>" class="quick-item" role="link" aria-label="Gestión de Envíos">
-        <div class="qi-icon"><i class="fa-solid fa-truck-fast"></i></div>
+        <div class="qi-icon"><i class="mdi mdi-truck-fast"></i></div>
         <div class="qi-title">Gestión de Envíos</div>
         <div class="qi-sub">Programa y monitorea envíos</div>
       </a>
 
       <a href="<?= base_url('resepciones') ?>" class="quick-item" role="link" aria-label="Aceptación de Envíos">
-        <div class="qi-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+        <div class="qi-icon"><i class="mdi mdi-clipboard-check"></i></div>
         <div class="qi-title">Aceptación de Envíos</div>
         <div class="qi-sub">Recibe y verifica mercancía</div>
       </a>
 
       <a href="<?= base_url('ventas') ?>" class="quick-item" role="link" aria-label="Punto de Venta">
-        <div class="qi-icon"><i class="fa-solid fa-cash-register"></i></div>
+        <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
         <div class="qi-title">Punto de Venta</div>
         <div class="qi-sub">Registra ventas y pagos</div>
       </a>

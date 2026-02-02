@@ -374,6 +374,7 @@ class UsuariosController extends BaseController
             'totalUsuarios'   => count($usuarios),
             'title'           => 'Resultados de búsqueda: ' . $termino,
             'nombre'          => session()->get('nombre'),
+            'apellidos'       => session()->get('apellidos'),
             'rol_nombre'      => session()->get('rol_nombre'),
             'sucursal_nombre' => session()->get('sucursal_nombre'),
             'usuario'         => session()->get('usuario'),
