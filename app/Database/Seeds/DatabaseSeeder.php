@@ -14,10 +14,10 @@ class DatabaseSeeder extends Seeder
             // 1. Roles
             $this->call('RolesSeeder');
             
-            // 2. Datos iniciales
+            // 2. Datos iniciales (incluye sucursales y admin)
             $this->call('InitialDataSeeder');
             
-            // 3. Usuarios completos
+            // 3. Usuarios completos (NO incluye admin)
             $this->call('UsuariosCompletosSeeder');
             
             // 4. Datos básicos

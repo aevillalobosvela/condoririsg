@@ -14,28 +14,51 @@ class InitialDataSeeder extends Seeder
         // 1. Crear sucursales temporalmente sin user_id válido
         $sucursalesData = [
             [
-                'nombre' => 'Oruro',
-                'descripcion' => 'Tienda principal Oruro',
-                'direccion' => '6 de octubre entre Aroma',
-                'telefono' => '52456789',
-                'estado' => true,
-                'user_id' => 1, // Temporal, se actualizará después
-                'created_at' => Time::now()
-            ],
-            [
-                'nombre' => 'Condoriri',
-                'descripcion' => 'Planta de producción de lácteos',
-                'direccion' => 'Comunidad Condoriri',
-                'telefono' => '52456790',
+                'id' => 2,
+                'nombre' => 'ORURO-VENTAS',
+                'descripcion' => 'produccion de leches',
+                'direccion' => '6 de octubre entre aroma',
+                'telefono' => '456789',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
             ],
             [
-                'nombre' => 'Ventas Oruro',
-                'descripcion' => 'Punto de venta Oruro',
-                'direccion' => 'Av. Brasil entre 6 de Octubre',
-                'telefono' => '52456791',
+                'id' => 5,
+                'nombre' => 'ORURO-CENTRAL',
+                'descripcion' => 'ADMINISTRACION ORURO COND',
+                'direccion' => 'COCHABAMBA ORURO',
+                'telefono' => '690901',
+                'estado' => true,
+                'user_id' => 1,
+                'created_at' => Time::now()
+            ],
+            [
+                'id' => 11,
+                'nombre' => 'AGROPECUARIOS',
+                'descripcion' => 'productos de agropecuarios papa',
+                'direccion' => 'condoriri',
+                'telefono' => '',
+                'estado' => true,
+                'user_id' => 1,
+                'created_at' => Time::now()
+            ],
+            [
+                'id' => 10,
+                'nombre' => 'GANADERIA',
+                'descripcion' => 'ganaderia camellos',
+                'direccion' => 'condoriri',
+                'telefono' => '',
+                'estado' => true,
+                'user_id' => 1,
+                'created_at' => Time::now()
+            ],
+            [
+                'id' => 4,
+                'nombre' => 'LACTEOS',
+                'descripcion' => 'PRODUCTOR DE LACTEOS',
+                'direccion' => 'CONDORIRI',
+                'telefono' => '456789',
                 'estado' => true,
                 'user_id' => 1,
                 'created_at' => Time::now()
@@ -56,7 +79,7 @@ class InitialDataSeeder extends Seeder
             'correo' => 'admin@condoriri.com',
             'password' => password_hash('admin123', PASSWORD_DEFAULT),
             'rol_id' => 1,
-            'sucursal_id' => 1,
+            'sucursal_id' => 5, // ORURO-CENTRAL
             'estado' => true,
             'created_at' => Time::now()
         ];

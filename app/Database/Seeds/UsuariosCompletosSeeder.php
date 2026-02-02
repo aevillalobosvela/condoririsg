@@ -9,6 +9,16 @@ class UsuariosCompletosSeeder extends Seeder
 {
     public function run()
     {
+        // Verificar que las sucursales existen
+        $sucursalesExistentes = $this->db->table('condoriri.sucursales')->select('id')->get()->getResult();
+        $sucursalIds = array_column($sucursalesExistentes, 'id');
+        echo "Sucursales disponibles: " . implode(', ', $sucursalIds) . "\n";
+        
+        // Verificar que los roles existen
+        $rolesExistentes = $this->db->table('condoriri.roles')->select('id')->get()->getResult();
+        $rolIds = array_column($rolesExistentes, 'id');
+        echo "Roles disponibles: " . implode(', ', $rolIds) . "\n";
+
         $usuarios = [
             // Saltamos admin porque ya se crea en InitialDataSeeder
             [
@@ -20,7 +30,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70234567',
                 'direccion' => 'Calle Brasil #456',
                 'rol_id' => 2,
-                'sucursal_id' => 1,
+                'sucursal_id' => 2, // ORURO-VENTAS
                 'estado' => true,
                 'ci' => 23456789,
                 'created_at' => Time::now()
@@ -34,7 +44,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70345678',
                 'direccion' => 'Zona Norte #789',
                 'rol_id' => 3,
-                'sucursal_id' => 2,
+                'sucursal_id' => 4, // LACTEOS
                 'estado' => true,
                 'ci' => 34567890,
                 'created_at' => Time::now()
@@ -48,7 +58,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70456789',
                 'direccion' => 'Av. Circunvalación #321',
                 'rol_id' => 4,
-                'sucursal_id' => 1,
+                'sucursal_id' => 5, // ORURO-CENTRAL
                 'estado' => true,
                 'ci' => 45678901,
                 'created_at' => Time::now()
@@ -62,7 +72,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70567890',
                 'direccion' => 'Comunidad Condoriri',
                 'rol_id' => 5,
-                'sucursal_id' => 2,
+                'sucursal_id' => 11, // AGROPECUARIOS
                 'estado' => true,
                 'ci' => 56789012,
                 'created_at' => Time::now()
@@ -76,7 +86,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70678901',
                 'direccion' => 'Estancia Condoriri',
                 'rol_id' => 6,
-                'sucursal_id' => 2,
+                'sucursal_id' => 10, // GANADERIA
                 'estado' => true,
                 'ci' => 67890123,
                 'created_at' => Time::now()
@@ -90,7 +100,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70789012',
                 'direccion' => 'Zona Central #654',
                 'rol_id' => 7,
-                'sucursal_id' => 1,
+                'sucursal_id' => 5, // ORURO-CENTRAL
                 'estado' => true,
                 'ci' => 78901234,
                 'created_at' => Time::now()
@@ -104,7 +114,7 @@ class UsuariosCompletosSeeder extends Seeder
                 'celular' => '70890123',
                 'direccion' => 'Villa Sebastián Pagador',
                 'rol_id' => 8,
-                'sucursal_id' => 3,
+                'sucursal_id' => 2, // ORURO-VENTAS
                 'estado' => true,
                 'ci' => 89012345,
                 'created_at' => Time::now()
@@ -112,7 +122,12 @@ class UsuariosCompletosSeeder extends Seeder
         ];
 
         foreach ($usuarios as $usuario) {
-            $this->db->table('condoriri.usuarios')->insert($usuario);
+            try {
+                $this->db->table('condoriri.usuarios')->insert($usuario);
+                echo "Usuario {$usuario['usuario']} creado correctamente.\n";
+            } catch (\Exception $e) {
+                echo "Error creando usuario {$usuario['usuario']}: " . $e->getMessage() . "\n";
+            }
         }
         
         echo "Seeder de Usuarios Completos ejecutado correctamente.\n";

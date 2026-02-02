@@ -13,7 +13,7 @@ class StockSucursalesSeeder extends Seeder
             // Leche Fresca en sucursales
             [
                 'producto_id' => 1,
-                'sucursal_id' => 1, // Oruro
+                'sucursal_id' => 2, // ORURO-VENTAS
                 'cantidad' => 50,
                 'stock' => 50,
                 'precio_contado' => 3.00,
@@ -27,7 +27,7 @@ class StockSucursalesSeeder extends Seeder
             ],
             [
                 'producto_id' => 1,
-                'sucursal_id' => 3, // Ventas Oruro
+                'sucursal_id' => 4, // LACTEOS
                 'cantidad' => 30,
                 'stock' => 30,
                 'precio_contado' => 3.00,
@@ -42,7 +42,7 @@ class StockSucursalesSeeder extends Seeder
             // Queso Fresco
             [
                 'producto_id' => 2,
-                'sucursal_id' => 1,
+                'sucursal_id' => 4, // LACTEOS
                 'cantidad' => 25,
                 'stock' => 25,
                 'precio_contado' => 22.00,
@@ -57,7 +57,7 @@ class StockSucursalesSeeder extends Seeder
             // Yogurt Natural
             [
                 'producto_id' => 3,
-                'sucursal_id' => 1,
+                'sucursal_id' => 2, // ORURO-VENTAS
                 'cantidad' => 40,
                 'stock' => 40,
                 'precio_contado' => 4.00,
@@ -72,7 +72,7 @@ class StockSucursalesSeeder extends Seeder
             // Mantequilla
             [
                 'producto_id' => 4,
-                'sucursal_id' => 1,
+                'sucursal_id' => 4, // LACTEOS
                 'cantidad' => 15,
                 'stock' => 15,
                 'precio_contado' => 16.00,
