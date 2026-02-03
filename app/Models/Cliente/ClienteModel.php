@@ -27,6 +27,11 @@ class ClienteModel extends Model
     protected $useSoftDeletes = true;
     protected $deletedField  = 'deleted_at';
 
- 
-   
+    /**
+     * Cuenta el total de clientes activos
+     */
+    public function contarClientes(): int
+    {
+        return $this->where('deleted_at', null)->countAllResults();
+    }
 }

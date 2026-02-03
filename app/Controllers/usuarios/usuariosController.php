@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\UsuarioModel;
 use App\Models\Rol\RolModel;
 use App\Models\Sucursal\SucursalModel;
+use App\Models\Cliente\ClienteModel;
 
 class UsuariosController extends BaseController
 {
@@ -17,41 +18,51 @@ class UsuariosController extends BaseController
     protected $usuarioModel;
     protected $rolModel;
     protected $sucursalModel;
+    protected $clienteModel;
 
     public function __construct()
     {
         $this->usuarioModel = new UsuarioModel();
         $this->rolModel = new RolModel();
         $this->sucursalModel = new SucursalModel();
+        $this->clienteModel = new ClienteModel();
     }
 
     public function all()
     {
         $usuariosModel = new UsuarioModel();
-
-
-        $usuarios = $usuariosModel->getRegistros();
-
-        $totalUsuarios   = count($usuarios);
+        
+        // Obtener filtros de la URL
+        $filters = [
+            'search' => $this->request->getGet('search'),
+            'rol' => $this->request->getGet('rol'),
+            'estado' => $this->request->getGet('estado')
+        ];
+        
+        // Aplicar filtros
+        $usuarios = $usuariosModel->getRegistrosFiltrados($filters);
+        
+        // Obtener todos los usuarios para estadísticas (sin filtros)
+        $todosUsuarios = $usuariosModel->getRegistros();
+        
+        $totalUsuarios   = count($todosUsuarios);
         $totalAdmins     = 0;
         $totalVendedores = 0;
-        $totalClientes   = 0;
+        $totalClientes   = $this->clienteModel->contarClientes();
 
-
-        foreach ($usuarios as $usuario) {
-            if (isset($usuario->rol_nombre)) {
-                if ($usuario->rol_nombre === 'administrador') {
+        foreach ($todosUsuarios as $usuario) {
+            if (isset($usuario['rol_nombre'])) {
+                if (strtolower($usuario['rol_nombre']) === 'admin') {
                     $totalAdmins++;
-                } elseif ($usuario->rol_nombre === 'vendedor') {
+                } elseif (strtolower($usuario['rol_nombre']) === 'vendedor') {
                     $totalVendedores++;
-                } elseif ($usuario->rol_nombre === 'cliente') {
-                    $totalClientes++;
                 }
             }
         }
 
         $data = [
             'usuarios'        => $usuarios,
+            'filters'         => $filters,
             'totalUsuarios'   => $totalUsuarios,
             'totalAdmins'     => $totalAdmins,
             'totalVendedores' => $totalVendedores,
@@ -62,7 +73,6 @@ class UsuariosController extends BaseController
             'sucursal_nombre' => session()->get('sucursal_nombre'),
             'usuario'         => session()->get('usuario'),
         ];
-
 
         echo view('usuarios/usuariosTable', $data);
     }
@@ -278,7 +288,7 @@ class UsuariosController extends BaseController
         }
 
         // 3. Verificar si ya está inactivo para evitar operaciones innecesarias
-        if ($usuario['estado'] == false) {
+        if ($usuario['estado'] === 'f' || $usuario['estado'] === false) {
              return redirect()->to('/usuarios')->with('message', 'El usuario ya está inactivo.');
         }
 
@@ -308,7 +318,7 @@ class UsuariosController extends BaseController
             return redirect()->to('/usuarios')->with('error', 'Usuario no encontrado.');
         }
 
-        if ($usuario['estado'] == true) {
+        if ($usuario['estado'] === 't' || $usuario['estado'] === true) {
             return redirect()->to('/usuarios')->with('message', 'El usuario ya está activo.');
         }
 
@@ -342,7 +352,9 @@ class UsuariosController extends BaseController
         if ($state !== null) {
             $nuevoEstado = (bool) $state;
         } else {
-            $nuevoEstado = !$usuario['estado'];
+            // Convertir string de PostgreSQL a booleano para invertir
+            $estadoActual = ($usuario['estado'] === 't');
+            $nuevoEstado = !$estadoActual;
         }
 
         if ($usuariosModel->cambiarEstado($id, $nuevoEstado)) {

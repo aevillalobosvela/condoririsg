@@ -115,19 +115,14 @@ $userRoleName = session()->get('rol_nombre');
           <li class="menu-title"><span>Administración</span></li>
 
           <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarUsuarios" data-bs-toggle="collapse">
-              <i class="ri-group-line"></i> <span>Usuarios</span>
+            <a class="nav-link menu-link" href="<?= base_url('usuarios') ?>">
+              <i class="ri-group-line"></i> <span>Gestión de Usuarios</span>
             </a>
-            <div class="collapse menu-dropdown" id="sidebarUsuarios">
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('usuarios') ?>" class="nav-link">Registrar Usuario</a></li>
-              </ul>
-            </div>
           </li>
 
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarInventario" data-bs-toggle="collapse">
-              <i class="ri-refrigerator-line"></i> <span>Inventario Lácteo</span>
+              <i class="ri-fridge-line"></i> <span>Inventario Lácteo</span>
             </a>
             <div class="collapse menu-dropdown" id="sidebarInventario">
               <ul class="nav nav-sm flex-column">

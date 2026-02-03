@@ -126,7 +126,7 @@
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
               <h4 class="fs-22 fw-semibold ff-secondary mb-4"><?= $totalAdmins ?? '0' ?></h4>
-              <a href="<?= base_url('usuarios?rol=administrador') ?>" class="text-decoration-underline">Ver administradores</a>
+              <a href="<?= base_url('usuarios?rol=admin') ?>" class="text-decoration-underline">Ver administradores</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-soft-admin rounded fs-3">
@@ -172,7 +172,7 @@
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
               <h4 class="fs-22 fw-semibold ff-secondary mb-4"><?= $totalClientes ?? '0' ?></h4>
-              <a href="<?= base_url('usuarios?rol=cliente') ?>" class="text-decoration-underline">Ver clientes</a>
+              <a href="<?= base_url('cliente/lista') ?>" class="text-decoration-underline">Ver clientes</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-soft-cliente rounded fs-3">
@@ -225,9 +225,14 @@
               <div class="col-xxl-2 col-sm-4">
                 <select class="form-control" id="filtroRol">
                   <option value="">Todos los roles</option>
-                  <option value="administrador" <?= (isset($filters['rol']) && $filters['rol'] === 'administrador') ? 'selected' : '' ?>>Administrador</option>
+                  <option value="admin" <?= (isset($filters['rol']) && $filters['rol'] === 'administrador') ? 'selected' : '' ?>>Administrador</option>
                   <option value="vendedor" <?= (isset($filters['rol']) && $filters['rol'] === 'vendedor') ? 'selected' : '' ?>>Vendedor</option>
-                  <option value="cliente" <?= (isset($filters['rol']) && $filters['rol'] === 'cliente') ? 'selected' : '' ?>>Cliente</option>
+                  <option value="almacen" <?= (isset($filters['rol']) && $filters['rol'] === 'almacen') ? 'selected' : '' ?>>Almacén</option>
+                  <option value="contabilidad" <?= (isset($filters['rol']) && $filters['rol'] === 'contabilidad') ? 'selected' : '' ?>>Contabilidad</option>
+                  <option value="agropecuario" <?= (isset($filters['rol']) && $filters['rol'] === 'agropecuario') ? 'selected' : '' ?>>Agropecuario</option>
+                  <option value="ganaderia" <?= (isset($filters['rol']) && $filters['rol'] === 'ganaderia') ? 'selected' : '' ?>>Ganadería</option>
+                  <option value="dev" <?= (isset($filters['rol']) && $filters['rol'] === 'dev') ? 'selected' : '' ?>>Desarrollador</option>
+                  <option value="envios" <?= (isset($filters['rol']) && $filters['rol'] === 'envios') ? 'selected' : '' ?>>Envíos</option>
                 </select>
               </div>
               <div class="col-xxl-2 col-sm-4">
@@ -256,17 +261,14 @@
             <table class="table align-middle table-nowrap" id="tablaUsuarios">
               <thead class="table-light text-muted">
                 <tr>
-                
                   <th>Nombre Completo</th>
                   <th>Correo</th>
                   <th>Rol</th>
                   <th>Sucursal</th>
                   <th>Celular</th>
-                
                   <th>Fecha de Registro</th>
                   <th>Estado</th>
-                  <th class="text-end">Acciones</th>
-                </tr>
+                  <th class="text-end">Acciones</th>                </tr>
               </thead>
               <tbody class="list form-check-all">
                 <?php if (!empty($usuarios)): ?>
@@ -298,8 +300,10 @@
                       <td><?= esc($usuario['created_at'] ?? 'N/A') ?></td>
                       <td>
                         <?php
-                          $estado = $usuario['estado'] ? 'true' : 'false';
-                          $claseEstado = $usuario['estado'] ? 'badge-soft-success' : 'badge-soft-danger';
+                          // Convertir string de PostgreSQL a booleano
+                          $estadoBool = ($usuario['estado'] === 't');
+                          $estado = $estadoBool ? 'Activo' : 'Inactivo';
+                          $claseEstado = $estadoBool ? 'bg-soft-vendedor' : 'bg-light text-dark';
                         ?>
                         <span class="badge <?= $claseEstado ?>"><?= $estado ?></span>
                       </td>
@@ -309,7 +313,7 @@
                             <i class="ri-pencil-fill align-bottom">Editar</i>
                           </a>
 
-                          <?php if ($usuario['estado']): ?>
+                          <?php if ($usuario['estado'] === 't'): ?>
                             <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Desactivar" onclick="confirmDelete(<?= $usuario['id'] ?>, 'desactivar')">
                               <i class="ri-forbid-line align-bottom">Desactivar</i>
                             </button>
@@ -325,7 +329,7 @@
                   <?php endforeach; ?>
                 <?php else: ?>
                   <tr>
-                    <td colspan="10" class="text-center py-4">No hay usuarios registrados que coincidan con los filtros.</td>
+                    <td colspan="8" class="text-center py-4">No hay usuarios registrados que coincidan con los filtros.</td>
                   </tr>
                 <?php endif; ?>
               </tbody>
@@ -393,11 +397,14 @@
 
   // Función para aplicar filtros y redirigir (necesaria para el filtrado del lado del servidor)
   const aplicarFiltros = (isManual = false) => {
-      const busqueda = document.getElementById('buscadorUsuarios').value;
+      const busqueda = document.getElementById('buscadorUsuarios').value.trim();
       const rolSeleccionado = document.getElementById('filtroRol').value;
       const estadoSeleccionado = document.getElementById('filtroEstado').value;
       
       const url = new URL(window.location.origin + window.location.pathname);
+      
+      // Limpiar parámetros existentes
+      url.search = '';
       
       if (busqueda) {
           url.searchParams.set('search', busqueda);
@@ -405,11 +412,8 @@
       if (rolSeleccionado) {
           url.searchParams.set('rol', rolSeleccionado);
       }
-      // Solo incluimos el estado si no es 'activo' (el valor por defecto que queremos) o si se seleccionó 'Todos' o 'inactivo'
-      if (estadoSeleccionado !== 'activo') { 
+      if (estadoSeleccionado) {
           url.searchParams.set('estado', estadoSeleccionado);
-      } else {
-          url.searchParams.delete('estado'); // Eliminar si es 'activo' para que la URL sea más limpia
       }
       
       // Redirigir si fue una acción manual (click en Filtrar)
@@ -420,14 +424,28 @@
 
   // Ejecutar filtros al cargar la página si hay parámetros en la URL (para mantener el estado)
   document.addEventListener('DOMContentLoaded', function() {
-    // Si la función 'aplicarFiltros' no está en el controlador, la función debe ser llamada al cargar la vista
-    // La lógica de filtrado del lado del cliente se ha eliminado ya que usas el filtrado por URL (lado del servidor).
-    
-    // Esto es necesario para que el botón de Filtrar funcione.
+    // Configurar el formulario de filtros
     document.querySelector('form').onsubmit = (e) => {
         e.preventDefault();
         aplicarFiltros(true);
     };
+    
+    // Permitir búsqueda con Enter en el campo de búsqueda
+    document.getElementById('buscadorUsuarios').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            aplicarFiltros(true);
+        }
+    });
+    
+    // Aplicar filtros automáticamente cuando cambian los selectores
+    document.getElementById('filtroRol').addEventListener('change', function() {
+        aplicarFiltros(true);
+    });
+    
+    document.getElementById('filtroEstado').addEventListener('change', function() {
+        aplicarFiltros(true);
+    });
   });
 </script>
 <?= $this->endSection() ?>
