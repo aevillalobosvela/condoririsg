@@ -57,6 +57,7 @@
                                             <th>ID</th>
                                             <th>Nombre</th>
                                             <th>Descripción</th>
+                                            <th>Estado</th>
                                             <th>Creado</th>
                                             <th>Actualizado</th>
                                             <th>Acciones</th>
@@ -64,18 +65,28 @@
                                     </thead>
                                     <tbody>
                                         <?php foreach ($categorias as $categoria): ?>
-                                            <tr>
+                                            <?php $isActive = ($categoria['estado'] === 't' || $categoria['estado'] === true); ?>
+                                            <tr class="<?= !$isActive ? 'table-secondary' : '' ?>">
                                                 <td><?= $categoria['id'] ?></td>
                                                 <td><?= esc($categoria['nombre']) ?></td>
                                                 <td><?= esc($categoria['descripcion']) ?></td>
+                                                <td>
+                                                    <span class="badge <?= $isActive ? 'bg-success' : 'bg-danger' ?>">
+                                                        <?= $isActive ? 'Activa' : 'Inactiva' ?>
+                                                    </span>
+                                                </td>
                                                 <td><?= $categoria['created_at'] ?></td>
                                                 <td><?= $categoria['updated_at'] ?></td>
                                                 <td>
                                                     <a href="/categorias/edit/<?= $categoria['id'] ?>" class="btn btn-sm btn-warning">
                                                         <i class="ri-edit-line"></i> Editar
                                                     </a>
-                                                    
-                                               
+                                                    <button type="button" 
+                                                            class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" 
+                                                            onclick="confirmarToggle(<?= $categoria['id'] ?>, '<?= esc($categoria['nombre']) ?>', <?= $isActive ? 'false' : 'true' ?>)">
+                                                        <i class="<?= $isActive ? 'ri-pause-circle-line' : 'ri-play-circle-line' ?>"></i> 
+                                                        <?= $isActive ? 'Desactivar' : 'Reactivar' ?>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -89,5 +100,46 @@
         </div>
     </div>
     </div>
+
+<!-- Modal de Confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Confirmar Acción</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?= $this->endSection() ?>
-<?= $this->section('scripts') ?><?= $this->endSection() ?>
+<?= $this->section('scripts') ?>
+<script>
+function confirmarToggle(id, nombre, activar) {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const accion = activar ? 'reactivar' : 'desactivar';
+    const color = activar ? 'success' : 'warning';
+    
+    document.getElementById('modalTitle').textContent = `${accion.charAt(0).toUpperCase() + accion.slice(1)} Categoría`;
+    document.getElementById('modalMessage').innerHTML = `¿Está seguro que desea <strong>${accion}</strong> la categoría <strong>"${nombre}"</strong>?`;
+    
+    const confirmBtn = document.getElementById('confirmButton');
+    confirmBtn.className = `btn btn-${color}`;
+    confirmBtn.textContent = accion.charAt(0).toUpperCase() + accion.slice(1);
+    
+    confirmBtn.onclick = () => {
+        window.location.href = `/categorias/delete/${id}`;
+    };
+    
+    modal.show();
+}
+</script>
+<?= $this->endSection() ?>
