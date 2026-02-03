@@ -152,13 +152,12 @@ class UsuariosController extends BaseController
     // --- Asegurar nombre de usuario único ---
     $intentos = 0;
     $usuarioBase = $usuario;
-    while ($this->usuarioModel->where('usuario', $usuario)->where('deleted_at', null)->first()) {
+    while ($this->usuarioModel->where('usuario', $usuario)->where('deleted_at', null)->countAllResults() > 0) {
         $intentos++;
         if ($intentos > 10) {
             return redirect()->back()->with('error', 'No se pudo generar un nombre de usuario único.');
         }
         $usuario = $usuarioBase . $intentos;
-        $password = $ci . ($primerNombre ? $primerNombre[0] : '') . $primerApellido . $segundoApellido;
     }
 
     // --- Guardar ---
@@ -177,7 +176,7 @@ class UsuariosController extends BaseController
     ];
 
     if ($this->usuarioModel->adicionar($data)) {
-        $mensaje = "Usuario creado exitosamente.<br><strong>Usuario:</strong> {$usuario}<br><strong>Contraseña:</strong> {$password}";
+        $mensaje = "Usuario creado exitosamente.<br><strong>Usuario:</strong> {$usuario}<br><strong>Nota:</strong> La contraseña temporal ha sido generada y debe ser cambiada en el primer acceso.";
         return redirect()->to('/usuarios')->with('message', $mensaje);
     } else {
         return redirect()->back()->withInput()->with('error', 'Error al crear el usuario.');
