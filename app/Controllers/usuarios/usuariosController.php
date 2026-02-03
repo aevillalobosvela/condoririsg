@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\UsuarioModel;
 use App\Models\Rol\RolModel;
 use App\Models\Sucursal\SucursalModel;
+use App\Models\Cliente\ClienteModel;
 
 class UsuariosController extends BaseController
 {
@@ -17,12 +18,14 @@ class UsuariosController extends BaseController
     protected $usuarioModel;
     protected $rolModel;
     protected $sucursalModel;
+    protected $clienteModel;
 
     public function __construct()
     {
         $this->usuarioModel = new UsuarioModel();
         $this->rolModel = new RolModel();
         $this->sucursalModel = new SucursalModel();
+        $this->clienteModel = new ClienteModel();
     }
 
     public function all()
@@ -35,7 +38,7 @@ class UsuariosController extends BaseController
         $totalUsuarios   = count($usuarios);
         $totalAdmins     = 0;
         $totalVendedores = 0;
-        $totalClientes   = 0;
+        $totalClientes   = $this->clienteModel->contarClientes();
 
 
         foreach ($usuarios as $usuario) {
