@@ -162,11 +162,32 @@ $userId = session()->get('id');
               <!-- Registro: mensaje informativo -->
               <div class="alert alert-info">
                 <i class="ri-information-line me-2"></i>
-                <strong>¡Atención!</strong> El <strong>nombre de usuario</strong> y la <strong>contraseña</strong> se generarán automáticamente:
-                <ul class="mb-0 mt-2">
-                  <li><strong>Usuario:</strong> primer nombre + iniciales de segundo nombre y apellidos (ej: <code>johnapg</code>)</li>
-                  <li><strong>Contraseña:</strong> CI + iniciales de nombre y apellidos (ej: <code>123456jpg</code>)</li>
-                </ul>
+                <strong>Generación Automática de Credenciales</strong>
+                <p class="mb-2">El sistema generará automáticamente el <strong>nombre de usuario</strong> y la <strong>contraseña</strong> basándose en los datos ingresados:</p>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-success">📝 Nombre de Usuario:</h6>
+                    <p class="small mb-2">Primer nombre + iniciales</p>
+                    <div class="bg-light p-2 rounded">
+                      <strong>Ejemplo:</strong><br>
+                      Juan Carlos Pérez García → <code class="text-primary">juancpg</code>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-success">🔐 Contraseña:</h6>
+                    <p class="small mb-2">CI + inicial nombre + iniciales apellidos</p>
+                    <div class="bg-light p-2 rounded">
+                      <strong>Ejemplo:</strong><br>
+                      CI: 1234567 → <code class="text-primary">1234567jpg</code>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3 mb-0">
+                  <i class="ri-shield-check-line me-1"></i>
+                  <small><strong>Importante:</strong> Las credenciales se mostrarán una sola vez después del registro. El usuario debe cambiar su contraseña en el primer acceso.</small>
+                </div>
               </div>
             <?php endif; ?>
 
