@@ -126,7 +126,7 @@
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
               <h4 class="fs-22 fw-semibold ff-secondary mb-4"><?= $totalAdmins ?? '0' ?></h4>
-              <a href="<?= base_url('usuarios?rol=administrador') ?>" class="text-decoration-underline">Ver administradores</a>
+              <a href="<?= base_url('usuarios?rol=admin') ?>" class="text-decoration-underline">Ver administradores</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-soft-admin rounded fs-3">
@@ -172,7 +172,7 @@
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
               <h4 class="fs-22 fw-semibold ff-secondary mb-4"><?= $totalClientes ?? '0' ?></h4>
-              <a href="<?= base_url('usuarios?rol=cliente') ?>" class="text-decoration-underline">Ver clientes</a>
+              <a href="<?= base_url('cliente/lista') ?>" class="text-decoration-underline">Ver clientes</a>
             </div>
             <div class="avatar-sm flex-shrink-0">
               <span class="avatar-title bg-soft-cliente rounded fs-3">
