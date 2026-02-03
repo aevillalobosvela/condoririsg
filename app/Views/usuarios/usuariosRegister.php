@@ -92,7 +92,7 @@ $userId = session()->get('id');
               </div>
             </div>
 
-            <!-- CI (clave para generar contraseña) -->
+            <!-- CI y Usuario -->
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label for="ci" class="form-label">Cédula de Identidad (CI) *</label>
@@ -100,7 +100,19 @@ $userId = session()->get('id');
                   value="<?= old('ci', $usuario['ci'] ?? '') ?>"
                   placeholder="Ej: 1234567">
               </div>
-              <div class="col-md-6 mb-3">
+              <?php if (isset($usuario)): ?>
+                <div class="col-md-6 mb-3">
+                  <label for="usuario" class="form-label">Nombre de Usuario *</label>
+                  <input type="text" class="form-control" id="usuario" name="usuario" required
+                    value="<?= old('usuario', $usuario['usuario'] ?? '') ?>"
+                    placeholder="Nombre de usuario">
+                </div>
+              <?php endif; ?>
+            </div>
+
+            <!-- Correo -->
+            <div class="row">
+              <div class="col-md-12 mb-3">
                 <label for="correo" class="form-label">Correo Electrónico *</label>
                 <input type="email" class="form-control" id="correo" name="correo" required
                   value="<?= old('correo', $usuario['correo'] ?? '') ?>"
