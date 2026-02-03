@@ -7,31 +7,33 @@ $userRoleName = session()->get('rol_nombre');
   .app-menu {
     background-color: #f9fdfb !important;
     border-right: 1px solid #d1f0e5;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
+
   .logo-dark span img,
   .logo-light span img {
     filter: none;
   }
-  
+
   /* Force logo sizing in collapsed state */
   .navbar-brand-box .logo-sm img {
     max-height: 50px !important;
     max-width: 50px !important;
     object-fit: contain !important;
   }
-  
+
   /* Remove blue background from navbar-brand-box */
   .navbar-brand-box {
     background: transparent !important;
   }
-  
+
   /* Hide large logo when sidebar is narrow */
   @media (max-width: 991px) {
     .logo-lg {
       display: none !important;
     }
   }
+
   .menu-title {
     color: #1e7e34 !important;
     font-weight: 700;
@@ -41,6 +43,7 @@ $userRoleName = session()->get('rol_nombre');
     text-transform: uppercase;
     letter-spacing: 1px;
   }
+
   .nav-link {
     color: #495057 !important;
     font-weight: 500;
@@ -49,11 +52,13 @@ $userRoleName = session()->get('rol_nombre');
     border-radius: 6px;
     transition: all 0.2s ease;
   }
+
   .nav-link:hover,
   .nav-link:focus {
     color: #1e7e34 !important;
     background-color: #f0f9f4 !important;
   }
+
   .nav-link i {
     color: #28a745 !important;
     font-size: 1.1rem;
@@ -61,23 +66,27 @@ $userRoleName = session()->get('rol_nombre');
     text-align: center;
     margin-right: 0.8rem;
   }
+
   .menu-dropdown .nav-link {
     padding-left: 3rem !important;
     color: #555 !important;
     margin: 0.1rem 0.75rem;
     font-size: 0.95rem;
   }
+
   .menu-dropdown .nav-link:hover {
     background-color: #e8f5ec !important;
     color: #28a745 !important;
   }
-  .nav-item.active > .nav-link,
+
+  .nav-item.active>.nav-link,
   .nav-link.active {
     color: #155724 !important;
     background-color: #e8f5ec !important;
     font-weight: 600;
     border-left: 3px solid #28a745;
   }
+
   .vertical-overlay {
     background-color: rgba(40, 167, 69, 0.1);
   }
@@ -146,14 +155,9 @@ $userRoleName = session()->get('rol_nombre');
           </li>
 
           <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarSucursales" data-bs-toggle="collapse">
-              <i class="ri-store-3-line"></i> <span>Sucursales</span>
+            <a class="nav-link menu-link" href="<?= base_url('sucursales') ?>">
+              <i class="ri-store-3-line"></i> <span>Gestión Sucursales</span>
             </a>
-            <div class="collapse menu-dropdown" id="sidebarSucursales">
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('sucursales') ?>" class="nav-link">Gestionar Sucursales</a></li>
-              </ul>
-            </div>
           </li>
 
           <li class="nav-item">
@@ -183,7 +187,7 @@ $userRoleName = session()->get('rol_nombre');
               </ul>
             </div>
           </li>
- 
+
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarRecepciones" data-bs-toggle="collapse">
               <i class="ri-truck-line"></i> <span>Recepciones</span>
@@ -195,10 +199,11 @@ $userRoleName = session()->get('rol_nombre');
             </div>
             <div class="collapse menu-dropdown" id="sidebarRecepciones">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('envios?tipo=devolucion') ?>" class="nav-link">Devoluciones</a></li>
+                <li class="nav-item"><a href="<?= base_url('envios?tipo=devolucion') ?>" class="nav-link">Devoluciones</a>
+                </li>
               </ul>
             </div>
-           
+
           </li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarAlmacen" data-bs-toggle="collapse">
@@ -206,7 +211,8 @@ $userRoleName = session()->get('rol_nombre');
             </a>
             <div class="collapse menu-dropdown" id="sidebarAlmacen">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('inventariosucursales') ?>" class="nav-link">Inventario Stock</a></li>
+                <li class="nav-item"><a href="<?= base_url('inventariosucursales') ?>" class="nav-link">Inventario
+                    Stock</a></li>
               </ul>
             </div>
           </li>
@@ -222,12 +228,13 @@ $userRoleName = session()->get('rol_nombre');
             <div class="collapse menu-dropdown" id="sidebarInventario">
               <ul class="nav nav-sm flex-column">
                 <li class="nav-item"><a href="<?= base_url('inventarios') ?>" class="nav-link">Registro de Leche</a></li>
-                <li class="nav-item"><a href="<?= base_url('stockinventario') ?>" class="nav-link">Inventario Stock</a></li>
+                <li class="nav-item"><a href="<?= base_url('stockinventario') ?>" class="nav-link">Inventario Stock</a>
+                </li>
                 <li class="nav-item"><a href="<?= base_url('categorias') ?>" class="nav-link">Categorías</a></li>
                 <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
               </ul>
             </div>
-            
+
           </li>
 
           <li class="nav-item">
@@ -243,7 +250,7 @@ $userRoleName = session()->get('rol_nombre');
               <ul class="nav nav-sm flex-column">
                 <li class="nav-item"><a href="<?= base_url('resepciones') ?>" class="nav-link">Devoluciones</a></li>
               </ul>
-            </div>            
+            </div>
           </li>
 
           <li class="menu-title"><span>Ventas</span></li>
@@ -253,7 +260,8 @@ $userRoleName = session()->get('rol_nombre');
             </a>
             <div class="collapse menu-dropdown" id="sidebarVentas">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('inventarios/ventas') ?>" class="nav-link">Gestionar Ventas</a></li>
+                <li class="nav-item"><a href="<?= base_url('inventarios/ventas') ?>" class="nav-link">Gestionar Ventas</a>
+                </li>
               </ul>
             </div>
           </li>
@@ -272,14 +280,16 @@ $userRoleName = session()->get('rol_nombre');
 
         <?php if (in_array($userRoleName, ['agropecuario', 'ganaderia'])): ?>
           <li class="menu-title"><span><?= $userRoleName === 'agropecuario' ? 'Agropecuario' : 'Ganadería' ?></span></li>
-          
+
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarAgro" data-bs-toggle="collapse">
-              <i class="ri-leaf-line"></i> <span><?= $userRoleName === 'agropecuario' ? 'Agropecuario' : 'Ganadería' ?></span>
+              <i class="ri-leaf-line"></i>
+              <span><?= $userRoleName === 'agropecuario' ? 'Agropecuario' : 'Ganadería' ?></span>
             </a>
             <div class="collapse menu-dropdown" id="sidebarAgro">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro') ?>" class="nav-link">Registro Productos</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro') ?>" class="nav-link">Registro Productos</a>
+                </li>
                 <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
               </ul>
             </div>
@@ -303,10 +313,12 @@ $userRoleName = session()->get('rol_nombre');
             </a>
             <div class="collapse menu-dropdown" id="sidebarVentasAgro">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar Ventas</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
+                    Ventas</a></li>
               </ul>
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar Ventas</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
+                    Ventas</a></li>
               </ul>
             </div>
           </li>
@@ -320,7 +332,7 @@ $userRoleName = session()->get('rol_nombre');
               <i class="ri-bank-line"></i> <span>Contabilidad</span>
             </a>
           </li>
-            <li class="menu-title"><span>Lacteos</span></li>
+          <li class="menu-title"><span>Lacteos</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarVentas" data-bs-toggle="collapse">
               <i class="ri-shopping-bag-2-line"></i> <span>Reportes</span>
@@ -331,7 +343,7 @@ $userRoleName = session()->get('rol_nombre');
               </ul>
             </div>
           </li>
-           <li class="menu-title"><span> Ventas Oruro</span></li>
+          <li class="menu-title"><span> Ventas Oruro</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarVentasOruro" data-bs-toggle="collapse">
               <i class="ri-shopping-bag-2-line"></i> <span>Reportes</span>
@@ -339,7 +351,7 @@ $userRoleName = session()->get('rol_nombre');
             <div class="collapse menu-dropdown" id="sidebarVentasOruro">
               <ul class="nav nav-sm flex-column">
                 <li class="nav-item"><a href="<?= base_url('ventas') ?>" class="nav-link">Ventas</a></li>
-               
+
               </ul>
             </div>
           </li>
@@ -366,7 +378,7 @@ $userRoleName = session()->get('rol_nombre');
             </div>
           </li>
 
-          
+
         <?php endif; ?>
 
 
