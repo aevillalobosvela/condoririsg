@@ -300,8 +300,10 @@
                       <td><?= esc($usuario['created_at'] ?? 'N/A') ?></td>
                       <td>
                         <?php
-                          $estado = $usuario['estado'] ? 'Activo' : 'Inactivo';
-                          $claseEstado = $usuario['estado'] ? 'badge-soft-success' : 'badge-soft-danger';
+                          // Convertir string de PostgreSQL a booleano
+                          $estadoBool = ($usuario['estado'] === 't');
+                          $estado = $estadoBool ? 'Activo' : 'Inactivo';
+                          $claseEstado = $estadoBool ? 'bg-soft-vendedor' : 'bg-light text-dark';
                         ?>
                         <span class="badge <?= $claseEstado ?>"><?= $estado ?></span>
                       </td>
@@ -311,7 +313,7 @@
                             <i class="ri-pencil-fill align-bottom">Editar</i>
                           </a>
 
-                          <?php if ($usuario['estado']): ?>
+                          <?php if ($usuario['estado'] === 't'): ?>
                             <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Desactivar" onclick="confirmDelete(<?= $usuario['id'] ?>, 'desactivar')">
                               <i class="ri-forbid-line align-bottom">Desactivar</i>
                             </button>
