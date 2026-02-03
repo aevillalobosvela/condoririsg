@@ -325,13 +325,26 @@ $userRoleName = session()->get('rol_nombre');
         <?php endif; ?>
 
 
-        <?php if (in_array($userRoleName, ['contabilidad', 'admin'])): ?>
+        <?php if ($userRoleName === 'contabilidad'): ?>
           <li class="menu-title"><span>Contabilidad</span></li>
           <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarContabilidad" data-bs-toggle="collapse">
+            <a class="nav-link menu-link" href="<?= base_url('/') ?>">
               <i class="ri-bank-line"></i> <span>Contabilidad</span>
             </a>
           </li>
+        <?php endif; ?>
+
+        <?php if ($userRoleName === 'admin'): ?>
+          <li class="menu-title"><span>Contabilidad</span></li>
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('contabilidad') ?>">
+              <i class="ri-bank-line"></i> <span>Contabilidad</span>
+            </a>
+          </li>
+        <?php endif; ?>
+        
+        <?php if (in_array($userRoleName, ['admin', 'contabilidad'])): ?>
+
           <li class="menu-title"><span>Lacteos</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarVentas" data-bs-toggle="collapse">

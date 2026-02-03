@@ -302,7 +302,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
 // Roles: admin, contabilidad
 // ============================================================================
 $routes->group('contabilidad', ['filter' => 'auth'], function ($routes) {
-    $routes->get('/', 'admin\adminController::index', ['filter' => 'role:admin,contabilidad']);
+    $routes->get('/', 'paneles\panelesController::contabilidad', ['filter' => 'role:admin,contabilidad']);
     $routes->get('show/(:num)', 'contabilidad\contabilidadController::show/$1', ['filter' => 'role:admin,contabilidad']);
     $routes->get('reporte', 'contabilidad\contabilidadController::exportarPdfVentas', ['filter' => 'role:admin,contabilidad']);
     $routes->get('reportes/grafico', 'contabilidad\contabilidadController::grafico',['filter' => 'role:admin,contabilidad']);
