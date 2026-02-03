@@ -288,7 +288,7 @@ class UsuariosController extends BaseController
         }
 
         // 3. Verificar si ya está inactivo para evitar operaciones innecesarias
-        if ($usuario['estado'] == false) {
+        if ($usuario['estado'] === 'f' || $usuario['estado'] === false) {
              return redirect()->to('/usuarios')->with('message', 'El usuario ya está inactivo.');
         }
 
@@ -318,7 +318,7 @@ class UsuariosController extends BaseController
             return redirect()->to('/usuarios')->with('error', 'Usuario no encontrado.');
         }
 
-        if ($usuario['estado'] == true) {
+        if ($usuario['estado'] === 't' || $usuario['estado'] === true) {
             return redirect()->to('/usuarios')->with('message', 'El usuario ya está activo.');
         }
 
@@ -352,7 +352,9 @@ class UsuariosController extends BaseController
         if ($state !== null) {
             $nuevoEstado = (bool) $state;
         } else {
-            $nuevoEstado = !$usuario['estado'];
+            // Convertir string de PostgreSQL a booleano para invertir
+            $estadoActual = ($usuario['estado'] === 't');
+            $nuevoEstado = !$estadoActual;
         }
 
         if ($usuariosModel->cambiarEstado($id, $nuevoEstado)) {

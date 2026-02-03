@@ -98,8 +98,11 @@ class UsuarioModel extends Model
         
         // Filtro por estado
         if (isset($filters['estado']) && $filters['estado'] !== '') {
-            $estado = $filters['estado'] === 'activo' ? true : false;
-            $builder->where('usuarios.estado', $estado);
+            if ($filters['estado'] === 'activo') {
+                $builder->where('usuarios.estado', true);
+            } else {
+                $builder->where('usuarios.estado', false);
+            }
         }
         
         return $builder->orderBy('usuarios.nombre, usuarios.apellidos')->findAll();
