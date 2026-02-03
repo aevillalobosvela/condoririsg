@@ -39,13 +39,11 @@ class UsuariosController extends BaseController
 
 
         foreach ($usuarios as $usuario) {
-            if (isset($usuario->rol_nombre)) {
-                if ($usuario->rol_nombre === 'administrador') {
+            if (isset($usuario['rol_nombre'])) {
+                if ($usuario['rol_nombre'] === 'admin') {
                     $totalAdmins++;
-                } elseif ($usuario->rol_nombre === 'vendedor') {
+                } elseif ($usuario['rol_nombre'] === 'vendedor') {
                     $totalVendedores++;
-                } elseif ($usuario->rol_nombre === 'cliente') {
-                    $totalClientes++;
                 }
             }
         }
