@@ -161,10 +161,21 @@ class unidadesController extends BaseController
      */
     public function delete(int $id): RedirectResponse
     {
-        if ($this->unidadModel->delete($id)) {
-            session()->setFlashdata('success', 'Unidad eliminada exitosamente (movida a la papelera).');
+        $unidad = $this->unidadModel->find($id);
+        
+        if (!$unidad) {
+            session()->setFlashdata('error', 'Unidad no encontrada.');
+            return redirect()->to('/unidades');
+        }
+
+        $estadoActual = ($unidad['estado'] === 't' || $unidad['estado'] === true);
+        $nuevoEstado = !$estadoActual;
+        $accion = $nuevoEstado ? 'reactivada' : 'desactivada';
+        
+        if ($this->unidadModel->update($id, ['estado' => $nuevoEstado])) {
+            session()->setFlashdata('success', "Unidad {$accion} exitosamente.");
         } else {
-            session()->setFlashdata('error', 'No se pudo eliminar la unidad.');
+            session()->setFlashdata('error', 'Error al cambiar el estado de la unidad.');
         }
 
         return redirect()->to('/unidades');
