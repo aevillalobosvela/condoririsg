@@ -31,21 +31,30 @@ class UsuariosController extends BaseController
     public function all()
     {
         $usuariosModel = new UsuarioModel();
-
-
-        $usuarios = $usuariosModel->getRegistros();
-
-        $totalUsuarios   = count($usuarios);
+        
+        // Obtener filtros de la URL
+        $filters = [
+            'search' => $this->request->getGet('search'),
+            'rol' => $this->request->getGet('rol'),
+            'estado' => $this->request->getGet('estado')
+        ];
+        
+        // Aplicar filtros
+        $usuarios = $usuariosModel->getRegistrosFiltrados($filters);
+        
+        // Obtener todos los usuarios para estadísticas (sin filtros)
+        $todosUsuarios = $usuariosModel->getRegistros();
+        
+        $totalUsuarios   = count($todosUsuarios);
         $totalAdmins     = 0;
         $totalVendedores = 0;
         $totalClientes   = $this->clienteModel->contarClientes();
 
-
-        foreach ($usuarios as $usuario) {
+        foreach ($todosUsuarios as $usuario) {
             if (isset($usuario['rol_nombre'])) {
-                if ($usuario['rol_nombre'] === 'admin') {
+                if (strtolower($usuario['rol_nombre']) === 'admin') {
                     $totalAdmins++;
-                } elseif ($usuario['rol_nombre'] === 'vendedor') {
+                } elseif (strtolower($usuario['rol_nombre']) === 'vendedor') {
                     $totalVendedores++;
                 }
             }
@@ -53,6 +62,7 @@ class UsuariosController extends BaseController
 
         $data = [
             'usuarios'        => $usuarios,
+            'filters'         => $filters,
             'totalUsuarios'   => $totalUsuarios,
             'totalAdmins'     => $totalAdmins,
             'totalVendedores' => $totalVendedores,
@@ -63,7 +73,6 @@ class UsuariosController extends BaseController
             'sucursal_nombre' => session()->get('sucursal_nombre'),
             'usuario'         => session()->get('usuario'),
         ];
-
 
         echo view('usuarios/usuariosTable', $data);
     }
