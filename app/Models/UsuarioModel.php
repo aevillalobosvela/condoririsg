@@ -69,6 +69,43 @@ class UsuarioModel extends Model
     }
 
     /**
+     * Obtiene todos los usuarios con relaciones y filtros.
+     */
+    public function getRegistrosFiltrados(array $filters = []): array
+    {
+        $builder = $this->select('usuarios.*, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre')
+            ->join('roles', 'roles.id = usuarios.rol_id', 'left')
+            ->join('sucursales', 'sucursales.id = usuarios.sucursal_id', 'left')
+            ->where('usuarios.deleted_at', null);
+        
+        // Filtro de búsqueda
+        if (!empty($filters['search'])) {
+            $searchTerm = "%{$filters['search']}%";
+            $builder->groupStart()
+                ->like('usuarios.nombre', $searchTerm)
+                ->orLike('usuarios.apellidos', $searchTerm)
+                ->orLike('usuarios.usuario', $searchTerm)
+                ->orLike('usuarios.correo', $searchTerm)
+                ->orLike('roles.nombre', $searchTerm)
+                ->orLike('sucursales.nombre', $searchTerm)
+                ->groupEnd();
+        }
+        
+        // Filtro por rol
+        if (!empty($filters['rol'])) {
+            $builder->where('LOWER(roles.nombre)', strtolower($filters['rol']));
+        }
+        
+        // Filtro por estado
+        if (isset($filters['estado']) && $filters['estado'] !== '') {
+            $estado = $filters['estado'] === 'activo' ? true : false;
+            $builder->where('usuarios.estado', $estado);
+        }
+        
+        return $builder->orderBy('usuarios.nombre, usuarios.apellidos')->findAll();
+    }
+
+    /**
      * Obtiene todos los usuarios con relaciones.
      */
     public function getRegistros(): array
