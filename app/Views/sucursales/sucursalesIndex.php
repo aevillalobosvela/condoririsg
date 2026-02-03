@@ -93,6 +93,7 @@
     padding: 1.5rem 1.5rem 1rem;
     border-bottom: 1px solid var(--border);
     background: var(--bg-light);
+    position: relative;
   }
 
   .card-id {
@@ -186,6 +187,56 @@
   .btn-edit:hover {
     background-color: #cce5ff;
     transform: scale(1.03);
+  }
+
+  .btn-toggle {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    margin-left: 0.5rem;
+  }
+  .btn-toggle:hover {
+    background-color: #ffeaa7;
+    transform: scale(1.03);
+  }
+
+  .btn-activate {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+    margin-left: 0.5rem;
+  }
+  .btn-activate:hover {
+    background-color: #bee5eb;
+    transform: scale(1.03);
+  }
+
+  .sucursal-card.inactive {
+    opacity: 0.6;
+    border-color: #dc3545;
+  }
+
+  .sucursal-card.inactive .card-head {
+    background: #f8d7da;
+  }
+
+  .estado-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+  }
+
+  .estado-activo {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .estado-inactivo {
+    background: #f8d7da;
+    color: #721c24;
   }
 
   /* Empty state */
@@ -334,8 +385,12 @@
 
         <div class="sucursales-grid">
           <?php foreach ($sucursales as $sucursal): ?>
-            <div class="sucursal-card">
+            <?php $isActive = ($sucursal['estado'] === 't' || $sucursal['estado'] === true); ?>
+            <div class="sucursal-card <?= !$isActive ? 'inactive' : '' ?>">
               <div class="card-head">
+                <span class="estado-badge <?= $isActive ? 'estado-activo' : 'estado-inactivo' ?>">
+                  <?= $isActive ? 'Activa' : 'Inactiva' ?>
+                </span>
                 <span class="card-id">#<?= esc($sucursal['id']) ?></span>
                 <h3 class="card-title">
                   <i class="ri-store-3-fill"></i>
@@ -380,6 +435,12 @@
                    class="btn-action btn-edit">
                   <i class="ri-pencil-line"></i> Editar
                 </a>
+                <button type="button" 
+                        class="btn-action <?= $isActive ? 'btn-toggle' : 'btn-activate' ?>" 
+                        onclick="confirmarCambioEstado(<?= $sucursal['id'] ?>, '<?= esc($sucursal['nombre']) ?>', <?= $isActive ? 'false' : 'true' ?>)">
+                  <i class="<?= $isActive ? 'ri-pause-circle-line' : 'ri-play-circle-line' ?>"></i> 
+                  <?= $isActive ? 'Desactivar' : 'Reactivar' ?>
+                </button>
               </div>
             </div>
           <?php endforeach; ?>
@@ -388,12 +449,50 @@
     </div>
   <?php endif; ?>
 </div>
+
+<!-- Modal de Confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Confirmar Acción</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
+function confirmarCambioEstado(id, nombre, activar) {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const accion = activar ? 'reactivar' : 'desactivar';
+    const color = activar ? 'success' : 'warning';
+    
+    document.getElementById('modalTitle').textContent = `${accion.charAt(0).toUpperCase() + accion.slice(1)} Sucursal`;
+    document.getElementById('modalMessage').innerHTML = `¿Está seguro que desea <strong>${accion}</strong> la sucursal <strong>"${nombre}"</strong>?`;
+    
+    const confirmBtn = document.getElementById('confirmButton');
+    confirmBtn.className = `btn btn-${color}`;
+    confirmBtn.textContent = accion.charAt(0).toUpperCase() + accion.slice(1);
+    
+    confirmBtn.onclick = () => {
+        window.location.href = `<?= base_url('sucursales/toggle/') ?>${id}`;
+    };
+    
+    modal.show();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Animación extra al cargar (opcional)
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
