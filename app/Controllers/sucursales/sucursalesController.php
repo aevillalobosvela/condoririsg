@@ -174,6 +174,28 @@ class sucursalesController extends BaseController
         return redirect()->to('/sucursales');
     }
 
+    public function toggleEstado(int $id): RedirectResponse
+    {
+        $sucursal = $this->sucursalModel->find($id);
+        
+        if (!$sucursal) {
+            session()->setFlashdata('error', 'Sucursal no encontrada.');
+            return redirect()->to('/sucursales');
+        }
+
+        $estadoActual = ($sucursal['estado'] === 't' || $sucursal['estado'] === true);
+        $nuevoEstado = !$estadoActual;
+        $accion = $nuevoEstado ? 'reactivada' : 'desactivada';
+        
+        if ($this->sucursalModel->update($id, ['estado' => $nuevoEstado])) {
+            session()->setFlashdata('success', "Sucursal {$accion} exitosamente.");
+        } else {
+            session()->setFlashdata('error', 'Error al cambiar el estado de la sucursal.');
+        }
+
+        return redirect()->to('/sucursales');
+    }
+
 
     public function show(int $id)
     {
