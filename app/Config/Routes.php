@@ -92,6 +92,7 @@ $routes->group('sucursales', ['filter' => 'auth'], function ($routes) {
     $routes->get('edit/(:num)', 'sucursales\sucursalesController::edit/$1', ['filter' => 'role:admin']);
     $routes->post('update/(:num)', 'sucursales\sucursalesController::update/$1', ['filter' => 'role:admin']);
     $routes->get('delete/(:num)', 'sucursales\sucursalesController::delete/$1', ['filter' => 'role:admin']);
+    $routes->get('toggle/(:num)', 'sucursales\sucursalesController::toggleEstado/$1', ['filter' => 'role:admin']);
     $routes->get('show/(:num)', 'sucursales\sucursalesController::show/$1', ['filter' => 'role:admin,contabilidad']);
 });
 
