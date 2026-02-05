@@ -210,6 +210,7 @@ class ProductosController extends BaseController
 
     /**
      * Procesa la actualización de un producto.
+     * En modo edición solo permite actualizar campos seguros (no relacionados con stock/producción)
      *
      * @return RedirectResponse
      */
@@ -217,32 +218,50 @@ class ProductosController extends BaseController
     {
         $data = $this->request->getPost();
 
-        // Convertir la fecha de vencimiento a null si está vacía
-        if (empty($data['fecha_vencimiento'])) {
-            $data['fecha_vencimiento'] = null;
+        // Campos seguros que se pueden actualizar en productos existentes
+        $camposSegurosPorActualizar = [
+            'nombre',
+            'descripcion', 
+            'precio_credito',
+            'precio_contado',
+            'categoria_id',
+            'unidad_id',
+            'fecha_vencimiento',
+            // Campos de calidad
+            'porocidad',
+            'ph',
+            'acides', 
+            'consistencia',
+            'color',
+            'olor',
+            'textura',
+            'observaciones'
+        ];
+
+        // Filtrar solo los campos seguros
+        $datosSegurosPorActualizar = [];
+        foreach ($camposSegurosPorActualizar as $campo) {
+            if (isset($data[$campo])) {
+                $datosSegurosPorActualizar[$campo] = $data[$campo];
+            }
         }
 
-        // Sincronizar stock_inve con stock si se actualiza el stock
-        if (isset($data['stock'])) {
-            $data['stock_inve'] = $data['stock'];
+        // Convertir la fecha de vencimiento a null si está vacía
+        if (empty($datosSegurosPorActualizar['fecha_vencimiento'])) {
+            $datosSegurosPorActualizar['fecha_vencimiento'] = null;
         }
 
         // Manejar la actualización de la imagen
         $imagen = $this->request->getFile('imagen');
-        if ($imagen && $imagen->isValid() && ! $imagen->hasMoved()) {
+        if ($imagen && $imagen->isValid() && !$imagen->hasMoved()) {
             $newName = $imagen->getRandomName();
             $imagen->move(ROOTPATH . 'public/uploads', $newName);
-            $data['imagen'] = 'uploads/' . $newName;
-        } else {
-            // Si no se subió nueva imagen, mantiene la existente
-            $data['imagen'] = $this->productoModel->find($id)->imagen;
+            $datosSegurosPorActualizar['imagen'] = 'uploads/' . $newName;
         }
+        // Si no se subió nueva imagen, no modificar el campo imagen existente
 
-        // Si el estado no se envía desde el formulario (checkbox no marcado), se asume false
-        $data['estado'] = $this->request->getPost('estado') == 'on' ? true : false;
-
-        if ($this->productoModel->update($id, $data)) {
-            return redirect()->to('/inventarios/show/' . $data['inventario_id'])->with('message', 'Producto actualizado con éxito.');
+        if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
+            return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
         } else {
             return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
         }

@@ -62,9 +62,8 @@ class ProductoModel extends Model
         'descripcion'         => 'permit_empty|max_length[500]',
         'precio_credito'      => 'required|numeric',
         'precio_contado'      => 'required|numeric',
-        'stock'               => 'required|integer|greater_than_equal_to[0]',
-      
-        'estado'              => 'in_list[0,1]',
+        'stock'               => 'permit_empty|integer|greater_than_equal_to[0]', // Cambiado a permit_empty
+        'estado'              => 'permit_empty|in_list[0,1]', // Cambiado a permit_empty
         'categoria_id'        => 'required|integer',
         'unidad_id'           => 'required|integer',
         'fecha_vencimiento'   => 'permit_empty|valid_date',
@@ -77,11 +76,9 @@ class ProductoModel extends Model
         'olor'                => 'permit_empty|max_length[100]',
         'textura'             => 'permit_empty|max_length[100]',
         'observaciones'       => 'permit_empty|max_length[500]',
-        'inventario_id'       => 'required|integer',
-        'user_id'             => 'required|integer',
-        'cantidad_unidad'     => 'required|numeric',
-        
-        
+        'inventario_id'       => 'permit_empty|integer', // Cambiado a permit_empty
+        'user_id'             => 'permit_empty|integer', // Cambiado a permit_empty
+        'cantidad_unidad'     => 'permit_empty|numeric', // Cambiado a permit_empty
     ];
     
     protected $validationMessages = [
