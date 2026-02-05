@@ -95,7 +95,14 @@ class ProductosController extends BaseController
     {
         $data = $this->request->getPost();
 
-        // --- Convertir campos de texto a MAYÚSCULAS ---
+        // Usar validación específica para creación
+        $this->productoModel->setValidationRules($this->productoModel->getValidationRulesForCreate());
+        
+        if (!$this->productoModel->validate($data)) {
+            return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
+        }
+
+        // Convertir campos de texto a MAYÚSCULAS
         $textFields = ['nombre', 'descripcion', 'marca', 'codigo'];
         foreach ($textFields as $field) {
             if (isset($data[$field]) && is_string($data[$field])) {
@@ -105,9 +112,8 @@ class ProductosController extends BaseController
 
         // Asegurar que 'stock' sea un entero válido
         $data['stock'] = !empty($data['stock']) ? (int) $data['stock'] : 0;
-
-        // ✅ Copiar stock a stock_inve
         $data['stock_inve'] = $data['stock'];
+        $data['estado'] = 1; // Siempre activo al crear
 
         // Convertir la fecha de vencimiento a null si está vacía
         if (empty($data['fecha_vencimiento'])) {
@@ -124,15 +130,11 @@ class ProductosController extends BaseController
             $data['imagen'] = 'jpg';
         }
 
-        // Intentar insertar
-        // Intentar insertar el producto
         if ($this->productoModel->insert($data)) {
-            // ✅ Actualizar la reserva en el inventario
             $inventarioId = $data['inventario_id'];
             $nuevaReserva = $data['reserva'] ?? 0;
 
             if (!$this->inventarioModel->update($inventarioId, ['reserva' => $nuevaReserva])) {
-                // Opcional: loggear error o notificar
                 log_message('error', "No se pudo actualizar la reserva del inventario ID {$inventarioId}");
             }
 
@@ -208,12 +210,6 @@ class ProductosController extends BaseController
         return view('productos/productosform', $data);
     }
 
-    /**
-     * Procesa la actualización de un producto.
-     * En modo edición solo permite actualizar campos seguros (no relacionados con stock/producción)
-     *
-     * @return RedirectResponse
-     */
     public function update(int $id): RedirectResponse
     {
         $data = $this->request->getPost();
@@ -227,7 +223,6 @@ class ProductosController extends BaseController
             'categoria_id',
             'unidad_id',
             'fecha_vencimiento',
-            // Campos de calidad
             'porocidad',
             'ph',
             'acides', 
@@ -246,6 +241,13 @@ class ProductosController extends BaseController
             }
         }
 
+        // Usar validación específica para actualización
+        $this->productoModel->setValidationRules($this->productoModel->getValidationRulesForUpdate());
+        
+        if (!$this->productoModel->validate($datosSegurosPorActualizar)) {
+            return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
+        }
+
         // Convertir la fecha de vencimiento a null si está vacía
         if (empty($datosSegurosPorActualizar['fecha_vencimiento'])) {
             $datosSegurosPorActualizar['fecha_vencimiento'] = null;
@@ -258,7 +260,6 @@ class ProductosController extends BaseController
             $imagen->move(ROOTPATH . 'public/uploads', $newName);
             $datosSegurosPorActualizar['imagen'] = 'uploads/' . $newName;
         }
-        // Si no se subió nueva imagen, no modificar el campo imagen existente
 
         if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
             return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
