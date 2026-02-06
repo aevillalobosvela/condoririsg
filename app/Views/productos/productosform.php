@@ -416,13 +416,24 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <h5 class="card-title text-info"><i class="ri-microscope-line me-2"></i> Control de Calidad</h5>
                     <div class="form-check form-switch form-switch-lg">
-                      <!-- ✅ Inicia DESACTIVADO -->
-                      <input class="form-check-input" type="checkbox" id="toggleCalidadBtn">
+                      <?php 
+                        // Determinar si el toggle debe estar activado
+                        $tieneCalidad = !empty($producto->imagen) && $producto->imagen !== 'jpg' 
+                                     || !empty($producto->ph) 
+                                     || !empty($producto->porocidad)
+                                     || !empty($producto->acides)
+                                     || !empty($producto->consistencia)
+                                     || !empty($producto->color)
+                                     || !empty($producto->olor)
+                                     || !empty($producto->textura)
+                                     || !empty($producto->fecha_vencimiento);
+                      ?>
+                      <input class="form-check-input" type="checkbox" id="toggleCalidadBtn" <?= $tieneCalidad ? 'checked' : '' ?>>
                       <label class="form-check-label" for="toggleCalidadBtn"></label>
                     </div>
                   </div>
                   <hr>
-                  <div id="calidadFields" class="toggle-fields disabled">
+                  <div id="calidadFields" class="toggle-fields <?= $tieneCalidad ? '' : 'disabled' ?>">
                     <div class="mb-3">
                       <label for="imagen" class="form-label">Imagen del Producto</label>
                       <input type="file" class="form-control <?= (session('validation') && session('validation')->hasError('imagen')) ? 'is-invalid' : '' ?>"
@@ -657,11 +668,6 @@
           e.preventDefault();
           return;
         }
-
-        if (!toggleCalidadBtn.checked) {
-          const inputs = calidadFieldsDiv.querySelectorAll('input:not([type="file"]), textarea, select');
-          inputs.forEach(el => el.value = '');
-        }
       });
     }
 
@@ -672,6 +678,23 @@
     if (toggleCalidadBtn && calidadFieldsDiv) {
       toggleCalidadBtn.addEventListener('change', function() {
         calidadFieldsDiv.classList.toggle('disabled', !this.checked);
+      });
+    }
+
+    // Preview de imagen cuando se selecciona un archivo
+    const imagenInput = document.getElementById('imagen');
+    const imagenPreview = document.getElementById('imagen-preview');
+    
+    if (imagenInput && imagenPreview) {
+      imagenInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            imagenPreview.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
       });
     }
   });
