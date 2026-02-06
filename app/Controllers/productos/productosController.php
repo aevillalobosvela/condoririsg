@@ -95,11 +95,12 @@ class ProductosController extends BaseController
     {
         $data = $this->request->getPost();
 
-        // Usar validación específica para creación
-        $this->productoModel->setValidationRules($this->productoModel->getValidationRulesForCreate());
+        // Validar usando las reglas de creación
+        $validation = \Config\Services::validation();
+        $validation->setRules($this->productoModel->getValidationRulesForCreate());
         
-        if (!$this->productoModel->validate($data)) {
-            return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
+        if (!$validation->run($data)) {
+            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
         }
 
         // Convertir campos de texto a MAYÚSCULAS
@@ -113,7 +114,7 @@ class ProductosController extends BaseController
         // Asegurar que 'stock' sea un entero válido
         $data['stock'] = !empty($data['stock']) ? (int) $data['stock'] : 0;
         $data['stock_inve'] = $data['stock'];
-        $data['estado'] = 1; // Siempre activo al crear
+        $data['estado'] = true; // Boolean para PostgreSQL
 
         // Convertir la fecha de vencimiento a null si está vacía
         if (empty($data['fecha_vencimiento'])) {
@@ -142,7 +143,7 @@ class ProductosController extends BaseController
         } else {
             $data['imagen'] = 'jpg'; // Imagen por defecto
         }
-
+        
         if ($this->productoModel->insert($data)) {
             $inventarioId = $data['inventario_id'];
             $nuevaReserva = $data['reserva'] ?? 0;
@@ -156,7 +157,7 @@ class ProductosController extends BaseController
         } else {
             return redirect()->back()
                 ->withInput()
-                ->with('errors', $this->productoModel->errors());
+                ->with('error', 'Error al crear el producto.');
         }
     }
     /**
@@ -261,10 +262,11 @@ class ProductosController extends BaseController
         }
 
         // Usar validación específica para actualización
-        $this->productoModel->setValidationRules($this->productoModel->getValidationRulesForUpdate());
+        $validation = \Config\Services::validation();
+        $validation->setRules($this->productoModel->getValidationRulesForUpdate());
         
-        if (!$this->productoModel->validate($datosSegurosPorActualizar)) {
-            return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
+        if (!$validation->run($datosSegurosPorActualizar)) {
+            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
         }
 
         // Convertir la fecha de vencimiento a null si está vacía
@@ -300,7 +302,15 @@ class ProductosController extends BaseController
         // Si no se subió nueva imagen, mantener la existente (no agregar al array)
 
         if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
-            return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
+            // Redirigir a la URL anterior o a productos por defecto
+            $previousUrl = session()->get('_ci_previous_url') ?? previous_url();
+            
+            // Si la URL anterior es la misma página de edición, ir a productos
+            if (strpos($previousUrl, 'productos/edit') !== false) {
+                return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
+            }
+            
+            return redirect()->to($previousUrl)->with('message', 'Producto actualizado con éxito.');
         } else {
             return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
         }

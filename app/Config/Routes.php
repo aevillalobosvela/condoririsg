@@ -139,20 +139,18 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
 
 // Productos Terminados (quesos, yogurt, etc.)
 $routes->group('productos', ['filter' => 'auth'], function ($routes) {
-    // CRUD básico
     $routes->get('/', 'productos\productosController::index', ['filter' => 'role:admin,almacen']);
     $routes->get('register/(:num)', 'productos\productosController::register/$1', ['filter' => 'role:admin,almacen']);
+    $routes->get('register', 'productos\productosController::register', ['filter' => 'role:admin,almacen']);
     $routes->post('create', 'productos\productosController::create', ['filter' => 'role:admin,almacen']);
     $routes->get('edit/(:num)', 'productos\productosController::edit/$1', ['filter' => 'role:admin,almacen']);
     $routes->post('update/(:num)', 'productos\productosController::update/$1', ['filter' => 'role:admin,almacen']);
     $routes->get('show/(:num)', 'productos\productosController::show/$1');
     $routes->get('delete/(:num)', 'productos\productosController::delete/$1', ['filter' => 'role:admin,almacen']);
-    
-    // Operaciones especiales
-    $routes->post('merma/(:num)', 'productos\productosController::merma/$1', ['filter' => 'role:admin,almacen']); // Registrar pérdidas
-    $routes->post('agregar/(:num)', 'productos\productosController::agregar/$1', ['filter' => 'role:admin,almacen']); // Agregar stock
-    $routes->post('subproducto', 'productos\productosController::subproducto', ['filter' => 'role:admin,almacen']); // Crear derivados
-    $routes->post('createSuero', 'productos\productosController::createSuero', ['filter' => 'role:admin,almacen']); // Productos de suero
+    $routes->post('merma/(:num)', 'productos\productosController::merma/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('agregar/(:num)', 'productos\productosController::agregar/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('subproducto', 'productos\productosController::subproducto', ['filter' => 'role:admin,almacen']);
+    $routes->post('createSuero', 'productos\productosController::createSuero', ['filter' => 'role:admin,almacen']);
 });
 
 // ============================================================================
