@@ -53,16 +53,16 @@ class InventariosController extends BaseController
         $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
         $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
 
-        // Si hay filtros personalizados, usar la lógica existente (sin filtro de "hoy")
+        // Si hay filtros personalizados, usar la lógica existente
         if (!empty($nombre) || (!empty($fecha_inicio) && !empty($fecha_fin))) {
             $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
-            $pager = null; // No paginamos en búsquedas personalizadas (o podrías paginar si lo deseas)
+            $pager = null;
         } else {
-            // Sin filtros: aplicar lógica de "hoy" o "todos"
+            // Sin filtros: mostrar solo hoy por defecto, todos si se especifica
             $builder = $this->inventarioModel->orderBy('created_at', 'DESC');
 
             if (!$mostrarTodos) {
-                // Filtrar solo por el día de hoy
+                // Filtrar solo por el día de hoy (comportamiento por defecto)
                 $hoy = date('Y-m-d');
                 $builder->where("DATE(created_at)", $hoy);
             }
@@ -96,6 +96,7 @@ class InventariosController extends BaseController
         'resumenInventario' => $resumenInventario,
         'resumenProducto' => $resumenProducto,
         'resumenPorNombre' => $resumenPorNombre,
+        'mostrar_todos' => $mostrarTodos,
     ];
         return view('inventarios/inventariosIndex', $data);
     }

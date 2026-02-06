@@ -95,7 +95,15 @@ class ProductosController extends BaseController
     {
         $data = $this->request->getPost();
 
-        // --- Convertir campos de texto a MAYÚSCULAS ---
+        // Validar usando las reglas de creación
+        $validation = \Config\Services::validation();
+        $validation->setRules($this->productoModel->getValidationRulesForCreate());
+        
+        if (!$validation->run($data)) {
+            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+        }
+
+        // Convertir campos de texto a MAYÚSCULAS
         $textFields = ['nombre', 'descripcion', 'marca', 'codigo'];
         foreach ($textFields as $field) {
             if (isset($data[$field]) && is_string($data[$field])) {
@@ -105,9 +113,8 @@ class ProductosController extends BaseController
 
         // Asegurar que 'stock' sea un entero válido
         $data['stock'] = !empty($data['stock']) ? (int) $data['stock'] : 0;
-
-        // ✅ Copiar stock a stock_inve
         $data['stock_inve'] = $data['stock'];
+        $data['estado'] = true; // Boolean para PostgreSQL
 
         // Convertir la fecha de vencimiento a null si está vacía
         if (empty($data['fecha_vencimiento'])) {
@@ -117,22 +124,31 @@ class ProductosController extends BaseController
         // Manejar la subida de la imagen
         $imagen = $this->request->getFile('imagen');
         if ($imagen && $imagen->isValid() && !$imagen->hasMoved()) {
+            // Validar tipo de archivo
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!in_array($imagen->getMimeType(), $allowedTypes)) {
+                return redirect()->back()->withInput()->with('error', 'El archivo debe ser una imagen válida (JPG, PNG, GIF).');
+            }
+            
+            // Validar tamaño (máximo 2MB)
+            if ($imagen->getSize() > 2048000) {
+                return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+            }
+            
             $newName = $imagen->getRandomName();
-            $imagen->move(ROOTPATH . 'public/uploads', $newName);
+            if (!$imagen->move(ROOTPATH . 'public/uploads', $newName)) {
+                return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+            }
             $data['imagen'] = 'uploads/' . $newName;
         } else {
-            $data['imagen'] = 'jpg';
+            $data['imagen'] = 'jpg'; // Imagen por defecto
         }
-
-        // Intentar insertar
-        // Intentar insertar el producto
+        
         if ($this->productoModel->insert($data)) {
-            // ✅ Actualizar la reserva en el inventario
             $inventarioId = $data['inventario_id'];
             $nuevaReserva = $data['reserva'] ?? 0;
 
             if (!$this->inventarioModel->update($inventarioId, ['reserva' => $nuevaReserva])) {
-                // Opcional: loggear error o notificar
                 log_message('error', "No se pudo actualizar la reserva del inventario ID {$inventarioId}");
             }
 
@@ -141,7 +157,7 @@ class ProductosController extends BaseController
         } else {
             return redirect()->back()
                 ->withInput()
-                ->with('errors', $this->productoModel->errors());
+                ->with('error', 'Error al crear el producto.');
         }
     }
     /**
@@ -208,41 +224,93 @@ class ProductosController extends BaseController
         return view('productos/productosform', $data);
     }
 
-    /**
-     * Procesa la actualización de un producto.
-     *
-     * @return RedirectResponse
-     */
     public function update(int $id): RedirectResponse
     {
-        $data = $this->request->getPost();
-
-        // Convertir la fecha de vencimiento a null si está vacía
-        if (empty($data['fecha_vencimiento'])) {
-            $data['fecha_vencimiento'] = null;
+        // Verificar que el producto existe antes de procesar
+        $productoExistente = $this->productoModel->find($id);
+        if (!$productoExistente) {
+            return redirect()->to('/productos')->with('error', 'Producto no encontrado.');
         }
 
-        // Sincronizar stock_inve con stock si se actualiza el stock
-        if (isset($data['stock'])) {
-            $data['stock_inve'] = $data['stock'];
+        $data = $this->request->getPost();
+
+        // Campos seguros que se pueden actualizar en productos existentes
+        $camposSegurosPorActualizar = [
+            'nombre',
+            'descripcion', 
+            'precio_credito',
+            'precio_contado',
+            'categoria_id',
+            'unidad_id',
+            'fecha_vencimiento',
+            'porocidad',
+            'ph',
+            'acides', 
+            'consistencia',
+            'color',
+            'olor',
+            'textura',
+            'observaciones'
+        ];
+
+        // Filtrar solo los campos seguros
+        $datosSegurosPorActualizar = [];
+        foreach ($camposSegurosPorActualizar as $campo) {
+            if (isset($data[$campo])) {
+                $datosSegurosPorActualizar[$campo] = $data[$campo];
+            }
+        }
+
+        // Usar validación específica para actualización
+        $validation = \Config\Services::validation();
+        $validation->setRules($this->productoModel->getValidationRulesForUpdate());
+        
+        if (!$validation->run($datosSegurosPorActualizar)) {
+            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+        }
+
+        // Convertir la fecha de vencimiento a null si está vacía
+        if (empty($datosSegurosPorActualizar['fecha_vencimiento'])) {
+            $datosSegurosPorActualizar['fecha_vencimiento'] = null;
         }
 
         // Manejar la actualización de la imagen
         $imagen = $this->request->getFile('imagen');
-        if ($imagen && $imagen->isValid() && ! $imagen->hasMoved()) {
+        if ($imagen && $imagen->isValid() && !$imagen->hasMoved()) {
+            // Validar tipo de archivo
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!in_array($imagen->getMimeType(), $allowedTypes)) {
+                return redirect()->back()->withInput()->with('error', 'El archivo debe ser una imagen válida (JPG, PNG, GIF).');
+            }
+            
+            // Validar tamaño (máximo 2MB)
+            if ($imagen->getSize() > 2048000) {
+                return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+            }
+            
+            // Eliminar imagen anterior si existe y no es la por defecto
+            if (!empty($productoExistente->imagen) && $productoExistente->imagen !== 'jpg' && file_exists(ROOTPATH . 'public/' . $productoExistente->imagen)) {
+                @unlink(ROOTPATH . 'public/' . $productoExistente->imagen);
+            }
+            
             $newName = $imagen->getRandomName();
-            $imagen->move(ROOTPATH . 'public/uploads', $newName);
-            $data['imagen'] = 'uploads/' . $newName;
-        } else {
-            // Si no se subió nueva imagen, mantiene la existente
-            $data['imagen'] = $this->productoModel->find($id)->imagen;
+            if (!$imagen->move(ROOTPATH . 'public/uploads', $newName)) {
+                return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+            }
+            $datosSegurosPorActualizar['imagen'] = 'uploads/' . $newName;
         }
+        // Si no se subió nueva imagen, mantener la existente (no agregar al array)
 
-        // Si el estado no se envía desde el formulario (checkbox no marcado), se asume false
-        $data['estado'] = $this->request->getPost('estado') == 'on' ? true : false;
-
-        if ($this->productoModel->update($id, $data)) {
-            return redirect()->to('/inventarios/show/' . $data['inventario_id'])->with('message', 'Producto actualizado con éxito.');
+        if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
+            // Redirigir a la URL anterior o a productos por defecto
+            $previousUrl = session()->get('_ci_previous_url') ?? previous_url();
+            
+            // Si la URL anterior es la misma página de edición, ir a productos
+            if (strpos($previousUrl, 'productos/edit') !== false) {
+                return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
+            }
+            
+            return redirect()->to($previousUrl)->with('message', 'Producto actualizado con éxito.');
         } else {
             return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
         }

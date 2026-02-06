@@ -57,32 +57,58 @@ class ProductoModel extends Model
     protected $deletedField = 'deleted_at';
     
    
-    protected $validationRules = [
-        'nombre'              => 'required|min_length[3]|max_length[255]',
-        'descripcion'         => 'permit_empty|max_length[500]',
-        'precio_credito'      => 'required|numeric',
-        'precio_contado'      => 'required|numeric',
-        'stock'               => 'required|integer|greater_than_equal_to[0]',
-      
-        'estado'              => 'in_list[0,1]',
-        'categoria_id'        => 'required|integer',
-        'unidad_id'           => 'required|integer',
-        'fecha_vencimiento'   => 'permit_empty|valid_date',
-        'cantidad_produccion' => 'permit_empty|numeric',
-        'porocidad'           => 'permit_empty|max_length[100]', 
-        'ph'                  => 'permit_empty|max_length[100]', 
-        'acides'              => 'permit_empty|max_length[100]', 
-        'consistencia'        => 'permit_empty|max_length[100]',
-        'color'               => 'permit_empty|max_length[100]',
-        'olor'                => 'permit_empty|max_length[100]',
-        'textura'             => 'permit_empty|max_length[100]',
-        'observaciones'       => 'permit_empty|max_length[500]',
-        'inventario_id'       => 'required|integer',
-        'user_id'             => 'required|integer',
-        'cantidad_unidad'     => 'required|numeric',
-        
-        
-    ];
+    /**
+     * Reglas de validación para creación de productos
+     */
+    public function getValidationRulesForCreate()
+    {
+        return [
+            'nombre'              => 'required|min_length[3]|max_length[255]',
+            'descripcion'         => 'permit_empty|max_length[500]',
+            'precio_credito'      => 'required|numeric|greater_than[0]',
+            'precio_contado'      => 'required|numeric|greater_than[0]',
+            'stock'               => 'required|integer|greater_than_equal_to[0]',
+            'categoria_id'        => 'required|integer',
+            'unidad_id'           => 'required|integer',
+            'inventario_id'       => 'required|integer',
+            'user_id'             => 'required|integer',
+            'cantidad_unidad'     => 'required|numeric|greater_than[0]',
+            'cantidad_produccion' => 'required|numeric|greater_than[0]',
+            'fecha_vencimiento'   => 'permit_empty|valid_date',
+            'porocidad'           => 'permit_empty|max_length[100]',
+            'ph'                  => 'permit_empty|max_length[100]',
+            'acides'              => 'permit_empty|max_length[100]',
+            'consistencia'        => 'permit_empty|max_length[100]',
+            'color'               => 'permit_empty|max_length[100]',
+            'olor'                => 'permit_empty|max_length[100]',
+            'textura'             => 'permit_empty|max_length[100]',
+            'observaciones'       => 'permit_empty|max_length[500]',
+        ];
+    }
+
+    /**
+     * Reglas de validación para actualización de productos
+     */
+    public function getValidationRulesForUpdate()
+    {
+        return [
+            'nombre'              => 'required|min_length[3]|max_length[255]',
+            'descripcion'         => 'permit_empty|max_length[500]',
+            'precio_credito'      => 'required|numeric|greater_than[0]',
+            'precio_contado'      => 'required|numeric|greater_than[0]',
+            'categoria_id'        => 'required|integer',
+            'unidad_id'           => 'required|integer',
+            'fecha_vencimiento'   => 'permit_empty|valid_date',
+            'porocidad'           => 'permit_empty|max_length[100]',
+            'ph'                  => 'permit_empty|max_length[100]',
+            'acides'              => 'permit_empty|max_length[100]',
+            'consistencia'        => 'permit_empty|max_length[100]',
+            'color'               => 'permit_empty|max_length[100]',
+            'olor'                => 'permit_empty|max_length[100]',
+            'textura'             => 'permit_empty|max_length[100]',
+            'observaciones'       => 'permit_empty|max_length[500]',
+        ];
+    }
     
     protected $validationMessages = [
         'nombre' => [
@@ -93,25 +119,18 @@ class ProductoModel extends Model
         'precio_credito' => [
             'required' => 'El precio a crédito es obligatorio.',
             'numeric'  => 'El precio a crédito debe ser un número.',
+            'greater_than' => 'El precio a crédito debe ser mayor a 0.',
         ],
         'precio_contado' => [
             'required' => 'El precio al contado es obligatorio.',
             'numeric'  => 'El precio al contado debe ser un número.',
+            'greater_than' => 'El precio al contado debe ser mayor a 0.',
         ],
         'stock' => [
             'required'              => 'El stock es obligatorio.',
             'integer'               => 'El stock debe ser un número entero.',
             'greater_than_equal_to' => 'El stock no puede ser negativo.',
         ],
-        'imagen' => [
-            'uploaded' => 'Debe subir una imagen del producto.',
-            'max_size' => 'El tamaño de la imagen no puede exceder 1 MB.',
-            'is_image' => 'El archivo subido no es una imagen válida.',
-        ],
-      'estado' => [
-        // 'required' => 'El estado del producto es obligatorio.', // ✨ ELIMINAR ESTA LÍNEA
-        'in_list'  => 'El estado debe ser Activo (1) o Inactivo (0).',
-    ],
         'categoria_id' => [
             'required' => 'Debe seleccionar una categoría.',
             'integer'  => 'La categoría seleccionada no es válida.',
@@ -124,26 +143,23 @@ class ProductoModel extends Model
             'valid_date' => 'La fecha de vencimiento no es una fecha válida.',
         ],
         'cantidad_produccion' => [
+            'required' => 'La cantidad de producción es obligatoria.',
             'numeric' => 'La cantidad de producción debe ser un valor numérico.',
+            'greater_than' => 'La cantidad de producción debe ser mayor a 0.',
         ],
-        'porocidad' => [
-            'numeric' => 'La porosidad debe ser un valor numérico.',
-        ],
-        'ph' => [
-            'numeric' => 'El PH debe ser un valor numérico.',
-        ],
-        'acides' => [
-            'numeric' => 'La acidez debe ser un valor numérico.',
+        'cantidad_unidad' => [
+            'required' => 'Los litros por unidad son obligatorios.',
+            'numeric' => 'Los litros por unidad deben ser un valor numérico.',
+            'greater_than' => 'Los litros por unidad deben ser mayor a 0.',
         ],
         'inventario_id' => [
-            'required' => 'El ID del inventario es obligatorio.',
-            'integer'  => 'El ID del inventario no es válido.',
+            'required' => 'Debe seleccionar un inventario.',
+            'integer'  => 'El inventario seleccionado no es válido.',
         ],
         'user_id' => [
             'required' => 'El ID de usuario es obligatorio.',
             'integer'  => 'El ID de usuario no es válido.',
         ],
-        
     ];
 
     protected $skipValidation = false;

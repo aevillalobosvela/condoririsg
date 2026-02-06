@@ -204,13 +204,16 @@
                     </div>
                   </div>
 
-                  <!-- Cálculo Automático -->
+                  <!-- Cálculo Automático - Solo en modo creación -->
+                  <?php if (!isset($producto->id)): ?>
                   <div class="alert alert-info">
                     <h6 class="alert-heading"><i class="ri-calculator-line me-2"></i> Cálculo Automático de Producción</h6>
                     <small>Complete los campos para calcular automáticamente la cantidad de productos.</small>
                   </div>
+                  <?php endif; ?>
 
-                  <!-- Inventario -->
+                  <!-- Inventario - Solo en modo creación -->
+                  <?php if (!isset($producto->id)): ?>
                   <div class="mb-3">
                     <label class="form-label">Inventario de Leche *</label>
                     <?php if ($inventario_seleccionado): ?>
@@ -250,8 +253,18 @@
                       <div class="invalid-feedback"><?= session('validation')->getError('inventario_id') ?></div>
                     <?php endif; ?>
                   </div>
+                  <?php else: ?>
+                  <!-- En modo edición, mostrar inventario como solo lectura -->
+                  <div class="mb-3">
+                    <label class="form-label">Inventario Asignado</label>
+                    <input type="text" class="form-control" value="<?= esc($inventario_seleccionado->nombre ?? 'No asignado') ?>" readonly>
+                    <input type="hidden" name="inventario_id" value="<?= esc($producto->inventario_id) ?>">
+                    <small class="form-text text-muted">El inventario no puede modificarse en productos existentes</small>
+                  </div>
+                  <?php endif; ?>
 
-                  <!-- Cantidad de litros y litros por unidad -->
+                  <!-- Cantidad de litros y litros por unidad - Solo en modo creación -->
+                  <?php if (!isset($producto->id)): ?>
                   <div class="row">
                     <div class="col-md-6">
                       <div class="mb-3">
@@ -264,13 +277,6 @@
                         <div class="stock-info">
                           Máximo permitido: <span id="max-litros" class="stock-available">0.00</span> L
                         </div>
-
-                        <!-- Mostrar litros guardados al editar -->
-                        <?php if (!empty($producto->cantidad_produccion)): ?>
-                          <div class="stock-info mt-2">
-                            Litros guardados: <span id="litros-guardados" class="stock-available"><?= esc(number_format($producto->cantidad_produccion, 2)) ?></span> L
-                          </div>
-                        <?php endif; ?>
                       </div>
                     </div>
                     <div class="col-md-6">
@@ -284,8 +290,10 @@
                       </div>
                     </div>
                   </div>
+                  <?php endif; ?>
 
-                  <!-- Resultados -->
+                  <!-- Resultados - Solo en modo creación -->
+                  <?php if (!isset($producto->id)): ?>
                   <div id="calculationResult" class="calculation-result">
                     <h6 class="text-primary mb-3"><i class="ri-calculator-fill me-2"></i> Resultados</h6>
                     <div class="result-item">
@@ -301,12 +309,13 @@
                       <span id="reservaLeche" class="result-highlight">0.00</span> L
                     </div>
                   </div>
+                  <?php endif; ?>
 
-                  <!-- Stock y Reserva (readonly) -->
+                  <!-- Stock y Reserva - Solo en modo creación -->
+                  <?php if (!isset($producto->id)): ?>
                   <div class="mb-3">
                     <label for="stock" class="form-label">Cantidad de Productos *</label>
                     <input type="number" class="form-control <?= (session('validation') && session('validation')->hasError('stock')) ? 'is-invalid' : '' ?>"
-
                       id="stock" name="stock" value="<?= old('stock', $producto->stock ?? '') ?>" required min="0" readonly>
                     <?php if (session('validation') && session('validation')->hasError('stock')): ?>
                       <div class="invalid-feedback"><?= session('validation')->getError('stock') ?></div>
@@ -323,6 +332,21 @@
                     <?php endif; ?>
                     <small class="form-text text-muted">Stock total − litros realmente utilizados</small>
                   </div>
+                  <?php else: ?>
+                  <!-- En modo edición, mostrar stock actual como información -->
+                  <div class="alert alert-warning">
+                    <h6 class="alert-heading"><i class="ri-information-line me-2"></i> Información del Producto</h6>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <strong>Stock Actual:</strong> <?= esc($producto->stock_inve ?? 0) ?> unidades
+                      </div>
+                      <div class="col-md-6">
+                        <strong>Stock Original:</strong> <?= esc($producto->stock ?? 0) ?> unidades
+                      </div>
+                    </div>
+                    <small class="text-muted">Los valores de stock no pueden modificarse en productos existentes</small>
+                  </div>
+                  <?php endif; ?>
                   <!-- <div class="row">
                     <div class="col-md-6">
                       <div class="mb-3">
@@ -392,13 +416,24 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <h5 class="card-title text-info"><i class="ri-microscope-line me-2"></i> Control de Calidad</h5>
                     <div class="form-check form-switch form-switch-lg">
-                      <!-- ✅ Inicia DESACTIVADO -->
-                      <input class="form-check-input" type="checkbox" id="toggleCalidadBtn">
+                      <?php 
+                        // Determinar si el toggle debe estar activado
+                        $tieneCalidad = !empty($producto->imagen) && $producto->imagen !== 'jpg' 
+                                     || !empty($producto->ph) 
+                                     || !empty($producto->porocidad)
+                                     || !empty($producto->acides)
+                                     || !empty($producto->consistencia)
+                                     || !empty($producto->color)
+                                     || !empty($producto->olor)
+                                     || !empty($producto->textura)
+                                     || !empty($producto->fecha_vencimiento);
+                      ?>
+                      <input class="form-check-input" type="checkbox" id="toggleCalidadBtn" <?= $tieneCalidad ? 'checked' : '' ?>>
                       <label class="form-check-label" for="toggleCalidadBtn"></label>
                     </div>
                   </div>
                   <hr>
-                  <div id="calidadFields" class="toggle-fields disabled">
+                  <div id="calidadFields" class="toggle-fields <?= $tieneCalidad ? '' : 'disabled' ?>">
                     <div class="mb-3">
                       <label for="imagen" class="form-label">Imagen del Producto</label>
                       <input type="file" class="form-control <?= (session('validation') && session('validation')->hasError('imagen')) ? 'is-invalid' : '' ?>"
@@ -408,7 +443,7 @@
                       <?php endif; ?>
                       <div class="mt-3">
                         <img id="imagen-preview"
-                          src="<?= (!empty($producto->imagen)) ? base_url('uploads/' . $producto->imagen) : 'https://placehold.co/200x200/e0f0e9/28a745?text=Producto' ?>"
+                          src="<?= (!empty($producto->imagen)) ? base_url( $producto->imagen) : 'https://placehold.co/200x200/e0f0e9/28a745?text=Producto' ?>"
                           alt="Vista previa" class="img-fluid img-preview">
                       </div>
                     </div>
@@ -536,111 +571,132 @@
 <?= $this->section('scripts') ?>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const inventarioSelect = document.getElementById('inventario_id');
-    const cantidadProduccionInput = document.getElementById('cantidad_produccion');
-    const cantidadUnidadInput = document.getElementById('cantidad_unidad');
-    const stockInput = document.getElementById('stock');
-    const reservaInput = document.getElementById('reserva');
-    const calculationResultDiv = document.getElementById('calculationResult');
+    // Verificar si estamos en modo edición
+    const isEditMode = <?= isset($producto->id) ? 'true' : 'false' ?>;
+    
+    // Solo ejecutar lógica de cálculo en modo creación
+    if (!isEditMode) {
+      const inventarioSelect = document.getElementById('inventario_id');
+      const cantidadProduccionInput = document.getElementById('cantidad_produccion');
+      const cantidadUnidadInput = document.getElementById('cantidad_unidad');
+      const stockInput = document.getElementById('stock');
+      const reservaInput = document.getElementById('reserva');
+      const calculationResultDiv = document.getElementById('calculationResult');
 
-    const stockDisponibleSpan = document.getElementById('stock-disponible');
-    const maxLitrosSpan = document.getElementById('max-litros');
-    const calculatedStockSpan = document.getElementById('calculatedStock');
-    const litrosUtilizadosSpan = document.getElementById('litrosUtilizados');
-    const reservaLecheSpan = document.getElementById('reservaLeche');
-    const productoForm = document.getElementById('productoForm');
+      const stockDisponibleSpan = document.getElementById('stock-disponible');
+      const maxLitrosSpan = document.getElementById('max-litros');
+      const calculatedStockSpan = document.getElementById('calculatedStock');
+      const litrosUtilizadosSpan = document.getElementById('litrosUtilizados');
+      const reservaLecheSpan = document.getElementById('reservaLeche');
+      const productoForm = document.getElementById('productoForm');
 
-    const toggleCalidadBtn = document.getElementById('toggleCalidadBtn');
-    const calidadFieldsDiv = document.getElementById('calidadFields');
-
-    // ✅ Obtener stock total desde data-stock
-    function getStockTotal() {
-      const stockStr = stockDisponibleSpan.getAttribute('data-stock');
-      return parseFloat(stockStr) || 0;
-    }
-
-    function calcularProduccion() {
-      const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
-      const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
-      const stockTotal = getStockTotal();
-
-      if (litrosAUsar > stockTotal) {
-        cantidadProduccionInput.classList.add('is-invalid');
-      } else {
-        cantidadProduccionInput.classList.remove('is-invalid');
+      // ✅ Obtener stock total desde data-stock
+      function getStockTotal() {
+        const stockStr = stockDisponibleSpan.getAttribute('data-stock');
+        return parseFloat(stockStr) || 0;
       }
 
-      let productos = 0;
-      let litrosUtilizados = 0;
-      let reservaFinal = stockTotal;
+      function calcularProduccion() {
+        const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
+        const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
+        const stockTotal = getStockTotal();
 
-      if (litrosAUsar > 0 && litrosPorUnidad > 0) {
-        productos = Math.floor(litrosAUsar / litrosPorUnidad); // ✅ Entero
-        litrosUtilizados = productos * litrosPorUnidad;
-        reservaFinal = stockTotal - litrosUtilizados; // ✅ Reserva = stock - utilizados
+        if (litrosAUsar > stockTotal) {
+          cantidadProduccionInput.classList.add('is-invalid');
+        } else {
+          cantidadProduccionInput.classList.remove('is-invalid');
+        }
+
+        let productos = 0;
+        let litrosUtilizados = 0;
+        let reservaFinal = stockTotal;
+
+        if (litrosAUsar > 0 && litrosPorUnidad > 0) {
+          productos = Math.floor(litrosAUsar / litrosPorUnidad); // ✅ Entero
+          litrosUtilizados = productos * litrosPorUnidad;
+          reservaFinal = stockTotal - litrosUtilizados; // ✅ Reserva = stock - utilizados
+        }
+
+        stockInput.value = productos;
+        reservaInput.value = reservaFinal.toFixed(2);
+
+        calculatedStockSpan.textContent = productos;
+        litrosUtilizadosSpan.textContent = litrosUtilizados.toFixed(2);
+        reservaLecheSpan.textContent = reservaFinal.toFixed(2);
+
+        calculationResultDiv.style.display = (litrosAUsar > 0 || litrosPorUnidad > 0) ? 'block' : 'none';
+
+        cantidadProduccionInput.setAttribute('max', stockTotal);
       }
 
-      stockInput.value = productos;
-      reservaInput.value = reservaFinal.toFixed(2);
+      function actualizarStockInfo() {
+        const stockTotal = getStockTotal();
+        stockDisponibleSpan.textContent = stockTotal.toFixed(2);
+        maxLitrosSpan.textContent = stockTotal.toFixed(2);
+        calcularProduccion();
+      }
 
-      calculatedStockSpan.textContent = productos;
-      litrosUtilizadosSpan.textContent = litrosUtilizados.toFixed(2);
-      reservaLecheSpan.textContent = reservaFinal.toFixed(2);
+      if (inventarioSelect && inventarioSelect.tagName === 'SELECT') {
+        inventarioSelect.addEventListener('change', function() {
+          const selectedOption = inventarioSelect.options[inventarioSelect.selectedIndex];
+          const stock = selectedOption ? (selectedOption.dataset.stock || 0) : 0;
+          stockDisponibleSpan.setAttribute('data-stock', stock);
+          actualizarStockInfo();
+        });
+      }
 
-      calculationResultDiv.style.display = (litrosAUsar > 0 || litrosPorUnidad > 0) ? 'block' : 'none';
+      cantidadProduccionInput.addEventListener('input', calcularProduccion);
+      cantidadUnidadInput.addEventListener('input', calcularProduccion);
 
-      cantidadProduccionInput.setAttribute('max', stockTotal);
-    }
+      // ✅ Inicializar después de que el DOM esté listo
+      actualizarStockInfo();
 
-    function actualizarStockInfo() {
-      const stockTotal = getStockTotal();
-      stockDisponibleSpan.textContent = stockTotal.toFixed(2);
-      maxLitrosSpan.textContent = stockTotal.toFixed(2);
-      calcularProduccion();
-    }
+      productoForm.addEventListener('submit', function(e) {
+        calcularProduccion();
+        const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
+        const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
+        const stockTotal = getStockTotal();
 
-    if (inventarioSelect && inventarioSelect.tagName === 'SELECT') {
-      inventarioSelect.addEventListener('change', function() {
-        const selectedOption = inventarioSelect.options[inventarioSelect.selectedIndex];
-        const stock = selectedOption ? (selectedOption.dataset.stock || 0) : 0;
-        stockDisponibleSpan.setAttribute('data-stock', stock);
-        actualizarStockInfo();
+        if (litrosAUsar > stockTotal) {
+          alert('La cantidad de litros a usar no puede exceder el stock total del inventario.');
+          e.preventDefault();
+          return;
+        }
+
+        if (litrosAUsar > 0 && litrosPorUnidad <= 0) {
+          alert('Debe especificar los litros por unidad.');
+          e.preventDefault();
+          return;
+        }
       });
     }
 
-    cantidadProduccionInput.addEventListener('input', calcularProduccion);
-    cantidadUnidadInput.addEventListener('input', calcularProduccion);
+    // Lógica del toggle de calidad (funciona en ambos modos)
+    const toggleCalidadBtn = document.getElementById('toggleCalidadBtn');
+    const calidadFieldsDiv = document.getElementById('calidadFields');
 
-    toggleCalidadBtn.addEventListener('change', function() {
-      calidadFieldsDiv.classList.toggle('disabled', !this.checked);
-    });
+    if (toggleCalidadBtn && calidadFieldsDiv) {
+      toggleCalidadBtn.addEventListener('change', function() {
+        calidadFieldsDiv.classList.toggle('disabled', !this.checked);
+      });
+    }
 
-    // ✅ Inicializar después de que el DOM esté listo
-    actualizarStockInfo();
-
-    productoForm.addEventListener('submit', function(e) {
-      calcularProduccion();
-      const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
-      const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
-      const stockTotal = getStockTotal();
-
-      if (litrosAUsar > stockTotal) {
-        alert('La cantidad de litros a usar no puede exceder el stock total del inventario.');
-        e.preventDefault();
-        return;
-      }
-
-      if (litrosAUsar > 0 && litrosPorUnidad <= 0) {
-        alert('Debe especificar los litros por unidad.');
-        e.preventDefault();
-        return;
-      }
-
-      if (!toggleCalidadBtn.checked) {
-        const inputs = calidadFieldsDiv.querySelectorAll('input:not([type="file"]), textarea, select');
-        inputs.forEach(el => el.value = '');
-      }
-    });
+    // Preview de imagen cuando se selecciona un archivo
+    const imagenInput = document.getElementById('imagen');
+    const imagenPreview = document.getElementById('imagen-preview');
+    
+    if (imagenInput && imagenPreview) {
+      imagenInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            imagenPreview.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
   });
 </script>
 <?= $this->endSection() ?>

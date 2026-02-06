@@ -223,7 +223,7 @@ $userRoleName = session()->get('rol_nombre');
           <li class="menu-title"><span>Inventario</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarInventario" data-bs-toggle="collapse">
-              <i class="ri-refrigerator-line"></i> <span>Inventario Lácteo</span>
+              <i class="ri-fridge-line"></i> <span>Inventario Lácteo</span>
             </a>
             <div class="collapse menu-dropdown" id="sidebarInventario">
               <ul class="nav nav-sm flex-column">
@@ -234,7 +234,12 @@ $userRoleName = session()->get('rol_nombre');
                 <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
               </ul>
             </div>
+          </li>
 
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productos') ?>">
+              <i class="ri-store-3-line"></i> <span>Productos</span>
+            </a>
           </li>
 
           <li class="nav-item">

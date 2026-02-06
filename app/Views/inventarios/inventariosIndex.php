@@ -229,6 +229,15 @@
               </div>
             </div>
             <div class="card-body pt-0">
+              <?php 
+                $hasCustomFilters = !empty($filters['nombre']) || (!empty($filters['fecha_inicio']) && !empty($filters['fecha_fin']));
+              ?>
+              <?php if (!$mostrar_todos && !$hasCustomFilters): ?>
+                <div class="alert alert-info d-flex align-items-center mb-3" style="background-color: #e3f2fd; border-color: #2196f3; color: #1976d2;">
+                  <i class="ri-information-line fs-5 me-2"></i>
+                  <div>Mostrando inventarios del día de hoy. Use "Mostrar Todos" para ver todos los registros.</div>
+                </div>
+              <?php endif; ?>
               <?php if (empty($inventarios)): ?>
                 <div class="alert alert-info text-center mt-3" style="background-color: #f8fdfa; border-color: #e0f0e9; color: #28a745;">
                   No se encontraron inventarios con los filtros aplicados.

@@ -168,12 +168,12 @@
                   </div>
                   <div class="col-md-4">
                     <div class="d-grid gap-2 d-md-flex">
-                      <button type="submit" class="btn btn-primary">
+                      <button type="submit" class="btn btn-info">
                         <i class="ri-filter-3-line align-bottom me-1"></i> Filtrar
                       </button>
-                      <a href="<?= base_url('inventariosucursales') ?>" class="btn btn-soft-secondary">
-                        <i class="ri-refresh-line align-bottom me-1"></i> Limpiar
-                      </a>
+                       <button type="button" class="btn btn-warning" onclick="limpiarFiltros()">
+                        <i class="ri-close-circle-line align-bottom me-1"></i> Limpiar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -304,6 +304,13 @@
 
 <?= $this->section('scripts') ?>
 <script>
+// Función para limpiar filtros
+function limpiarFiltros() {
+    document.getElementById('stats_fecha_inicio').value = '';
+    document.getElementById('stats_fecha_fin').value = '';
+    window.location.href = window.location.pathname;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Código de animación (mantenido)
     const observer = new IntersectionObserver((entries) => {
