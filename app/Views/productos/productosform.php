@@ -432,7 +432,7 @@
                       <?php endif; ?>
                       <div class="mt-3">
                         <img id="imagen-preview"
-                          src="<?= (!empty($producto->imagen)) ? base_url('uploads/' . $producto->imagen) : 'https://placehold.co/200x200/e0f0e9/28a745?text=Producto' ?>"
+                          src="<?= (!empty($producto->imagen)) ? base_url( $producto->imagen) : 'https://placehold.co/200x200/e0f0e9/28a745?text=Producto' ?>"
                           alt="Vista previa" class="img-fluid img-preview">
                       </div>
                     </div>
