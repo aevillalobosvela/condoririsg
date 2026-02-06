@@ -123,11 +123,24 @@ class ProductosController extends BaseController
         // Manejar la subida de la imagen
         $imagen = $this->request->getFile('imagen');
         if ($imagen && $imagen->isValid() && !$imagen->hasMoved()) {
+            // Validar tipo de archivo
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!in_array($imagen->getMimeType(), $allowedTypes)) {
+                return redirect()->back()->withInput()->with('error', 'El archivo debe ser una imagen válida (JPG, PNG, GIF).');
+            }
+            
+            // Validar tamaño (máximo 2MB)
+            if ($imagen->getSize() > 2048000) {
+                return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+            }
+            
             $newName = $imagen->getRandomName();
-            $imagen->move(ROOTPATH . 'public/uploads', $newName);
+            if (!$imagen->move(ROOTPATH . 'public/uploads', $newName)) {
+                return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+            }
             $data['imagen'] = 'uploads/' . $newName;
         } else {
-            $data['imagen'] = 'jpg';
+            $data['imagen'] = 'jpg'; // Imagen por defecto
         }
 
         if ($this->productoModel->insert($data)) {
@@ -212,6 +225,12 @@ class ProductosController extends BaseController
 
     public function update(int $id): RedirectResponse
     {
+        // Verificar que el producto existe antes de procesar
+        $productoExistente = $this->productoModel->find($id);
+        if (!$productoExistente) {
+            return redirect()->to('/productos')->with('error', 'Producto no encontrado.');
+        }
+
         $data = $this->request->getPost();
 
         // Campos seguros que se pueden actualizar en productos existentes
@@ -256,10 +275,29 @@ class ProductosController extends BaseController
         // Manejar la actualización de la imagen
         $imagen = $this->request->getFile('imagen');
         if ($imagen && $imagen->isValid() && !$imagen->hasMoved()) {
+            // Validar tipo de archivo
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!in_array($imagen->getMimeType(), $allowedTypes)) {
+                return redirect()->back()->withInput()->with('error', 'El archivo debe ser una imagen válida (JPG, PNG, GIF).');
+            }
+            
+            // Validar tamaño (máximo 2MB)
+            if ($imagen->getSize() > 2048000) {
+                return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+            }
+            
+            // Eliminar imagen anterior si existe y no es la por defecto
+            if (!empty($productoExistente->imagen) && $productoExistente->imagen !== 'jpg' && file_exists(ROOTPATH . 'public/' . $productoExistente->imagen)) {
+                @unlink(ROOTPATH . 'public/' . $productoExistente->imagen);
+            }
+            
             $newName = $imagen->getRandomName();
-            $imagen->move(ROOTPATH . 'public/uploads', $newName);
+            if (!$imagen->move(ROOTPATH . 'public/uploads', $newName)) {
+                return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+            }
             $datosSegurosPorActualizar['imagen'] = 'uploads/' . $newName;
         }
+        // Si no se subió nueva imagen, mantener la existente (no agregar al array)
 
         if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
             return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
