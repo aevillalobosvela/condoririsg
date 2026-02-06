@@ -234,7 +234,12 @@ $userRoleName = session()->get('rol_nombre');
                 <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
               </ul>
             </div>
+          </li>
 
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productos') ?>">
+              <i class="ri-store-3-line"></i> <span>Productos</span>
+            </a>
           </li>
 
           <li class="nav-item">
