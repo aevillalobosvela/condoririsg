@@ -1339,6 +1339,120 @@ class InventariosController extends BaseController
         ]);
     }
 
+    public function exportarExcel()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+
+        $filename = 'inventarios_' . date('Ymd_His') . '.xls';
+        
+        header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF"; // UTF-8 BOM
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        // Estilos
+        echo '<Styles>' . "\n";
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11"/><Interior ss:Color="#4472C4" ss:Pattern="Solid"/></Style>' . "\n";
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/></Style>' . "\n";
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/></Style>' . "\n";
+        echo '</Styles>' . "\n";
+
+        // Hoja 1: Resumen
+        echo '<Worksheet ss:Name="Resumen">' . "\n";
+        echo '<Table>' . "\n";
+        
+        echo '<Row><Cell ss:StyleID="header"><Data ss:Type="String">REPORTE DE INVENTARIOS - CONDORIRI</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell><Data ss:Type="String">Generado: ' . date('d/m/Y H:i:s') . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell><Data ss:Type="String">Filtros: ' . ($nombre ?: 'Todos') . ' | ' . ($fecha_inicio ?: 'N/A') . ' - ' . ($fecha_fin ?: 'N/A') . '</Data></Cell></Row>' . "\n";
+        echo '<Row></Row>' . "\n";
+        
+        $totalInventarios = count($inventarios);
+        $totalStock = 0;
+        foreach ($inventarios as $inv) {
+            $totalStock += $inv->stock ?? 0;
+        }
+        
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Total Inventarios</Data></Cell><Cell><Data ss:Type="Number">' . $totalInventarios . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Stock Total (L)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . $totalStock . '</Data></Cell></Row>' . "\n";
+        
+        echo '</Table></Worksheet>' . "\n";
+
+        // Hoja 2: Detalle Inventarios
+        echo '<Worksheet ss:Name="Detalle Inventarios">' . "\n";
+        echo '<Table>' . "\n";
+        
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Nombre</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Descripción</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Stock (L)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Reserva</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Turno</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Estado</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Creación</Data></Cell>';
+        echo '</Row>' . "\n";
+
+        foreach ($inventarios as $inv) {
+            echo '<Row>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->code ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->descripcion ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->stock ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->reserva ?? 0) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->turno ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . ($inv->estado ? 'Activo' : 'Inactivo') . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($inv->created_at)) . '</Data></Cell>';
+            echo '</Row>' . "\n";
+        }
+        
+        echo '</Table></Worksheet>' . "\n";
+
+        // Hoja 3: Productos por Inventario
+        echo '<Worksheet ss:Name="Productos">' . "\n";
+        echo '<Table>' . "\n";
+        
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Inventario</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Producto</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Stock</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Precio Crédito</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Precio Contado</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cant. Producción</Data></Cell>';
+        echo '</Row>' . "\n";
+
+        foreach ($inventarios as $inv) {
+            $productos = $this->productoModel
+                ->where('inventario_id', $inv->id)
+                ->orderBy('nombre', 'ASC')
+                ->findAll();
+            
+            foreach ($productos as $prod) {
+                echo '<Row>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($prod->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->stock ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->precio_credito ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->precio_contado ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->cantidad_produccion ?? 0) . '</Data></Cell>';
+                echo '</Row>' . "\n";
+            }
+        }
+        
+        echo '</Table></Worksheet>' . "\n";
+        echo '</Workbook>';
+        exit;
+    }
+
 
 
 
