@@ -115,6 +115,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     // Filtros y reportes
     $routes->get('filtered', 'inventarios\inventariosController::filtered', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarPdf', 'inventarios\inventariosController::exportarPdf', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarExcel', 'inventarios\inventariosController::exportarExcel', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('resumen', 'inventarios\inventariosController::getResumen', ['filter' => 'role:admin,almacen']);
     $routes->get('resumenNombre', 'inventarios\inventariosController::getResumenPorNombre', ['filter' => 'role:admin,almacen']);
     $routes->get('reporteInventario', 'inventarios\inventariosController::reporteInventario', ['filter' => 'role:admin,almacen']);
