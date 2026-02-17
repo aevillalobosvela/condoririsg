@@ -600,9 +600,10 @@
 
       // Los datos de clientes ya están disponibles desde PHP
       const clientes = <?= json_encode($clientes) ?>;
+      const terminoLower = termino.toLowerCase();
       const filtered = clientes.filter(c => 
-        c.nombre_completo.toLowerCase().includes(termino.toLowerCase()) || 
-        c.ci_nit.includes(termino)
+        c.nombre_completo.toLowerCase().includes(terminoLower) || 
+        (c.ci_nit && c.ci_nit.toString().includes(termino))
       );
 
       if (filtered.length === 0) {

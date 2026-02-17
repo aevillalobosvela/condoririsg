@@ -1914,6 +1914,76 @@ class InventariosController extends BaseController
         $pdf->generarReporte($inventario, $usuario);
     }
 
+    public function controlCalidadExcel($id)
+    {
+        $inventario = $this->inventarioModel->find($id);
+
+        if (!$inventario) {
+            return redirect()->back()->with('error', 'Inventario no encontrado.');
+        }
+
+        if (empty($inventario->fecha_calidad)) {
+            return redirect()->back()->with('error', 'Este inventario no tiene registro de control de calidad.');
+        }
+
+        $db = \Config\Database::connect();
+        $usuario = $db->table('condoriri.usuarios')->where('id', $inventario->user_cali)->get()->getRowArray();
+        $nombreUsuario = $usuario ? trim(($usuario['nombre'] ?? '') . ' ' . ($usuario['apellidos'] ?? '')) : 'N/A';
+
+        $filename = 'control_calidad_' . $inventario->code . '_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Control de Calidad">';
+        echo '<Table>';
+        echo '<Column ss:Width="250"/><Column ss:Width="150"/>';
+        
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - CONTROL DE CALIDAD</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">CONTROL DE CALIDAD - ' . htmlspecialchars($inventario->nombre, ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Código:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars($inventario->code, ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Registro:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($inventario->fecha_calidad)) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Registrado por:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars($nombreUsuario, ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        
+        echo '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Parámetro</Data></Cell><Cell ss:StyleID="header"><Data ss:Type="String">Valor</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Grasa (%)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->grasa ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">SNG</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->sng ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Densidad</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->densidad ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Lactosa (%)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->lactosa ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Sólidos Totales (%)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->solidos ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Proteína (%)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->proteina ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Agua Agregada (%)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->agua ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Temperatura (°C)</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->temperatura ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Punto de Congelación</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->congelacion ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">pH</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inventario->ph ?? 0) . '</Data></Cell></Row>';
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+
     public function exportarExcelVentas()
     {
         $fecha_inicio = $this->request->getGet('fecha_inicio') ?? date('Y-m-d');

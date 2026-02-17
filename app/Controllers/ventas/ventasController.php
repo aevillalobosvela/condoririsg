@@ -715,7 +715,7 @@ class ventasController extends BaseController
 
             // 8. Inserción de la Cabecera de Venta
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+                'code' => 'TEMP',
                 'cliente_id' => $clienteId,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
@@ -729,6 +729,10 @@ class ventasController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
+
+            // Actualizar código con formato correlativo basado en ID
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
 
             // 9. Inserción de Detalles y Actualización de Stock
@@ -889,9 +893,8 @@ class ventasController extends BaseController
 
             // 9. ✅ INSERTAR VENTA CON personal_uto_id
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
-
-                'cliente_id' => null,                // opcional: dejar en NULL si no se usa
+                'code' => 'TEMP',
+                'cliente_id' => null,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
                 'monto_total' => $totalVenta,
@@ -905,6 +908,10 @@ class ventasController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
+
+            // Actualizar código con formato correlativo basado en ID
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             // 10. Insertar detalles y actualizar stock
             foreach ($itemsDetalle as $item) {
