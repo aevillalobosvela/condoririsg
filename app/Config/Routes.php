@@ -115,6 +115,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     // Filtros y reportes
     $routes->get('filtered', 'inventarios\inventariosController::filtered', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarPdf', 'inventarios\inventariosController::exportarPdf', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarExcel', 'inventarios\inventariosController::exportarExcel', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('resumen', 'inventarios\inventariosController::getResumen', ['filter' => 'role:admin,almacen']);
     $routes->get('resumenNombre', 'inventarios\inventariosController::getResumenPorNombre', ['filter' => 'role:admin,almacen']);
     $routes->get('reporteInventario', 'inventarios\inventariosController::reporteInventario', ['filter' => 'role:admin,almacen']);
@@ -125,6 +126,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('recibo/(:num)', 'inventarios\inventariosController::generarRecibo/$1');
     $routes->get('cierre', 'inventarios\inventariosController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('cierre/rango', 'inventarios\inventariosController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarExcelVentas', 'inventarios\inventariosController::exportarExcelVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarVenta', 'inventarios\inventariosController::guardarVenta', ['filter' => 'role:admin,almacen']);
@@ -265,6 +267,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     $routes->get('credito', 'ventas\ventasController::credito', ['filter' => 'role:admin,vendedor']);
     $routes->get('cierre', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('cierre/rango', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
+    $routes->get('exportarExcelVentas', 'ventas\ventasController::exportarExcelVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
 });
 
 // ============================================================================
@@ -293,6 +296,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
+    $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
 });
 
 // ============================================================================
@@ -302,7 +306,8 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
 $routes->group('contabilidad', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'paneles\panelesController::contabilidad', ['filter' => 'role:admin,contabilidad']);
     $routes->get('show/(:num)', 'contabilidad\contabilidadController::show/$1', ['filter' => 'role:admin,contabilidad']);
-    $routes->get('reporte', 'contabilidad\contabilidadController::exportarPdfVentas', ['filter' => 'role:admin,contabilidad']);
+    $routes->get('exportarPdfVentas', 'contabilidad\contabilidadController::exportarPdfVentas', ['filter' => 'role:admin,contabilidad']);
+    $routes->get('exportarExcelVentas', 'contabilidad\contabilidadController::exportarExcelVentas', ['filter' => 'role:admin,contabilidad']);
     $routes->get('reportes/grafico', 'contabilidad\contabilidadController::grafico',['filter' => 'role:admin,contabilidad']);
 });
 
@@ -331,6 +336,7 @@ $routes->group('baja', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'baja\bajaController::index', ['filter' => 'role:admin,almacen']);
     $routes->post('store', 'baja\bajaController::store', ['filter' => 'role:admin,almacen']);
     $routes->get('reportePDF', 'baja\bajaController::reportePDF', ['filter' => 'role:admin,almacen']);
+    $routes->get('exportarExcel', 'baja\bajaController::exportarExcel', ['filter' => 'role:admin,almacen']);
 });
 
 // ============================================================================

@@ -99,13 +99,8 @@ class contabilidadController extends BaseController
 
     public function exportarPdfVentas()
     {
-
-        
         $sucursal_id  = (int) $this->request->getGet('sucursal_id');
-
-
-
-         $fecha_inicio = $this->request->getGet('fecha_inicio');
+        $fecha_inicio = $this->request->getGet('fecha_inicio');
         $fecha_fin    = $this->request->getGet('fecha_fin');
         $tipo         = $this->request->getGet('tipo'); 
 
@@ -113,7 +108,6 @@ class contabilidadController extends BaseController
         $fecha_inicio = $fecha_inicio ?: $hoy;
         $fecha_fin    = $fecha_fin ?: $hoy;
 
-       
         if (!in_array($tipo, ['contado', 'credito', 'general'])) {
             $tipo = 'general';
         }
@@ -121,9 +115,7 @@ class contabilidadController extends BaseController
             throw new \InvalidArgumentException('ID de sucursal requerido');
         }
 
-
         if ($sucursal_id === 5) {
-
             $reportData = $this->ventaModel->getDailySalesReportDataAdmin(
                 $fecha_inicio,
                 $fecha_fin,
@@ -131,7 +123,6 @@ class contabilidadController extends BaseController
                 $tipo
             );
         } elseif ($sucursal_id === 10 || $sucursal_id === 11) {
-
             $reportData = $this->ventaModel->getDailySalesReportData2(
                 $fecha_inicio,
                 $fecha_fin,
@@ -139,7 +130,6 @@ class contabilidadController extends BaseController
                 $tipo
             );
         } elseif ($sucursal_id === 2) {
-
             $reportData = $this->ventaModel->getDailySalesReportDataVenta(
                 $fecha_inicio,
                 $fecha_fin, 
@@ -147,15 +137,21 @@ class contabilidadController extends BaseController
                 $tipo
             );
         } elseif ($sucursal_id === 4) {
-
             $reportData = $this->ventaModel->getDailySalesReportData3(
                 $fecha_inicio,
                 $fecha_fin,
                 $sucursal_id,
                 $tipo
             );
-        } 
-
+        } else {
+            // Para otras sucursales, usar método genérico
+            $reportData = $this->ventaModel->getDailySalesReportDataVenta(
+                $fecha_inicio,
+                $fecha_fin,
+                $sucursal_id,
+                $tipo
+            );
+        }
 
         $sucursal = $this->sucursalModel->find($sucursal_id);
 
@@ -396,5 +392,113 @@ class contabilidadController extends BaseController
             'pagerLinks' => $pagerLinks,
             'totalRegistros' => $total,
         ]);
+    }
+    public function exportarExcelVentas()
+    {
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? date('Y-m-d');
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? date('Y-m-d');
+        $tipo = $this->request->getGet('tipo') ?? 'general';
+        $sucursal_id = (int)$this->request->getGet('sucursal_id');
+
+        if ($sucursal_id <= 0) {
+            throw new \InvalidArgumentException('ID de sucursal requerido');
+        }
+
+        $db = \Config\Database::connect();
+        $inicio = $fecha_inicio . ' 00:00:00';
+        $fin = $fecha_fin . ' 23:59:59';
+
+        $sql = "SELECT v.*, COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre, p.nombre AS nombre_personal, p.dip
+                FROM condoriri.ventas v
+                LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
+                LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
+                WHERE v.deleted_at IS NULL AND v.sucursal_id = ? AND v.created_at >= ? AND v.created_at <= ?";
+        
+        $params = [$sucursal_id, $inicio, $fin];
+        if ($tipo === 'contado') {
+            $sql .= " AND v.tipo_pago = 'contado'";
+        } elseif ($tipo === 'credito') {
+            $sql .= " AND v.tipo_pago = 'credito'";
+        }
+        $sql .= " ORDER BY v.created_at DESC";
+
+        $ventas = $db->query($sql, $params)->getResult();
+        $totalVentas = array_sum(array_column($ventas, 'monto_total'));
+        $totalRegistros = count($ventas);
+
+        $sucursal = $this->sucursalModel->find($sucursal_id);
+        $sucursalNombre = $sucursal ? $sucursal['nombre'] : 'Desconocida';
+
+        $filename = 'ventas_' . $sucursalNombre . '_' . $tipo . '_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="total"><Font ss:Bold="1" ss:Size="11" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/></Borders></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Resumen">';
+        echo '<Table>';
+        echo '<Column ss:Width="500"/><Column ss:Width="150"/>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">REPORTE DE VENTAS - ' . strtoupper($sucursalNombre) . ' - ' . strtoupper($tipo) . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Generado:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i:s') . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Desde:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_inicio . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Hasta:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_fin . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Total Ventas</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . $totalRegistros . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Monto Total (Bs)</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . number_format($totalVentas, 2, '.', '') . '</Data></Cell></Row>';
+        echo '</Table></Worksheet>';
+
+        echo '<Worksheet ss:Name="Detalle Ventas">';
+        echo '<Table>';
+        echo '<Column ss:Width="50"/><Column ss:Width="120"/><Column ss:Width="200"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="130"/><Column ss:Width="80"/>';
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cliente/Personal</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Monto Total</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Tipo Pago</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Estado</Data></Cell>';
+        echo '</Row>';
+
+        foreach ($ventas as $venta) {
+            $cliente = !empty($venta->personal_uto_id) ? ($venta->nombre_personal . ' - CI: ' . $venta->dip) : $venta->cliente_nombre;
+            echo '<Row>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($venta->id ?? 0) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($venta->code ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($cliente, ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($venta->monto_total ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . ucfirst($venta->tipo_pago ?? '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($venta->created_at)) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . ($venta->estado == 1 ? 'Finalizada' : 'Cancelada') . '</Data></Cell>';
+            echo '</Row>';
+        }
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
     }
 }

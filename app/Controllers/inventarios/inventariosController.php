@@ -359,6 +359,11 @@ class InventariosController extends BaseController
 
         $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
 
+        // Obtener resúmenes
+        $resumenInventario = $this->inventarioModel->getResumen($fecha_inicio, $fecha_fin);
+        $resumenProducto = $this->productoModel->getResumen($fecha_inicio, $fecha_fin);
+        $resumenPorNombre = $this->inventarioModel->getResumenPorNombre($fecha_inicio, $fecha_fin);
+
         $data = [
             'inventarios' => $inventarios,
             'title'       => 'Inventarios Filtrados',
@@ -367,6 +372,12 @@ class InventariosController extends BaseController
                 'fecha_inicio' => $fecha_inicio,
                 'fecha_fin'   => $fecha_fin,
             ],
+            'per_page' => 20,
+            'pager' => null,
+            'resumenInventario' => $resumenInventario,
+            'resumenProducto' => $resumenProducto,
+            'resumenPorNombre' => $resumenPorNombre,
+            'mostrar_todos' => false,
         ];
 
 
@@ -1339,6 +1350,426 @@ class InventariosController extends BaseController
         ]);
     }
 
+    public function exportarExcel()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+
+        // Cargar sucursales y usuarios
+        $db = \Config\Database::connect();
+        $sucursales = $db->table('condoriri.sucursales')->select('id, nombre')->get()->getResultArray();
+        $usuarios = $db->table('condoriri.usuarios')->select('id, nombre, apellidos')->get()->getResultArray();
+        
+        $sucursalesMap = [];
+        foreach ($sucursales as $s) {
+            $sucursalesMap[$s['id']] = $s['nombre'];
+        }
+        
+        $usuariosMap = [];
+        foreach ($usuarios as $u) {
+            $usuariosMap[$u['id']] = trim($u['nombre'] . ' ' . $u['apellidos']);
+        }
+
+        $filename = 'inventarios_' . date('Ymd_His') . '.xls';
+        
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        echo ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        // Estilos mejorados
+        echo '<Styles>' . "\n";
+        
+        // Título principal UTO
+        echo '<Style ss:ID="titulo_uto">';
+        echo '<Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Subtítulo UTO
+        echo '<Style ss:ID="subtitulo_uto">';
+        echo '<Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Info UTO
+        echo '<Style ss:ID="info_uto">';
+        echo '<Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Encabezado de tabla
+        echo '<Style ss:ID="header">';
+        echo '<Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/>';
+        echo '<Interior ss:Color="#2E5090" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+        
+        // Subencabezado
+        echo '<Style ss:ID="subheader">';
+        echo '<Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/>';
+        echo '<Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Left" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Números decimales
+        echo '<Style ss:ID="number">';
+        echo '<NumberFormat ss:Format="#,##0.00"/>';
+        echo '<Alignment ss:Horizontal="Right" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Números enteros
+        echo '<Style ss:ID="integer">';
+        echo '<NumberFormat ss:Format="#,##0"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Fechas
+        echo '<Style ss:ID="date">';
+        echo '<NumberFormat ss:Format="dd/mm/yyyy hh:mm"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Estado Activo
+        echo '<Style ss:ID="activo">';
+        echo '<Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Calibri"/>';
+        echo '<Interior ss:Color="#28A745" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Estado Inactivo
+        echo '<Style ss:ID="inactivo">';
+        echo '<Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Calibri"/>';
+        echo '<Interior ss:Color="#DC3545" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Totales
+        echo '<Style ss:ID="total">';
+        echo '<Font ss:Bold="1" ss:Size="11" ss:Color="#000000" ss:FontName="Calibri"/>';
+        echo '<Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+        
+        // Centrado
+        echo '<Style ss:ID="center">';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '</Style>' . "\n";
+        
+        // Filas alternas
+        echo '<Style ss:ID="row_even">';
+        echo '<Interior ss:Color="#F8F9FA" ss:Pattern="Solid"/>';
+        echo '</Style>' . "\n";
+        
+        echo '</Styles>' . "\n";
+
+        // Calcular totales
+        $totalInventarios = count($inventarios);
+        $totalStock = 0;
+        foreach ($inventarios as $inv) {
+            $totalStock += $inv->stock ?? 0;
+        }
+
+        // Hoja 1: Resumen con encabezado UTO
+        echo '<Worksheet ss:Name="Resumen">' . "\n";
+        echo '<Table>' . "\n";
+        echo '<Column ss:Width="500"/>' . "\n";
+        echo '<Column ss:Width="150"/>' . "\n";
+        
+        // Encabezado institucional UTO
+        echo '<Row ss:Height="20">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row ss:Height="18">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row ss:Height="16">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row ss:Height="14">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row ss:Height="14">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row></Row>' . "\n";
+        
+        // Título del reporte
+        echo '<Row ss:Height="22">';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">REPORTE DE INVENTARIOS - CONDORIRI</Data></Cell>';
+        echo '</Row>' . "\n";
+        
+        echo '<Row></Row>' . "\n";
+        
+        // Información del reporte
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Generado:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i:s') . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Filtro Nombre:</Data></Cell><Cell><Data ss:Type="String">' . ($nombre ?: 'Todos') . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Inicio:</Data></Cell><Cell><Data ss:Type="String">' . ($fecha_inicio ?: 'N/A') . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Fin:</Data></Cell><Cell><Data ss:Type="String">' . ($fecha_fin ?: 'N/A') . '</Data></Cell></Row>' . "\n";
+        
+        echo '<Row></Row>' . "\n";
+        
+        // Totales
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Total Inventarios</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . $totalInventarios . '</Data></Cell></Row>' . "\n";
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Stock Total (Litros)</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . number_format($totalStock, 2, '.', '') . '</Data></Cell></Row>' . "\n";
+        
+        echo '</Table></Worksheet>' . "\n";
+
+        // Hoja 2: Detalle Inventarios
+        echo '<Worksheet ss:Name="Detalle Inventarios">' . "\n";
+        echo '<Table>' . "\n";
+        echo '<Column ss:Width="100"/>' . "\n";
+        echo '<Column ss:Width="120"/>' . "\n";
+        echo '<Column ss:Width="200"/>' . "\n";
+        echo '<Column ss:Width="80"/>' . "\n";
+        echo '<Column ss:Width="80"/>' . "\n";
+        echo '<Column ss:Width="60"/>' . "\n";
+        echo '<Column ss:Width="80"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="150"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="150"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="70"/>' . "\n";
+        echo '<Column ss:Width="90"/>' . "\n";
+        echo '<Column ss:Width="90"/>' . "\n";
+        echo '<Column ss:Width="60"/>' . "\n";
+        echo '<Column ss:Width="130"/>' . "\n";
+        echo '<Column ss:Width="130"/>' . "\n";
+        echo '<Column ss:Width="130"/>' . "\n";
+        
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Nombre</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Descripción</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Stock (L)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Reserva</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Turno</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Estado</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Sucursal ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Sucursal</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Usuario ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Usuario</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Grasa (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">SNG (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Densidad</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Lactosa (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Sólidos (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Proteína (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Agua (%)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Temperatura (°C)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Congelación (°C)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">pH</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Creación</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Actualización</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Calidad</Data></Cell>';
+        echo '</Row>' . "\n";
+
+        $fill = false;
+        foreach ($inventarios as $inv) {
+            $rowStyle = $fill ? 'row_even' : '';
+            $sucursalNombre = $sucursalesMap[$inv->sucursal_id] ?? 'N/A';
+            $usuarioNombre = $usuariosMap[$inv->user_id] ?? 'N/A';
+            
+            echo '<Row>';
+            echo '<Cell' . ($rowStyle ? ' ss:StyleID="' . $rowStyle . '"' : '') . '><Data ss:Type="String">' . htmlspecialchars($inv->code ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell' . ($rowStyle ? ' ss:StyleID="' . $rowStyle . '"' : '') . '><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell' . ($rowStyle ? ' ss:StyleID="' . $rowStyle . '"' : '') . '><Data ss:Type="String">' . htmlspecialchars($inv->descripcion ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->stock ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->reserva ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($inv->turno ?? '', ENT_XML1) . '</Data></Cell>';
+            $estadoStyle = $inv->estado ? 'activo' : 'inactivo';
+            $estadoTexto = $inv->estado ? 'Activo' : 'Inactivo';
+            echo '<Cell ss:StyleID="' . $estadoStyle . '"><Data ss:Type="String">' . $estadoTexto . '</Data></Cell>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($inv->sucursal_id ?? 0) . '</Data></Cell>';
+            echo '<Cell' . ($rowStyle ? ' ss:StyleID="' . $rowStyle . '"' : '') . '><Data ss:Type="String">' . htmlspecialchars($sucursalNombre, ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($inv->user_id ?? 0) . '</Data></Cell>';
+            echo '<Cell' . ($rowStyle ? ' ss:StyleID="' . $rowStyle . '"' : '') . '><Data ss:Type="String">' . htmlspecialchars($usuarioNombre, ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->grasa ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->sng ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->densidad ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->lactosa ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->solidos ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->proteina ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->agua ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->temperatura ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->congelacion ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($inv->ph ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="date"><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($inv->created_at)) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="date"><Data ss:Type="String">' . ($inv->updated_at ? date('d/m/Y H:i', strtotime($inv->updated_at)) : 'N/A') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="date"><Data ss:Type="String">' . ($inv->fecha_calidad ? date('d/m/Y H:i', strtotime($inv->fecha_calidad)) : 'N/A') . '</Data></Cell>';
+            echo '</Row>' . "\n";
+            $fill = !$fill;
+        }
+        
+        echo '</Table></Worksheet>' . "\n";
+
+        // Hoja 3: Productos por Inventario
+        echo '<Worksheet ss:Name="Productos">' . "\n";
+        echo '<Table>' . "\n";
+        echo '<Column ss:Width="50"/>' . "\n";  // ID
+        echo '<Column ss:Width="70"/>' . "\n";  // Inventario ID
+        echo '<Column ss:Width="120"/>' . "\n"; // Código Inventario
+        echo '<Column ss:Width="120"/>' . "\n"; // Inventario
+        echo '<Column ss:Width="150"/>' . "\n"; // Producto
+        echo '<Column ss:Width="200"/>' . "\n"; // Descripción
+        echo '<Column ss:Width="90"/>' . "\n";  // Precio Crédito
+        echo '<Column ss:Width="90"/>' . "\n";  // Precio Contado
+        echo '<Column ss:Width="70"/>' . "\n";  // Stock
+        echo '<Column ss:Width="70"/>' . "\n";  // Stock Inve
+        echo '<Column ss:Width="70"/>' . "\n";  // Reserva
+        echo '<Column ss:Width="80"/>' . "\n";  // Estado
+        echo '<Column ss:Width="120"/>' . "\n"; // Categoría
+        echo '<Column ss:Width="100"/>' . "\n"; // Unidad
+        echo '<Column ss:Width="100"/>' . "\n"; // Fecha Venc.
+        echo '<Column ss:Width="90"/>' . "\n";  // Cant. Producción
+        echo '<Column ss:Width="80"/>' . "\n";  // Cant. Unidad
+        echo '<Column ss:Width="80"/>' . "\n";  // Porosidad
+        echo '<Column ss:Width="60"/>' . "\n";  // pH
+        echo '<Column ss:Width="80"/>' . "\n";  // Acidez
+        echo '<Column ss:Width="100"/>' . "\n"; // Consistencia
+        echo '<Column ss:Width="80"/>' . "\n";  // Color
+        echo '<Column ss:Width="80"/>' . "\n";  // Olor
+        echo '<Column ss:Width="80"/>' . "\n";  // Textura
+        echo '<Column ss:Width="70"/>' . "\n";  // Merma
+        echo '<Column ss:Width="70"/>' . "\n";  // Agrega
+        echo '<Column ss:Width="70"/>' . "\n";  // Litros
+        echo '<Column ss:Width="80"/>' . "\n";  // Materia Sub
+        echo '<Column ss:Width="90"/>' . "\n";  // Suero Lácteo
+        echo '<Column ss:Width="90"/>' . "\n";  // Suero Quesería
+        echo '<Column ss:Width="200"/>' . "\n"; // Observaciones
+        echo '<Column ss:Width="130"/>' . "\n"; // Fecha Creación
+        echo '<Column ss:Width="130"/>' . "\n"; // Fecha Actualización
+        
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Inventario ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código Inventario</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Inventario</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Producto</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Descripción</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Precio Crédito</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Precio Contado</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Stock</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Stock Inve</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Reserva</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Estado</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Categoría</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Unidad</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Vencimiento</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cant. Producción</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cant. Unidad</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Porosidad</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">pH</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Acidez</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Consistencia</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Color</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Olor</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Textura</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Merma</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Agrega</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Litros</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Materia Sub</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Suero Lácteo</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Suero Quesería</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Observaciones</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Creación</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha Actualización</Data></Cell>';
+        echo '</Row>' . "\n";
+
+        // Cargar categorías y unidades
+        $categorias = $db->table('condoriri.categorias')->select('id, nombre')->get()->getResultArray();
+        $unidades = $db->table('condoriri.unidades')->select('id, nombre')->get()->getResultArray();
+        
+        $categoriasMap = [];
+        foreach ($categorias as $c) {
+            $categoriasMap[$c['id']] = $c['nombre'];
+        }
+        
+        $unidadesMap = [];
+        foreach ($unidades as $u) {
+            $unidadesMap[$u['id']] = $u['nombre'];
+        }
+
+        foreach ($inventarios as $inv) {
+            $productos = $this->productoModel
+                ->where('inventario_id', $inv->id)
+                ->orderBy('nombre', 'ASC')
+                ->findAll();
+            
+            foreach ($productos as $prod) {
+                $categoriaNombre = $categoriasMap[$prod->categoria_id] ?? 'N/A';
+                $unidadNombre = $unidadesMap[$prod->unidad_id] ?? 'N/A';
+                $estadoTexto = $prod->estado ? 'Activo' : 'Inactivo';
+                $estadoStyle = $prod->estado ? 'activo' : 'inactivo';
+                
+                echo '<Row>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->id ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($inv->id ?? 0) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->code ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($prod->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($prod->descripcion ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->precio_credito ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->precio_contado ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->stock ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->stock_inve ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->reserva ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $estadoStyle . '"><Data ss:Type="String">' . $estadoTexto . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($categoriaNombre, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($unidadNombre, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . ($prod->fecha_vencimiento ? date('d/m/Y', strtotime($prod->fecha_vencimiento)) : 'N/A') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->cantidad_produccion ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->cantidad_unidad ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->porocidad ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->ph ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->acides ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->consistencia ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->color ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->olor ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($prod->textura ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->merma ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->agrega ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->litros ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($prod->materia_sub ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->suero_lacteo ?? 0) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($prod->suero_queseria ?? 0) . '</Data></Cell>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($prod->observaciones ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="date"><Data ss:Type="String">' . ($prod->created_at ? date('d/m/Y H:i', strtotime($prod->created_at)) : 'N/A') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="date"><Data ss:Type="String">' . ($prod->updated_at ? date('d/m/Y H:i', strtotime($prod->updated_at)) : 'N/A') . '</Data></Cell>';
+                echo '</Row>' . "\n";
+            }
+        }
+        
+        echo '</Table></Worksheet>' . "\n";
+        echo '</Workbook>';
+        exit;
+    }
+
 
 
 
@@ -1483,5 +1914,105 @@ class InventariosController extends BaseController
         $pdf->generarReporte($inventario, $usuario);
     }
 
-}
+    public function exportarExcelVentas()
+    {
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? date('Y-m-d');
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? date('Y-m-d');
+        $tipo = $this->request->getGet('tipo') ?? 'general';
+        $sucursal_id = $this->request->getGet('sucursal_id') ?? 4;
 
+        $db = \Config\Database::connect();
+        $inicio = $fecha_inicio . ' 00:00:00';
+        $fin = $fecha_fin . ' 23:59:59';
+
+        $sql = "SELECT v.*, COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre, p.nombre AS nombre_personal, p.dip
+                FROM condoriri.ventas v
+                LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
+                LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
+                WHERE v.deleted_at IS NULL AND v.sucursal_id = ? AND v.created_at >= ? AND v.created_at <= ?";
+        
+        $params = [$sucursal_id, $inicio, $fin];
+        if ($tipo === 'contado') {
+            $sql .= " AND v.tipo_pago = 'contado'";
+        } elseif ($tipo === 'credito') {
+            $sql .= " AND v.tipo_pago = 'credito'";
+        }
+        $sql .= " ORDER BY v.created_at DESC";
+
+        $ventas = $db->query($sql, $params)->getResult();
+        $totalVentas = array_sum(array_column($ventas, 'monto_total'));
+        $totalRegistros = count($ventas);
+
+        $filename = 'ventas_' . $tipo . '_' . date('Ymd_His') . '.xml';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="total"><Font ss:Bold="1" ss:Size="11" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/></Borders></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Resumen">';
+        echo '<Table>';
+        echo '<Column ss:Width="500"/><Column ss:Width="150"/>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">REPORTE DE VENTAS - ' . strtoupper($tipo) . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Generado:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i:s') . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Desde:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_inicio . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Hasta:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_fin . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Total Ventas</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . $totalRegistros . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Monto Total (Bs)</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . number_format($totalVentas, 2, '.', '') . '</Data></Cell></Row>';
+        echo '</Table></Worksheet>';
+
+        echo '<Worksheet ss:Name="Detalle Ventas">';
+        echo '<Table>';
+        echo '<Column ss:Width="50"/><Column ss:Width="120"/><Column ss:Width="200"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="130"/><Column ss:Width="80"/>';
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">ID</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cliente/Personal</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Monto Total</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Tipo Pago</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Fecha</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Estado</Data></Cell>';
+        echo '</Row>';
+
+        foreach ($ventas as $venta) {
+            $cliente = !empty($venta->personal_uto_id) ? ($venta->nombre_personal . ' - CI: ' . $venta->dip) : $venta->cliente_nombre;
+            echo '<Row>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($venta->id ?? 0) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($venta->code ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($cliente, ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . ($venta->monto_total ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . ucfirst($venta->tipo_pago ?? '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($venta->created_at)) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . ($venta->estado == 1 ? 'Finalizada' : 'Cancelada') . '</Data></Cell>';
+            echo '</Row>';
+        }
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+}
