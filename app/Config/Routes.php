@@ -267,6 +267,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     $routes->get('credito', 'ventas\ventasController::credito', ['filter' => 'role:admin,vendedor']);
     $routes->get('cierre', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('cierre/rango', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
+    $routes->get('exportarExcelVentas', 'ventas\ventasController::exportarExcelVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
 });
 
 // ============================================================================
@@ -295,6 +296,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
+    $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
 });
 
 // ============================================================================
