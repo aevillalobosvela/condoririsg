@@ -351,9 +351,21 @@
             </button>
           </div>
           <div class="col-md-2">
+            <a href="<?= base_url('inventarios/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=deposito_contado&sucursal_id=4') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel Contado
+            </a>
+          </div>
+          <div class="col-md-2">
             <a href="<?= base_url('inventarios/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=contado') ?>"
               class="btn btn-outline-primary w-100" target="_blank">
               <i class="ri-file-pdf-line me-1"></i> Contado Deposito
+            </a>
+          </div>
+          <div class="col-md-2">
+            <a href="<?= base_url('inventarios/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=credito&sucursal_id=4') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel Crédito
             </a>
           </div>
           <div class="col-md-2">
@@ -362,6 +374,12 @@
               <i class="ri-file-pdf-line me-1"></i> Crédito
             </a>
           </div> 
+          <div class="col-md-2">
+            <a href="<?= base_url('inventarios/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=general&sucursal_id=4') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel General
+            </a>
+          </div>
           <div class="col-md-2">
             <a href="<?= base_url('inventarios/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=general') ?>"
               class="btn btn-info w-100" target="_blank">
