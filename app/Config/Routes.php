@@ -320,6 +320,7 @@ $routes->group('inventariosucursales', ['filter' => 'auth'], function ($routes) 
     $routes->get('/', 'sucursales\stockSucursalesController::index', ['filter' => 'role:admin,vendedor']);
     $routes->get('filtered', 'sucursales\stockSucursalesController::filtered', ['filter' => 'role:admin,vendedor']);
     $routes->get('reporteStock', 'sucursales\stockSucursalesController::reporteStock', ['filter' => 'role:admin,vendedor']);
+    $routes->get('exportarExcelStock', 'sucursales\stockSucursalesController::exportarExcelStock', ['filter' => 'role:admin,vendedor']);
 });
 
 // Stock de Inventarios (Materia Prima)

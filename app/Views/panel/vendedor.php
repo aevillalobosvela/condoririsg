@@ -152,7 +152,7 @@
 
       <a href="<?= base_url('resepciones') ?>" class="quick-link" aria-label="Aceptación de Envíos">
         <div class="quick-item">
-          <div class="qi-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+          <div class="qi-icon"><i class="mdi mdi-clipboard-check"></i></div>
           <div class="qi-title">Aceptación de Envíos</div>
           <div class="qi-sub">Recibe y verifica mercancía</div>
         </div>
@@ -160,14 +160,14 @@
 
       <a href="<?= base_url('ventas') ?>" class="quick-link" aria-label="Punto de Venta">
         <div class="quick-item">
-          <div class="qi-icon"><i class="fa-solid fa-cash-register"></i></div>
+          <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
           <div class="qi-title">Punto de Venta</div>
           <div class="qi-sub">Registra ventas y pagos</div>
         </div>
       </a>
       <a href="<?= base_url('inventariosucursales') ?>" class="quick-link" aria-label="Stock">
         <div class="quick-item">
-          <div class="qi-icon"><i class="fa-solid fa-cash-register"></i></div>
+          <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
           <div class="qi-title">Inventario</div>
           <div class="qi-sub">Productos en almacen</div>
         </div>

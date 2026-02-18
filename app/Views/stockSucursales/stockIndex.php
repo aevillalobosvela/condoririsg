@@ -411,13 +411,22 @@
                   <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                       <h5 class="card-title mb-0">Detalle por Producto</h5>
-                      <button type="button" class="btn btn-primary" onclick="
-                        const fInicio = document.getElementById('stats_fecha_inicio').value;
-                        const fFin = document.getElementById('stats_fecha_fin').value;
-                        window.location.href = '<?= base_url('inventariosucursales/reporteStock') ?>?fecha_inicio=' + fInicio + '&fecha_fin=' + fFin;
-                      ">
-                        <i class="ri-file-pdf-line me-1"></i> Generar Reporte PDF
-                      </button>
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success" onclick="
+                          const fInicio = document.getElementById('stats_fecha_inicio').value;
+                          const fFin = document.getElementById('stats_fecha_fin').value;
+                          window.location.href = '<?= base_url('inventariosucursales/exportarExcelStock') ?>?fecha_inicio=' + fInicio + '&fecha_fin=' + fFin;
+                        ">
+                          <i class="ri-file-excel-2-line me-1"></i> Generar Excel
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="
+                          const fInicio = document.getElementById('stats_fecha_inicio').value;
+                          const fFin = document.getElementById('stats_fecha_fin').value;
+                          window.location.href = '<?= base_url('inventariosucursales/reporteStock') ?>?fecha_inicio=' + fInicio + '&fecha_fin=' + fFin;
+                        ">
+                          <i class="ri-file-pdf-line me-1"></i> Generar PDF
+                        </button>
+                      </div>
                     </div>
                     <div class="card-body">
                       <div class="table-responsive">
