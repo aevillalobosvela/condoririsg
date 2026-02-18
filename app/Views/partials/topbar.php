@@ -42,6 +42,7 @@ $userApellidos = session('apellidos');
                     <div class="ms-3 d-none d-md-block">
                         <h4 class="mb-0 fw-bold text-primary">Condoriri SG</h4>
                         <small class="text-muted">Sistema de Gestión - <?= esc(session('sucursal_nombre') ?? 'N/A') ?></small>
+                        <small class="text-muted">N° - <?= esc(session('sucursal_id') ?? 'N/A') ?></small>
                     </div>
                 </div>
             </div>
