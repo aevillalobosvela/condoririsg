@@ -202,6 +202,7 @@ $routes->group('resepciones', ['filter' => 'auth'], function ($routes) {
     $routes->get('show/(:num)', 'resepciones\resepcionesController::show/$1');
     $routes->get('reporteGeneral', 'resepciones\resepcionesController::reporteGeneral', ['filter' => 'role:admin,dev,vendedor,almacen']);
     $routes->get('reporteDetallado/(:num)', 'resepciones\resepcionesController::reporteDetallado/$1', ['filter' => 'role:admin,dev,vendedor,almacen']);
+    $routes->get('exportarExcelDetallado/(:num)', 'resepciones\resepcionesController::exportarExcelDetallado/$1', ['filter' => 'role:admin,dev,vendedor,almacen']);
     
     // Rutas duplicadas (legacy - revisar)
     $routes->get('register', 'envios\enviosController::register', ['filter' => 'role:admin,dev,vendedor,almacen']);

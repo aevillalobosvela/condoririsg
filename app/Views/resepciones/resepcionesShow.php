@@ -102,6 +102,9 @@
         <div class="card-header d-flex align-items-center justify-content-between">
           <h5 class="card-title mb-0">Detalles del Envío</h5>
           <div>
+            <a href="<?= base_url('resepciones/exportarExcelDetallado/' . $envio->id) ?>" class="btn btn-success btn-sm me-2">
+              <i class="ri-file-excel-2-line me-1"></i> Exportar Excel
+            </a>
             <a href="<?= base_url('resepciones/reporteDetallado/' . $envio->id) ?>" class="btn btn-danger btn-sm me-2">
               <i class="ri-file-pdf-line me-1"></i> Exportar PDF
             </a>

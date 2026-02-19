@@ -216,6 +216,96 @@ class resepcionesController extends BaseController
         ]);
     }
 
+    public function exportarExcelDetallado($id)
+    {
+        $envio = $this->envioModel->find($id);
+        if (!$envio) {
+            return redirect()->back()->with('error', 'Envío no encontrado');
+        }
+
+        $sucursalOrigen = $this->sucursalModel->find($envio['sucursal_origen_id']);
+        $sucursalDestino = $this->sucursalModel->find($envio['sucursal_destino_id']);
+        $userCreador = $this->userModel->find($envio['user_id']);
+        $userTransporte = $this->userModel->find($envio['user_transporte_id']);
+        $userRecepcion = !empty($envio['user_recepcion_id']) ? $this->userModel->find($envio['user_recepcion_id']) : null;
+        
+        $transferencias = $this->transferenciasModel->where('envio_id', $id)->findAll();
+        
+        foreach ($transferencias as $key => $transfer) {
+            $producto = $this->productosModel->find($transfer->producto_id);
+            $transferencias[$key]->producto_nombre = $producto->nombre ?? 'Desconocido';
+            $transferencias[$key]->producto_code = $producto->code ?? 'N/A';
+        }
+
+        $filename = 'recepcion_' . $envio['code'] . '_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Detalle Recepción">';
+        echo '<Table>';
+        echo '<Column ss:Width="250"/><Column ss:Width="200"/>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">DETALLE DE RECEPCIÓN - ' . htmlspecialchars($envio['code'], ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row></Row>';
+        
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Código Envío:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars($envio['code'], ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Sucursal Origen:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars($sucursalOrigen['nombre'] ?? 'N/A', ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Sucursal Destino:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars($sucursalDestino['nombre'] ?? 'N/A', ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Enviado por:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars(trim(($userCreador['nombre'] ?? '') . ' ' . ($userCreador['apellidos'] ?? '')), ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Transporte:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars(trim(($userTransporte['nombre'] ?? '') . ' ' . ($userTransporte['apellidos'] ?? '')), ENT_XML1) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Envío:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($envio['fecha_envio'])) . '</Data></Cell></Row>';
+        if ($userRecepcion) {
+            echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Recepcionado por:</Data></Cell><Cell><Data ss:Type="String">' . htmlspecialchars(trim(($userRecepcion['nombre'] ?? '') . ' ' . ($userRecepcion['apellidos'] ?? '')), ENT_XML1) . '</Data></Cell></Row>';
+            echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Recepción:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i', strtotime($envio['fecha_recepcion'])) . '</Data></Cell></Row>';
+        }
+        echo '<Row></Row>';
+
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Código Producto</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Producto</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cantidad Enviada</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Cantidad Aceptada</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Observaciones</Data></Cell>';
+        echo '</Row>';
+
+        foreach ($transferencias as $item) {
+            echo '<Row>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($item->producto_code ?? 'N/A', ENT_XML1) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($item->producto_nombre, ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($item->cantidad ?? 0) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($item->cantidad_acep ?? 0) . '</Data></Cell>';
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($item->observacion_destino ?? '', ENT_XML1) . '</Data></Cell>';
+            echo '</Row>';
+        }
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+
     public function show(int $id)
     {
         $envio = $this->envioModel->find($id);
