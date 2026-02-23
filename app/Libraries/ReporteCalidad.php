@@ -37,7 +37,7 @@ class ReporteCalidad extends FPDF
         $this->SetFont('Arial', 'B', 12);
         $this->Cell(0, 5, utf8_decode("UNIVERSIDAD TÉCNICA DE ORURO"), 0, 1, 'C');
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(0, 5, utf8_decode("FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE"), 0, 1, 'C');
+        $this->Cell(0, 5, utf8_decode("FACULTAD DE CIENCIAS AGRARIAS Y NATURALES"), 0, 1, 'C');
         $this->SetFont('Arial', '', 8);
         $this->Cell(0, 4, utf8_decode("CONDORIRI - LABORATORIO DE INNOVACIÓN"), 0, 1, 'C');
         
