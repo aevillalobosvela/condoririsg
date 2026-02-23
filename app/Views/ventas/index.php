@@ -125,16 +125,12 @@
   $totalVentas = $totalVentas ?? 0;
 
   $isSingleDay = ($fecha_desde === $fecha_hasta);
-  $currentTime = time();
-  $startSellTime = strtotime($hoy . ' 08:00:00');
-  $endSellTime = strtotime($hoy . ' 22:00:00');
-
   $isToday = ($fecha_desde === $hoy);
   $isPastDate = ($fecha_desde < $hoy);
-  $isSellingTime = ($currentTime >= $startSellTime && $currentTime <= $endSellTime);
 
-  $canSell = $isToday && $isSellingTime;
-  $showCloseBoxKPI = $isSingleDay && ($isPastDate || ($isToday && !$isSellingTime));
+  // ✅ VENTAS 24/7: Siempre se puede vender si es el día de hoy
+  $canSell = $isToday;
+  $showCloseBoxKPI = $isSingleDay && $isPastDate;
   ?>
 
   <div class="row">
@@ -147,7 +143,7 @@
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1 overflow-hidden">
-                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">VENTA ACTIVA (08:00 - 16:00)</p>
+                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">VENTA ACTIVA (24 HORAS)</p>
                   </div>
                 </div>
                 <div class="d-flex align-items-end justify-content-between mt-4">
@@ -218,7 +214,7 @@
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1 overflow-hidden">
-                  <p class="text-uppercase fw-medium text-muted text-truncate mb-0">VENTA ACTIVA (08:00 - 18:00)</p>
+                  <p class="text-uppercase fw-medium text-muted text-truncate mb-0">VENTA ACTIVA (24 HORAS)</p>
                 </div>
               </div>
               <div class="d-flex align-items-end justify-content-between mt-4">
