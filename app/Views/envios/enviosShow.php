@@ -311,9 +311,9 @@
             <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
               <i class="ri-file-pdf-line align-bottom me-1"></i> Generar Envio
             </a>
-            <a href="<?= base_url('envios/exportarExcelEnvio/' . $envio->id) ?>" class="btn btn-success btn-sm">
+            <!-- <a href="<?= base_url('envios/exportarExcelEnvio/' . $envio->id) ?>" class="btn btn-success btn-sm">
               <i class="ri-file-excel-line align-bottom me-1"></i> Resumen de Productos
-            </a>
+            </a> -->
           </div>
         </div>
         <div class="card-body">
