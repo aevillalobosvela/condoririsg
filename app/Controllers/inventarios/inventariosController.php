@@ -2019,7 +2019,7 @@ class InventariosController extends BaseController
         $totalVentas = array_sum(array_column($ventas, 'monto_total'));
         $totalRegistros = count($ventas);
 
-        $filename = 'ventas_' . $tipo . '_' . date('Ymd_His') . '.xml';
+        $filename = 'ventas_' . $tipo . '_' . date('Ymd_His') . '.xls';
         header('Content-Type: application/vnd.ms-excel');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Pragma: no-cache');
