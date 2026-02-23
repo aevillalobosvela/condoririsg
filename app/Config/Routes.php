@@ -191,6 +191,7 @@ $routes->group('envios', ['filter' => 'auth'], function ($routes) {
     
     // Reportes y devoluciones
     $routes->get('reporte', 'envios\enviosController::generarReporte', ['filter' => 'role:admin,almacen,ganaderia,agropecuario,vendedor']);
+    $routes->get('exportarExcelEnvio/(:num)', 'envios\enviosController::exportarExcelEnvio/$1', ['filter' => 'role:admin,almacen,ganaderia,agropecuario,vendedor']);
     $routes->get('devoluciones', 'envios\enviosController::devIndex', ['filter' => 'role:admin,vendedor,almacen,ganaderia,agropecuario']);
     $routes->get('devoluciones/show/(:num)', 'envios\enviosController::devShow/$1', ['filter' => 'role:admin,vendedor,almacen']);
 });
