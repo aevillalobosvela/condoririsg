@@ -38,8 +38,6 @@ class App extends BaseConfig
      * @phpstan-var list<string>
      */
     public array $allowedHostnames = [];
-    // En app/Config/App.php
-public $timezone = 'America/La_Paz';
 
     /**
      * --------------------------------------------------------------------------
@@ -118,7 +116,7 @@ public $timezone = 'America/La_Paz';
      *
      * @see https://www.php.net/manual/en/timezones.php for list of timezones supported by PHP.
      */
-    public string $appTimezone = 'UTC';
+    public string $appTimezone = 'America/La_Paz';
 
     /**
      * --------------------------------------------------------------------------
