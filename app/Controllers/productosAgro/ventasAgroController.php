@@ -453,7 +453,7 @@ class ventasAgroController extends BaseController
         }
 
         $ventaData = [
-            'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+            'code' => 'TEMP',
             'cliente_id' => $clienteId,
             'sucursal_id' => $sucursalId,
             'tipo_pago' => $tipoPago,
@@ -467,6 +467,9 @@ class ventasAgroController extends BaseController
         if (!$ventaId) {
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
+
+        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+        $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         foreach ($itemsDetalle as $item) {
             $detalleData = [
@@ -607,7 +610,7 @@ class ventasAgroController extends BaseController
 
         
         $ventaData = [
-            'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+            'code' => 'TEMP',
             'cliente_id' => null,
             'sucursal_id' => $sucursalId,
             'tipo_pago' => $tipoPago,
@@ -622,6 +625,9 @@ class ventasAgroController extends BaseController
         if (!$ventaId) {
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
+
+        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+        $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         // ✅ Procesar detalles y actualizar stock
         foreach ($itemsDetalle as $item) {
@@ -831,7 +837,7 @@ class ventasAgroController extends BaseController
         echo '<Table>';
         echo '<Column ss:Width="500"/><Column ss:Width="150"/>';
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
-        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
         echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - PRODUCTOS AGROPECUARIOS</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';

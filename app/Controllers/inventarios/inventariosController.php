@@ -984,7 +984,7 @@ class InventariosController extends BaseController
             }
 
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+                'code' => 'TEMP',
                 'cliente_id' => $clienteId,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
@@ -998,6 +998,9 @@ class InventariosController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
+
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             foreach ($itemsDetalle as $item) {
                 $detalleData = [
@@ -1132,7 +1135,7 @@ class InventariosController extends BaseController
 
             // ✅ Insertar venta
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+                'code' => 'TEMP',
                 'cliente_id' => null,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
@@ -1151,6 +1154,9 @@ class InventariosController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('No se pudo obtener el ID de la venta.');
             }
+
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             // ✅ Insertar detalles y actualizar stock_inve
             foreach ($itemsDetalle as $item) {
@@ -1496,7 +1502,7 @@ class InventariosController extends BaseController
         echo '</Row>' . "\n";
         
         echo '<Row ss:Height="18">';
-        echo '<Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell>';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell>';
         echo '</Row>' . "\n";
         
         echo '<Row ss:Height="16">';
@@ -1956,7 +1962,7 @@ class InventariosController extends BaseController
         echo '<Column ss:Width="250"/><Column ss:Width="150"/>';
         
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
-        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
         echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - CONTROL DE CALIDAD</Data></Cell></Row>';
         echo '<Row></Row>';
         echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">CONTROL DE CALIDAD - ' . htmlspecialchars($inventario->nombre, ENT_XML1) . '</Data></Cell></Row>';
@@ -2040,7 +2046,7 @@ class InventariosController extends BaseController
         echo '<Table>';
         echo '<Column ss:Width="500"/><Column ss:Width="150"/>';
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
-        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRONÓMICAS Y MEDIO AMBIENTE</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
         echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
