@@ -160,11 +160,11 @@
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Sucursal Origen:</div>
-                  <div class="col-md-8"><?= esc($envio->sucursal_origen_nombre ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($sucursalOrigen->nombre ?? 'N/A') ?></div>
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Sucursal Destino:</div>
-                  <div class="col-md-8"><?= esc($envio->sucursal_destino_nombre ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($sucursalDestino->nombre ?? 'N/A') ?></div>
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Observación Origen:</div>
