@@ -124,9 +124,9 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('ventas', 'inventarios\inventariosController::indexVenta', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('registerVenta', 'inventarios\inventariosController::registerVenta', ['filter' => 'role:admin,almacen']);
     $routes->get('recibo/(:num)', 'inventarios\inventariosController::generarRecibo/$1');
-    $routes->get('cierre', 'inventarios\inventariosController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
-    $routes->get('cierre/rango', 'inventarios\inventariosController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
-    $routes->get('exportarExcelVentas', 'inventarios\inventariosController::exportarExcelVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('cierre', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('cierre/rango', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarExcelVentas', 'inventarios\ReportesVentasController::exportarExcelVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarVenta', 'inventarios\inventariosController::guardarVenta', ['filter' => 'role:admin,almacen']);
