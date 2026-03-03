@@ -95,27 +95,38 @@ class FacturaPdf extends FPDF
         // --- Tabla de Productos ---
         $this->SetFont('Arial', 'B', 12);
         $this->Cell(0, 8, utf8_decode('Detalle de Productos'), 0, 1, 'L');
-        $this->SetFont('Arial', 'B', 10);
+        $this->SetFont('Arial', 'B', 9);
         
-        $columnWidths = [70, 30, 80]; // Anchos de las columnas
+        $columnWidths = [55, 20, 25, 25, 55]; // Anchos de las columnas
         $this->Cell($columnWidths[0], 7, utf8_decode('Producto'), 1, 0, 'C');
-        $this->Cell($columnWidths[1], 7, utf8_decode('Cantidad'), 1, 0, 'C');
-        $this->Cell($columnWidths[2], 7, utf8_decode('Observación'), 1, 1, 'C');
+        $this->Cell($columnWidths[1], 7, utf8_decode('Cant.'), 1, 0, 'C');
+        $this->Cell($columnWidths[2], 7, utf8_decode('P. Unit.'), 1, 0, 'C');
+        $this->Cell($columnWidths[3], 7, utf8_decode('Subtotal'), 1, 0, 'C');
+        $this->Cell($columnWidths[4], 7, utf8_decode('Observación'), 1, 1, 'C');
         
-        $this->SetFont('Arial', '', 10);
+        $this->SetFont('Arial', '', 9);
         $totalProductos = 0;
+        $totalGeneral = 0;
         foreach ($productos as $producto) {
             $totalProductos += $producto->cantidad;
+            $precioUnit = (float)($producto->precio_unitario ?? 0);
+            $subtotal = $precioUnit * $producto->cantidad;
+            $totalGeneral += $subtotal;
+            
             $this->Cell($columnWidths[0], 7, utf8_decode($producto->producto_nombre), 1, 0, 'L');
             $this->Cell($columnWidths[1], 7, $producto->cantidad, 1, 0, 'C');
-            $this->Cell($columnWidths[2], 7, utf8_decode($producto->observacion_origen ?: 'N/A'), 1, 1, 'L');
+            $this->Cell($columnWidths[2], 7, number_format($precioUnit, 2), 1, 0, 'R');
+            $this->Cell($columnWidths[3], 7, number_format($subtotal, 2), 1, 0, 'R');
+            $this->Cell($columnWidths[4], 7, utf8_decode($producto->observacion_origen ?: 'N/A'), 1, 1, 'L');
         }
         $this->Ln(5);
 
         // --- Totales ---
-        $this->SetFont('Arial', 'B', 12);
+        $this->SetFont('Arial', 'B', 10);
         $this->Cell($columnWidths[0] + $columnWidths[1], 7, utf8_decode('Total de Productos:'), 1, 0, 'R');
-        $this->Cell($columnWidths[2], 7, $totalProductos, 1, 1, 'C');
+        $this->Cell($columnWidths[2], 7, $totalProductos, 1, 0, 'C');
+        $this->Cell($columnWidths[3], 7, utf8_decode('Total Bs:'), 1, 0, 'R');
+        $this->Cell($columnWidths[4], 7, number_format($totalGeneral, 2), 1, 1, 'R');
         $this->Ln(15);
         
 
