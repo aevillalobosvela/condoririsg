@@ -133,11 +133,11 @@
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Vendedor / Creador:</div>
-                  <div class="col-md-8"><?= esc($userCreador->nombre_completo ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($userCreador->nombre . ' ' . $userCreador->apellidos ?? 'N/A') ?></div>
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Transporte:</div>
-                  <div class="col-md-8"><?= esc($userTransporte->nombre_completo ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($userTransporte->nombre . ' ' . $userTransporte->apellidos ?? 'N/A') ?></div>
                 </div>
                 <?php if (!empty($envio->observacion_origen)): ?>
                   <div class="row mb-2">
@@ -174,7 +174,7 @@
                 <?php if ($envio->user_recepcion_id): ?>
                   <div class="row mb-2">
                     <div class="col-md-4 fw-bold">Receptor:</div>
-                    <div class="col-md-8"><?= esc($userRecepcion->nombre_completo ?? 'N/A') ?></div>
+                    <div class="col-md-8"><?= esc($userRecepcion->nombre . ' ' . $userRecepcion->apellidos ?? 'N/A') ?></div>
                   </div>
                 <?php endif; ?>
                 <?php if ($envio->fecha_recepcion): ?>
