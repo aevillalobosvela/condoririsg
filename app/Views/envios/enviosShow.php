@@ -160,11 +160,11 @@
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Sucursal Origen:</div>
-                  <div class="col-md-8"><?= esc($envio->sucursal_origen_nombre ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($sucursalOrigen->nombre ?? 'N/A') ?></div>
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Sucursal Destino:</div>
-                  <div class="col-md-8"><?= esc($envio->sucursal_destino_nombre ?? 'N/A') ?></div>
+                  <div class="col-md-8"><?= esc($sucursalDestino->nombre ?? 'N/A') ?></div>
                 </div>
                 <div class="row mb-2">
                   <div class="col-md-4 fw-bold">Observación Origen:</div>
@@ -311,9 +311,9 @@
             <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
               <i class="ri-file-pdf-line align-bottom me-1"></i> Generar Envio
             </a>
-            <a href="<?= base_url('envios/exportarExcelEnvio/' . $envio->id) ?>" class="btn btn-success btn-sm">
+            <!-- <a href="<?= base_url('envios/exportarExcelEnvio/' . $envio->id) ?>" class="btn btn-success btn-sm">
               <i class="ri-file-excel-line align-bottom me-1"></i> Resumen de Productos
-            </a>
+            </a> -->
           </div>
         </div>
         <div class="card-body">
