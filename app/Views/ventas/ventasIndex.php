@@ -444,23 +444,36 @@
   </div>
 </div>
 
-<!-- MODAL DE CONFIRMACIÓN DE VENTA (NUEVO) -->
+<!-- MODAL DE CONFIRMACIÓN DE VENTA -->
 <div class="modal fade" id="confirmSaleModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title text-success"><i class="ri-shopping-cart-line me-1"></i> Confirmar Venta</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-3">¿Desea finalizar la transacción con los siguientes detalles?</p>
-        <ul class="list-unstyled">
-          <li><strong>Cliente:</strong> <span id="modalClientName">N/A</span></li>
-          <li><strong>Total a pagar:</strong> <span class="text-success fw-bold" id="modalTotalAmount">Bs. 0.00</span></li>
-          <li><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></li>
-          <li><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></li>
-          <li><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></li>
-        </ul>
+        <p class="mb-3 fw-bold">¿Desea finalizar la transacción con los siguientes detalles?</p>
+        
+        <div class="mb-3">
+          <strong>Cliente:</strong> <span id="modalClientName">N/A</span>
+        </div>
+        
+        <div class="mb-3">
+          <strong>Productos:</strong>
+          <div id="modalProductsList" class="mt-2"></div>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-6"><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></div>
+          <div class="col-6"><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></div>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-6"><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></div>
+          <div class="col-6"><strong>Total a pagar:</strong> <span class="text-success fw-bold fs-5" id="modalTotalAmount">Bs. 0.00</span></div>
+        </div>
+        
         <div class="alert alert-info py-2 mt-3" role="alert">
           Esta acción no se puede deshacer y el stock será actualizado.
         </div>
@@ -809,6 +822,24 @@
         document.getElementById('modalPaymentType').textContent = (tipoPago === 'credito' ? 'Crédito' : 'Contado');
         document.getElementById('modalMontoRecibido').textContent = (tipoPago === 'contado' ? `Bs. ${recibido.toFixed(2)}` : 'N/A');
         document.getElementById('modalCambio').textContent = (tipoPago === 'contado' ? `Bs. ${cambio.toFixed(2)}` : 'N/A');
+        
+        // Renderizar lista de productos con colores
+        const productsList = cart.map(item => {
+          const colors = getProductColors(item.name);
+          const subtotal = item.price * item.quantity * (1 - item.discount/100);
+          return `
+            <div class="d-flex align-items-center mb-2 p-2 rounded" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%); border-left: 3px solid ${colors.border};">
+              <div class="flex-grow-1">
+                <div style="color: ${colors.text}; font-weight: 600; font-size: 0.9rem;">${item.name}</div>
+                <small class="text-muted">Cantidad: ${item.quantity} ${item.unidad} × Bs. ${item.price.toFixed(2)}</small>
+              </div>
+              <div class="text-end">
+                <div style="color: ${colors.badge}; font-weight: bold;">Bs. ${subtotal.toFixed(2)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        document.getElementById('modalProductsList').innerHTML = productsList;
 
         // Mostrar el modal
         confirmSaleModalInstance.show();
