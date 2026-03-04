@@ -140,6 +140,16 @@
     color: #C2185B;
   }
 
+  /* Animación de feedback al clickear producto */
+  @keyframes productClick {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  .product-card-clicked {
+    animation: productClick 0.3s ease;
+  }
+
   @media (max-width: 991.98px) {
     .pos-container {
       grid-template-columns: 1fr;
@@ -629,6 +639,11 @@
             stock: parseInt(card.dataset.stock),
             unidad: card.dataset.unidad
           };
+          
+          // Animación de feedback
+          card.classList.add('product-card-clicked');
+          setTimeout(() => card.classList.remove('product-card-clicked'), 300);
+          
           addToCart(product);
         });
       });
