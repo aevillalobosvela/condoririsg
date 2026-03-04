@@ -1,3 +1,4 @@
+V 04/03/2026
 CREATE TABLE productos_agro (
     id SERIAL PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
