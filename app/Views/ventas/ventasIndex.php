@@ -119,6 +119,27 @@
     border-radius: 8px;
   }
 
+  /* Estilos para el dropdown de categorías con colores */
+  #categoryFilter {
+    font-weight: 500;
+  }
+  #categoryFilter option[value="LECHE"] {
+    background-color: #E3F2FD;
+    color: #1565C0;
+  }
+  #categoryFilter option[value="QUESO"] {
+    background-color: #FFF3E0;
+    color: #E65100;
+  }
+  #categoryFilter option[value="REQUESON"] {
+    background-color: #E8F5E9;
+    color: #2E7D32;
+  }
+  #categoryFilter option[value="YOGURT"] {
+    background-color: #FCE4EC;
+    color: #C2185B;
+  }
+
   @media (max-width: 991.98px) {
     .pos-container {
       grid-template-columns: 1fr;
@@ -211,31 +232,85 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
+        <div class="row mb-3 g-2">
+          <div class="col-md-6">
+            <input type="text" id="productFilter" class="form-control" placeholder="Buscar productos por nombre...">
+          </div>
+          <div class="col-md-6">
+            <select id="categoryFilter" class="form-select">
+              <option value="">Todos los productos</option>
+              <option value="LECHE" data-color="#2196F3">🔵 Leche</option>
+              <option value="QUESO" data-color="#FF9800">🟠 Queso</option>
+              <option value="REQUESON" data-color="#4CAF50">🟢 Requesón</option>
+              <option value="YOGURT" data-color="#E91E63">🌸 Yogurt</option>
+            </select>
+          </div>
         </div>
 
         <div class="row g-3" id="productsGrid">
           <?php foreach ($productos as $p): ?>
+            <?php
+              // Detectar tipo de producto para asignar colores
+              // IMPORTANTE: Verificar REQUESÓN antes que QUESO (contiene la palabra QUESO)
+              $nombre_upper = strtoupper($p['producto']);
+              if (strpos($nombre_upper, 'REQUESON') !== false || strpos($nombre_upper, 'REQUESÓN') !== false) {
+                $bg = '#E8F5E9'; $border = '#4CAF50'; $text = '#2E7D32'; $badge = '#388E3C';
+              } elseif (strpos($nombre_upper, 'LECHE') !== false) {
+                $bg = '#E3F2FD'; $border = '#2196F3'; $text = '#1565C0'; $badge = '#1976D2';
+              } elseif (strpos($nombre_upper, 'QUESO') !== false) {
+                $bg = '#FFF3E0'; $border = '#FF9800'; $text = '#E65100'; $badge = '#F57C00';
+              } elseif (strpos($nombre_upper, 'YOGURT') !== false || strpos($nombre_upper, 'YOGUR') !== false) {
+                $bg = '#FCE4EC'; $border = '#E91E63'; $text = '#C2185B'; $badge = '#D81B60';
+              } else {
+                $bg = '#F5F5F5'; $border = '#9E9E9E'; $text = '#424242'; $badge = '#757575';
+              }
+            ?>
             <div class="col-6 col-md-4 product-card" 
                  data-id="<?= $p['id'] ?>"
                  data-name="<?= esc($p['producto']) ?>"
                  data-price="<?= $p['precio_contado'] ?>"
                  data-stock="<?= $p['stock'] ?>"
-                 data-unidad="<?= esc($p['unidad'] ?? 'und') ?>">
-              <div class="card h-100 shadow-sm border-0">
-                <div class="card-body text-center p-3">
-                  <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                       style="width: 60px; height: 60px;">
-                    <span class="fw-bold text-success"><?= substr(esc($p['producto']), 0, 2) ?></span>
+                 data-unidad="<?= esc($p['unidad'] ?? 'und') ?>"
+                 data-created="<?= isset($p['created_at']) ? date('d/m/Y', strtotime($p['created_at'])) : '' ?>">
+              <div class="card h-100 shadow-sm border-0" style="border-left: 4px solid <?= $border ?> !important;">
+                <div class="card-body text-center p-3" style="background: linear-gradient(135deg, <?= $bg ?> 0%, #ffffff 100%);">
+                  <!-- Icono circular o Imagen -->
+                  <?php 
+                    $imagenPorNombre = 'assets/images/productos/' . $p['producto'] . '.png';
+                    $imagenExiste = file_exists(FCPATH . $imagenPorNombre);
+                  ?>
+                  <?php if ($imagenExiste): ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
+                         style="width: 90px; height: 90px; background-color: <?= $border ?>;">
+                      <img src="<?= base_url($imagenPorNombre) ?>" alt="<?= esc($p['producto']) ?>" 
+                           style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                  <?php else: ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                         style="width: 90px; height: 90px; background-color: <?= $border ?>; color: white;">
+                      <span class="fw-bold" style="font-size: 0.9rem;"><?= substr(esc($p['producto']), 0, 2) ?></span>
+                    </div>
+                  <?php endif; ?>
+                  
+                  <!-- Nombre del producto -->
+                  <h6 class="card-title mb-2" style="color: <?= $text ?>; font-size: 0.8rem; line-height: 1.2;"><?= esc($p['producto']) ?></h6>
+                  
+                  <!-- Precio -->
+                  <div class="mb-2">
+                    <span class="fw-bold" style="color: <?= $badge ?>; font-size: 0.9rem;">Bs. <?= number_format($p['precio_contado'], 2) ?></span>
                   </div>
-                  <h6 class="card-title fs-6 mb-1"><?= esc($p['producto']) ?></h6>
-                  <p class="card-text mb-1">
-                    <span class="text-success fw-bold">Bs. <?= number_format($p['precio_contado'], 2) ?></span>
-                  </p>
-                  <p class="card-text mb-0">
-                    <small class="text-muted"><?= $p['stock'] ?> <?= esc($p['unidad'] ?? 'und') ?></small>
-                  </p>
+                  
+                  <!-- Stock -->
+                  <div class="mb-2">
+                    <span class="badge" style="background-color: <?= $border ?>; font-size: 0.65rem;"><?= $p['stock'] ?> <?= esc($p['unidad'] ?? 'und') ?></span>
+                  </div>
+                  
+                  <!-- Fecha de creación -->
+                  <?php if (isset($p['created_at'])): ?>
+                  <div class="text-muted" style="font-size: 0.65rem;">
+                    <i class="ri-calendar-line"></i> <?= date('d/m/Y', strtotime($p['created_at'])) ?>
+                  </div>
+                  <?php endif; ?>
                 </div>
               </div>
             </div>
@@ -414,6 +489,8 @@
     let currentPage = 1;
     let selectedClient = null;
     let cart = [];
+    let currentNameFilter = '';
+    let currentCategoryFilter = '';
 
     // Referencias a elementos
     const clientSearch = document.getElementById('clientSearch');
@@ -437,39 +514,96 @@
 
     // --- FUNCIONES DE RENDERIZADO Y LÓGICA ---
 
-    function renderProducts(filter = '') {
-      const filtered = allProducts.filter(p => 
-        p.producto.toLowerCase().includes(filter.toLowerCase())
-      );
+    function getProductImage(p) {
+      return '<?= base_url() ?>/assets/images/productos/' + p.producto + '.png';
+    }
+
+    // Función para detectar tipo de producto y asignar colores
+    function getProductColors(productName) {
+      const name = productName.toUpperCase();
+      
+      // IMPORTANTE: Verificar REQUESÓN antes que QUESO (contiene la palabra QUESO)
+      if (name.includes('REQUESON') || name.includes('REQUESÓN')) {
+        return { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32', badge: '#388E3C' }; // Verde
+      } else if (name.includes('LECHE')) {
+        return { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0', badge: '#1976D2' }; // Azul
+      } else if (name.includes('QUESO')) {
+        return { bg: '#FFF3E0', border: '#FF9800', text: '#E65100', badge: '#F57C00' }; // Naranja
+      } else if (name.includes('YOGURT') || name.includes('YOGUR')) {
+        return { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B', badge: '#D81B60' }; // Rosa
+      } else {
+        return { bg: '#F5F5F5', border: '#9E9E9E', text: '#424242', badge: '#757575' }; // Gris (otros)
+      }
+    }
+
+    function renderProducts(nameFilter = '', categoryFilter = '') {
+      const filtered = allProducts.filter(p => {
+        const matchesName = p.producto.toLowerCase().includes(nameFilter.toLowerCase());
+        
+        // IMPORTANTE: Verificar REQUESON antes que QUESO para evitar falsos positivos
+        let matchesCategory = true;
+        if (categoryFilter) {
+          const nameUpper = p.producto.toUpperCase();
+          if (categoryFilter === 'REQUESON') {
+            matchesCategory = nameUpper.includes('REQUESON') || nameUpper.includes('REQUESÓN');
+          } else if (categoryFilter === 'QUESO') {
+            // Solo QUESO, excluyendo REQUESON
+            matchesCategory = nameUpper.includes('QUESO') && !nameUpper.includes('REQUESON') && !nameUpper.includes('REQUESÓN');
+          } else {
+            matchesCategory = nameUpper.includes(categoryFilter);
+          }
+        }
+        
+        return matchesName && matchesCategory;
+      });
 
       const totalPages = Math.ceil(filtered.length / itemsPerPage);
       const start = (currentPage - 1) * itemsPerPage;
       const paginated = filtered.slice(start, start + itemsPerPage);
 
-      productsGrid.innerHTML = paginated.map(p => `
+      productsGrid.innerHTML = paginated.map(p => {
+        const colors = getProductColors(p.producto);
+        const createdDate = p.created_at ? new Date(p.created_at).toLocaleDateString('es-BO', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
+        return `
         <div class="col-6 col-md-4 product-card" 
              data-id="${p.id}" 
              data-name="${p.producto}" 
              data-price="${p.precio_contado}" 
              data-stock="${p.stock}"
-             data-unidad="${p.unidad || 'und'}">
-          <div class="card h-100 shadow-sm border-0 cursor-pointer">
-            <div class="card-body text-center p-3">
-              <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                   style="width: 60px; height: 60px;">
-                <span class="fw-bold text-success">${p.producto.substring(0,2)}</span>
+             data-unidad="${p.unidad || 'und'}"
+             data-created="${createdDate}">
+          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${colors.border} !important;">
+            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%);">
+              <!-- Icono circular o Imagen -->
+              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
+                   style="width: 90px; height: 90px; background-color: ${colors.border}; position: relative;">
+                <img src="${getProductImage(p)}" 
+                     alt="${p.producto}" 
+                     style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <span class="fw-bold" style="font-size: 0.9rem; color: white; display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${p.producto.substring(0,2)}</span>
               </div>
-              <h6 class="card-title fs-6 mb-1">${p.producto}</h6>
-              <p class="card-text mb-1">
-                <span class="text-success fw-bold">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
-              </p>
-              <p class="card-text mb-0">
-                <small class="text-muted">${p.stock} ${p.unidad || 'und'}</small>
-              </p>
+              
+              <!-- Nombre del producto -->
+              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.producto}</h6>
+              
+              <!-- Precio -->
+              <div class="mb-2">
+                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+              </div>
+              
+              <!-- Stock -->
+              <div class="mb-2">
+                <span class="badge" style="background-color: ${colors.border}; font-size: 0.65rem;">${p.stock} ${p.unidad || 'und'}</span>
+              </div>
+              
+              <!-- Fecha de creación -->
+              ${createdDate ? `<div class="text-muted" style="font-size: 0.65rem;"><i class="ri-calendar-line"></i> ${createdDate}</div>` : ''}
             </div>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       renderPagination(totalPages);
       
@@ -522,8 +656,7 @@
         link.addEventListener('click', (e) => {
           e.preventDefault();
           currentPage = parseInt(link.dataset.page);
-          const filter = document.getElementById('productFilter').value;
-          renderProducts(filter);
+          renderProducts(currentNameFilter, currentCategoryFilter);
         });
       });
     }
@@ -752,13 +885,42 @@
 
     document.getElementById('productFilter').addEventListener('input', (e) => {
       currentPage = 1;
-      renderProducts(e.target.value);
+      currentNameFilter = e.target.value;
+      renderProducts(currentNameFilter, currentCategoryFilter);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+      currentPage = 1;
+      currentCategoryFilter = e.target.value;
+      renderProducts(currentNameFilter, currentCategoryFilter);
+      
+      // Cambiar el color del select según la categoría seleccionada
+      const select = e.target;
+      const colorMap = {
+        'LECHE': { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
+        'QUESO': { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
+        'REQUESON': { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
+        'YOGURT': { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' }
+      };
+      
+      if (currentCategoryFilter && colorMap[currentCategoryFilter]) {
+        const colors = colorMap[currentCategoryFilter];
+        select.style.backgroundColor = colors.bg;
+        select.style.borderColor = colors.border;
+        select.style.color = colors.text;
+        select.style.fontWeight = '600';
+      } else {
+        select.style.backgroundColor = '';
+        select.style.borderColor = '';
+        select.style.color = '';
+        select.style.fontWeight = '500';
+      }
     });
 
     document.getElementById('itemsPerPage').addEventListener('change', (e) => {
       itemsPerPage = parseInt(e.target.value);
       currentPage = 1;
-      renderProducts(document.getElementById('productFilter').value);
+      renderProducts(currentNameFilter, currentCategoryFilter);
     });
 
     // Carrito interacción (Input change)
@@ -808,6 +970,9 @@
     renderProducts();
     // Asegurar que la visibilidad de los campos de pago sea correcta al inicio
     tipoPagoSelect.dispatchEvent(new Event('change'));
+    
+    // Inicializar el color del select de categorías
+    document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
   });
 </script>
 <?= $this->endSection() ?>
