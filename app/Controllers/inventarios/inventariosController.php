@@ -999,7 +999,8 @@ class InventariosController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            // Generar código con secuencias
+            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
             $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             foreach ($itemsDetalle as $item) {
@@ -1155,7 +1156,8 @@ class InventariosController extends BaseController
                 throw new \Exception('No se pudo obtener el ID de la venta.');
             }
 
-            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            // Generar código con secuencias
+            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
             $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             // ✅ Insertar detalles y actualizar stock_inve
