@@ -535,33 +535,19 @@ class ventasController extends BaseController
      */
     public function register()
     {
-
-
-        $productos = $this->stockSucursalModel
-                          ->where('stock' . '>' . 0) 
-                          ->findAll();
-
+        $productos = $this->stockSucursalModel->where('stock >', 0)->findAll();
         $clientes = $this->clienteModel->findAll();
+        $categorias = $this->categoriaModel->findAll();
 
         $data = [
             'title'     => 'Registrar Venta',
             'productos' => $productos,
             'clientes'  => $clientes,
+            'categorias' => $categorias,
         ];
-
 
         return view('ventas/ventasIndex', $data);
     }
-
-    
-
-
-
-
-
-
-
-
 
     /**
      * Guarda la venta y actualiza el stock.
