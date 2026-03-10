@@ -194,8 +194,8 @@
 
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
-        <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI:</label>
-        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI: (ej. 745687)" autocomplete="off">
+        <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
+        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o Nombre Completo (ej. 745687 o Juan Perez)" autocomplete="off">
         <div id="personalInfo" class="mt-3"></div>
       </div>
 
@@ -466,7 +466,7 @@
       clienteIdInput.value = '';
       selectedPersonal = null;
 
-      if (dip.length < 5) return;
+      if (dip.length < 3) return;
 
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('ventas/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
