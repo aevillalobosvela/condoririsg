@@ -123,6 +123,37 @@
     cursor: pointer;
   }
 
+  /* Estilos para el dropdown de categorías con colores */
+  #categoryFilter {
+    font-weight: 500;
+  }
+  #categoryFilter option[value="LECHE"] {
+    background-color: #E3F2FD;
+    color: #1565C0;
+  }
+  #categoryFilter option[value="QUESO"] {
+    background-color: #FFF3E0;
+    color: #E65100;
+  }
+  #categoryFilter option[value="REQUESON"] {
+    background-color: #E8F5E9;
+    color: #2E7D32;
+  }
+  #categoryFilter option[value="YOGURT"] {
+    background-color: #FCE4EC;
+    color: #C2185B;
+  }
+
+  /* Animación de feedback al clickear producto */
+  @keyframes productClick {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  .product-card-clicked {
+    animation: productClick 0.3s ease;
+  }
+
   @media (max-width: 991.98px) {
     .pos-container {
       grid-template-columns: 1fr;
@@ -215,36 +246,79 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
+        <div class="row mb-3 g-2">
+          <div class="col-md-6">
+            <input type="text" id="productFilter" class="form-control" placeholder="Buscar productos por nombre...">
+          </div>
+          <div class="col-md-6">
+            <select id="categoryFilter" class="form-select">
+              <option value="">Todos los productos</option>
+              <option value="LECHE" data-color="#2196F3">🔵 Leche</option>
+              <option value="QUESO" data-color="#FF9800">🟠 Queso</option>
+              <option value="REQUESON" data-color="#4CAF50">🟢 Requesón</option>
+              <option value="YOGURT" data-color="#E91E63">🌸 Yogurt</option>
+            </select>
+          </div>
         </div>
 
         <div class="row g-3" id="productsGrid">
-          <?php foreach ($productos as $p): ?> 
-            <div class="col-6 col-md-4 product-card cursor-pointer" 
+          <?php foreach ($productos as $p): ?>
+            <?php
+              // Detectar tipo de producto para asignar colores
+              $nombre_upper = strtoupper($p->nombre);
+              if (strpos($nombre_upper, 'REQUESON') !== false || strpos($nombre_upper, 'REQUESÓN') !== false) {
+                $bg = '#E8F5E9'; $border = '#4CAF50'; $text = '#2E7D32'; $badge = '#388E3C';
+              } elseif (strpos($nombre_upper, 'LECHE') !== false) {
+                $bg = '#E3F2FD'; $border = '#2196F3'; $text = '#1565C0'; $badge = '#1976D2';
+              } elseif (strpos($nombre_upper, 'QUESO') !== false) {
+                $bg = '#FFF3E0'; $border = '#FF9800'; $text = '#E65100'; $badge = '#F57C00';
+              } elseif (strpos($nombre_upper, 'YOGURT') !== false || strpos($nombre_upper, 'YOGUR') !== false) {
+                $bg = '#FCE4EC'; $border = '#E91E63'; $text = '#C2185B'; $badge = '#D81B60';
+              } else {
+                $bg = '#F5F5F5'; $border = '#9E9E9E'; $text = '#424242'; $badge = '#757575';
+              }
+            ?>
+            <div class="col-6 col-md-4 product-card" 
                  data-id="<?= $p->id ?>"
                  data-name="<?= esc($p->nombre) ?>"
                  data-price="<?= $p->precio_contado ?>"
                  data-stock="<?= $p->stock_inve ?>"
-                 data-unidad="<?= esc($p->unidad_nombre ?? 'und') ?>">
-              <div class="card h-100 shadow-sm border-0">
-                <div class="card-body text-center p-3">
-                  <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                       style="width: 60px; height: 60px;">
-
-                    <span class="fw-bold text-success"><?= substr(esc($p->nombre), 0, 2) ?></span>
+                 data-unidad="<?= esc($p->unidad_nombre ?? 'und') ?>"
+                 data-created="<?= isset($p->created_at) ? date('d/m/Y', strtotime($p->created_at)) : '' ?>">
+              <div class="card h-100 shadow-sm border-0" style="border-left: 4px solid <?= $border ?> !important;">
+                <div class="card-body text-center p-3" style="background: linear-gradient(135deg, <?= $bg ?> 0%, #ffffff 100%);">
+                  <?php 
+                    $imagenPorNombre = 'assets/images/productos/' . $p->nombre . '.png';
+                    $imagenExiste = file_exists(FCPATH . $imagenPorNombre);
+                  ?>
+                  <?php if ($imagenExiste): ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
+                         style="width: 90px; height: 90px; background-color: <?= $border ?>;">
+                      <img src="<?= base_url($imagenPorNombre) ?>" alt="<?= esc($p->nombre) ?>" 
+                           style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                  <?php else: ?>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                         style="width: 90px; height: 90px; background-color: <?= $border ?>; color: white;">
+                      <span class="fw-bold" style="font-size: 0.9rem;"><?= substr(esc($p->nombre), 0, 2) ?></span>
+                    </div>
+                  <?php endif; ?>
+                  
+                  <h6 class="card-title mb-2" style="color: <?= $text ?>; font-size: 0.8rem; line-height: 1.2;"><?= esc($p->nombre) ?></h6>
+                  
+                  <div class="mb-2">
+                    <span class="fw-bold" style="color: <?= $badge ?>; font-size: 0.9rem;">Bs. <?= number_format($p->precio_contado, 2) ?></span>
                   </div>
-                 
-                  <h6 class="card-title fs-6 mb-1"><?= esc($p->nombre) ?></h6>
-                  <p class="card-text mb-1">
-                    <span class="text-success fw-bold">Bs. <?= number_format($p->precio_contado, 2) ?></span>
-                  </p>
-                  <p class="card-text mb-0">
-                    <small class="text-muted"><?= $p->stock_inve ?> <?= esc($p->unidad_nombre ?? 'und') ?></small>
-                  </p>
-                  <p class="card-text mb-0">
-                    <small class="text-muted">Nro lote: <?= esc($p->id) ?></small>
-                  </p>
+                  
+                  <div class="mb-2">
+                    <span class="badge" style="background-color: <?= $border ?>; font-size: 0.65rem;"><?= $p->stock_inve ?> <?= esc($p->unidad_nombre ?? 'und') ?></span>
+                  </div>
+                  
+                  <?php if (isset($p->created_at)): ?>
+                  <div class="text-muted" style="font-size: 0.65rem;">
+                    <i class="ri-calendar-line"></i> <?= date('d/m/Y', strtotime($p->created_at)) ?>
+                  </div>
+                  <?php endif; ?>
                 </div>
               </div>
             </div>
@@ -376,23 +450,36 @@
   </div>
 </div>
 
-<!-- MODAL DE CONFIRMACIÓN DE VENTA (NUEVO) -->
+<!-- MODAL DE CONFIRMACIÓN DE VENTA -->
 <div class="modal fade" id="confirmSaleModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title text-success"><i class="ri-shopping-cart-line me-1"></i> Confirmar Venta</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-3">¿Desea finalizar la transacción con los siguientes detalles?</p>
-        <ul class="list-unstyled">
-          <li><strong>Cliente:</strong> <span id="modalClientName">N/A</span></li>
-          <li><strong>Total a pagar:</strong> <span class="text-success fw-bold" id="modalTotalAmount">Bs. 0.00</span></li>
-          <li><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></li>
-          <li><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></li>
-          <li><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></li>
-        </ul>
+        <p class="mb-3 fw-bold">¿Desea finalizar la transacción con los siguientes detalles?</p>
+        
+        <div class="mb-3">
+          <strong>Cliente:</strong> <span id="modalClientName">N/A</span>
+        </div>
+        
+        <div class="mb-3">
+          <strong>Productos:</strong>
+          <div id="modalProductsList" class="mt-2"></div>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-6"><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></div>
+          <div class="col-6"><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></div>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-6"><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></div>
+          <div class="col-6"><strong>Total a pagar:</strong> <span class="text-success fw-bold fs-5" id="modalTotalAmount">Bs. 0.00</span></div>
+        </div>
+        
         <div class="alert alert-info py-2 mt-3" role="alert">
           Esta acción no se puede deshacer y el stock será actualizado.
         </div>
@@ -421,6 +508,8 @@
     let currentPage = 1;
     let selectedClient = null;
     let cart = [];
+    let currentNameFilter = '';
+    let currentCategoryFilter = '';
 
     // Referencias a elementos
     const clientSearch = document.getElementById('clientSearch');
@@ -444,39 +533,88 @@
 
     // --- FUNCIONES DE RENDERIZADO Y LÓGICA ---
 
-    function renderProducts(filter = '') {
-      const filtered = allProducts.filter(p => 
-        (p.nombre && p.nombre.toLowerCase().includes(filter.toLowerCase())) ||
-        (p.nombre_completo && p.nombre_completo.toLowerCase().includes(filter.toLowerCase()))
-      );
+    function getProductImage(p) {
+      return '<?= base_url() ?>/assets/images/productos/' + p.nombre + '.png';
+    }
+
+    function getProductColors(productName) {
+      const name = productName.toUpperCase();
+      
+      if (name.includes('REQUESON') || name.includes('REQUESÓN')) {
+        return { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32', badge: '#388E3C' };
+      } else if (name.includes('LECHE')) {
+        return { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0', badge: '#1976D2' };
+      } else if (name.includes('QUESO')) {
+        return { bg: '#FFF3E0', border: '#FF9800', text: '#E65100', badge: '#F57C00' };
+      } else if (name.includes('YOGURT') || name.includes('YOGUR')) {
+        return { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B', badge: '#D81B60' };
+      } else {
+        return { bg: '#F5F5F5', border: '#9E9E9E', text: '#424242', badge: '#757575' };
+      }
+    }
+
+    function renderProducts(nameFilter = '', categoryFilter = '') {
+      const filtered = allProducts.filter(p => {
+        const matchesName = (p.nombre && p.nombre.toLowerCase().includes(nameFilter.toLowerCase())) ||
+                           (p.nombre_completo && p.nombre_completo.toLowerCase().includes(nameFilter.toLowerCase()));
+        
+        let matchesCategory = true;
+        if (categoryFilter) {
+          const nameUpper = (p.nombre || p.nombre_completo || '').toUpperCase();
+          if (categoryFilter === 'REQUESON') {
+            matchesCategory = nameUpper.includes('REQUESON') || nameUpper.includes('REQUESÓN');
+          } else if (categoryFilter === 'QUESO') {
+            matchesCategory = nameUpper.includes('QUESO') && !nameUpper.includes('REQUESON') && !nameUpper.includes('REQUESÓN');
+          } else {
+            matchesCategory = nameUpper.includes(categoryFilter);
+          }
+        }
+        
+        return matchesName && matchesCategory;
+      });
 
       const totalPages = Math.ceil(filtered.length / itemsPerPage);
       const start = (currentPage - 1) * itemsPerPage;
       const paginated = filtered.slice(start, start + itemsPerPage);
 
-      productsGrid.innerHTML = paginated.map(p => `
-        <div class="col-6 col-md-4 product-card cursor-pointer" 
+      productsGrid.innerHTML = paginated.map(p => {
+        const colors = getProductColors(p.nombre || p.nombre_completo || '');
+        const createdDate = p.created_at ? new Date(p.created_at).toLocaleDateString('es-BO', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
+        return `
+        <div class="col-6 col-md-4 product-card" 
              data-id="${p.id}" 
              data-name="${p.nombre || p.nombre_completo || 'Sin nombre'}" 
              data-price="${p.precio_contado || 0}" 
              data-stock="${p.stock_inve || 0}"
-             data-unidad="${p.unidad_nombre || 'und'}">
-          <div class="card h-100 shadow-sm border-0">
-            <div class="card-body text-center p-3">
-              <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                   style="width: 60px; height: 60px;">
-                <span class="fw-bold text-success">${(p.nombre || 'SN').substring(0,2)}</span>
+             data-unidad="${p.unidad_nombre || 'und'}"
+             data-created="${createdDate}">
+          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${colors.border} !important;">
+            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%);">
+              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
+                   style="width: 90px; height: 90px; background-color: ${colors.border}; position: relative;">
+                <img src="${getProductImage(p)}" 
+                     alt="${p.nombre || p.nombre_completo}" 
+                     style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <span class="fw-bold" style="font-size: 0.9rem; color: white; display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${(p.nombre || 'SN').substring(0,2)}</span>
               </div>
               
-              <h6 class="card-title fs-6 mb-1">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
-              <p class="card-text mb-1">
-                <span class="text-success fw-bold">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
-              </p>
-                <small class="text-muted">Nro lote: ${p.id}</small>
+              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
+              
+              <div class="mb-2">
+                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
+              </div>
+              
+              <div class="mb-2">
+                <span class="badge" style="background-color: ${colors.border}; font-size: 0.65rem;">${p.stock_inve || 0} ${p.unidad_nombre || 'und'}</span>
+              </div>
+              
+              ${createdDate ? `<div class="text-muted" style="font-size: 0.65rem;"><i class="ri-calendar-line"></i> ${createdDate}</div>` : ''}
             </div>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       renderPagination(totalPages);
       
@@ -489,6 +627,10 @@
             stock: parseInt(card.dataset.stock),
             unidad: card.dataset.unidad
           };
+          
+          card.classList.add('product-card-clicked');
+          setTimeout(() => card.classList.remove('product-card-clicked'), 300);
+          
           addToCart(product);
         });
       });
@@ -676,6 +818,23 @@
         document.getElementById('modalPaymentType').textContent = (tipoPago === 'credito' ? 'Crédito' : 'Contado');
         document.getElementById('modalMontoRecibido').textContent = (tipoPago === 'contado' ? `Bs. ${recibido.toFixed(2)}` : 'N/A');
         document.getElementById('modalCambio').textContent = (tipoPago === 'contado' ? `Bs. ${cambio.toFixed(2)}` : 'N/A');
+        
+        const productsList = cart.map(item => {
+          const colors = getProductColors(item.name);
+          const subtotal = item.price * item.quantity * (1 - item.discount/100);
+          return `
+            <div class="d-flex align-items-center mb-2 p-2 rounded" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%); border-left: 3px solid ${colors.border};">
+              <div class="flex-grow-1">
+                <div style="color: ${colors.text}; font-weight: 600; font-size: 0.9rem;">${item.name}</div>
+                <small class="text-muted">Cantidad: ${item.quantity} ${item.unidad} × Bs. ${item.price.toFixed(2)}</small>
+              </div>
+              <div class="text-end">
+                <div style="color: ${colors.badge}; font-weight: bold;">Bs. ${subtotal.toFixed(2)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        document.getElementById('modalProductsList').innerHTML = productsList;
 
         confirmSaleModalInstance.show();
     });
@@ -742,13 +901,41 @@
 
     document.getElementById('productFilter').addEventListener('input', (e) => {
       currentPage = 1;
-      renderProducts(e.target.value);
+      currentNameFilter = e.target.value;
+      renderProducts(currentNameFilter, currentCategoryFilter);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+      currentPage = 1;
+      currentCategoryFilter = e.target.value;
+      renderProducts(currentNameFilter, currentCategoryFilter);
+      
+      const select = e.target;
+      const colorMap = {
+        'LECHE': { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
+        'QUESO': { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
+        'REQUESON': { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
+        'YOGURT': { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' }
+      };
+      
+      if (currentCategoryFilter && colorMap[currentCategoryFilter]) {
+        const colors = colorMap[currentCategoryFilter];
+        select.style.backgroundColor = colors.bg;
+        select.style.borderColor = colors.border;
+        select.style.color = colors.text;
+        select.style.fontWeight = '600';
+      } else {
+        select.style.backgroundColor = '';
+        select.style.borderColor = '';
+        select.style.color = '';
+        select.style.fontWeight = '500';
+      }
     });
 
     document.getElementById('itemsPerPage').addEventListener('change', (e) => {
       itemsPerPage = parseInt(e.target.value);
       currentPage = 1;
-      renderProducts(document.getElementById('productFilter').value);
+      renderProducts(currentNameFilter, currentCategoryFilter);
     });
 
     document.getElementById('cartItems').addEventListener('input', (e) => {
@@ -795,6 +982,7 @@
     // Inicializar
     renderProducts();
     tipoPagoSelect.dispatchEvent(new Event('change'));
+    document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
   });
 </script>
 <?= $this->endSection() ?>
