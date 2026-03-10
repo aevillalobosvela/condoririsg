@@ -125,17 +125,25 @@ $userSucursal = session()->get('sucursal_id');
             <!-- Nombre (Materia prima) -->
             <div class="mb-3">
               <label for="nombre" class="form-label">Materia Prima *</label>
-              <select class="form-select" id="nombre" name="nombre" required>
-                <option value="" disabled <?= empty(old('nombre', $inventario->nombre ?? '')) ? 'selected' : '' ?>>Seleccione la materia prima</option>
-                <?php if (isset($materiasPrimas) && !empty($materiasPrimas)): ?>
-                  <?php foreach ($materiasPrimas as $mp): ?>
-                    <?php $nombreMp = is_object($mp) ? $mp->nombre : $mp['nombre']; ?>
-                    <option value="<?= esc($nombreMp) ?>" <?= (old('nombre', $inventario->nombre ?? '') === $nombreMp) ? 'selected' : '' ?>>
-                      <?= esc($nombreMp) ?>
-                    </option>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </select>
+              <div class="d-flex gap-2 align-items-start">
+                <select class="form-select" id="nombre" name="nombre" required>
+                  <option value="" disabled <?= empty(old('nombre', $inventario->nombre ?? '')) ? 'selected' : '' ?>>Seleccione la materia prima</option>
+                  <?php if (isset($materiasPrimas) && !empty($materiasPrimas)): ?>
+                    <?php foreach ($materiasPrimas as $mp): ?>
+                      <?php 
+                        $nombreMp = is_object($mp) ? $mp->nombre : $mp['nombre'];
+                        $idMp = is_object($mp) ? $mp->id : $mp['id'];
+                      ?>
+                      <option value="<?= esc($nombreMp) ?>" data-id="<?= $idMp ?>" <?= (old('nombre', $inventario->nombre ?? '') === $nombreMp) ? 'selected' : '' ?>>
+                        <?= esc($nombreMp) ?>
+                      </option>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </select>
+                <button type="button" class="btn btn-outline-primary" id="btnEditarMateria" title="Editar materia prima">
+                  <i class="ri-pencil-line"></i>
+                </button>
+              </div>
               <div class="invalid-feedback">Seleccione la materia prima.</div>
             </div>
 
@@ -219,6 +227,88 @@ $userSucursal = session()->get('sucursal_id');
         }
         form.classList.add('was-validated');
       }, false);
+    });
+
+    // Editar materia prima
+    const btnEditar = document.getElementById('btnEditarMateria');
+    const selectNombre = document.getElementById('nombre');
+    let modoEdicion = false;
+
+    btnEditar.addEventListener('click', function() {
+      if (!modoEdicion) {
+        const selectedOption = selectNombre.options[selectNombre.selectedIndex];
+        if (!selectedOption || !selectedOption.value) {
+          alert('Seleccione una materia prima primero');
+          return;
+        }
+
+        const materiaId = selectedOption.getAttribute('data-id');
+        const nombreActual = selectedOption.value;
+
+        // Crear input de edición
+        const inputEdit = document.createElement('input');
+        inputEdit.type = 'text';
+        inputEdit.className = 'form-control';
+        inputEdit.id = 'inputEditMateria';
+        inputEdit.value = nombreActual;
+        inputEdit.setAttribute('data-id', materiaId);
+
+        // Reemplazar select por input
+        selectNombre.style.display = 'none';
+        selectNombre.parentNode.insertBefore(inputEdit, selectNombre);
+
+        // Cambiar botón a confirmar
+        btnEditar.innerHTML = '<i class="ri-check-line"></i>';
+        btnEditar.classList.remove('btn-outline-primary');
+        btnEditar.classList.add('btn-success');
+        btnEditar.title = 'Confirmar cambio';
+        modoEdicion = true;
+      } else {
+        // Confirmar cambio
+        const inputEdit = document.getElementById('inputEditMateria');
+        const nuevoNombre = inputEdit.value.trim();
+        const materiaId = inputEdit.getAttribute('data-id');
+
+        if (!nuevoNombre) {
+          alert('El nombre no puede estar vacío');
+          return;
+        }
+
+        // Enviar actualización
+        fetch('<?= base_url('inventarios/updateMateriaPrima') ?>', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: 'id=' + materiaId + '&nombre=' + encodeURIComponent(nuevoNombre)
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Actualizar select
+            const selectedOption = selectNombre.options[selectNombre.selectedIndex];
+            selectedOption.value = nuevoNombre;
+            selectedOption.text = nuevoNombre;
+
+            // Restaurar vista
+            inputEdit.remove();
+            selectNombre.style.display = '';
+            btnEditar.innerHTML = '<i class="ri-pencil-line"></i>';
+            btnEditar.classList.remove('btn-success');
+            btnEditar.classList.add('btn-outline-primary');
+            btnEditar.title = 'Editar materia prima';
+            modoEdicion = false;
+
+            alert('Materia prima actualizada correctamente');
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          alert('Error al actualizar: ' + error);
+        });
+      }
     });
   });
 </script>

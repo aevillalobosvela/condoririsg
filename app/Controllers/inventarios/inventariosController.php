@@ -1868,6 +1868,29 @@ class InventariosController extends BaseController
             ]
         );
     }
+
+    public function updateMateriaPrima()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Solicitud inválida']);
+        }
+
+        $id = $this->request->getPost('id');
+        $nombre = trim($this->request->getPost('nombre'));
+
+        if (empty($id) || empty($nombre)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Datos incompletos']);
+        }
+
+        try {
+            if ($this->materiaPrimaModel->update($id, ['nombre' => $nombre])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Materia prima actualizada']);
+            }
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al actualizar']);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
     public function reporteInventario()
     {
         $nombre = $this->request->getGet('nombre') ?? '';
