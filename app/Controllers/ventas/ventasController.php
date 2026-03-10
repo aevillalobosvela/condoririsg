@@ -493,12 +493,13 @@ class ventasController extends BaseController
     public function buscarPersonalUto()
     {
         $db = db_connect();
-        $dipPattern = $this->request->getGet('dip') . '%';
+        $searchTerm = $this->request->getGet('dip');
+        $searchPattern = '%' . $searchTerm . '%';
 
         $sql = "
             SELECT 
                 p.id_persona, 
-                p.nombre, 
+                p.nombre_completo AS nombre, 
                 p.dip, 
                 p.telefono, 
                 p.celular, 
@@ -512,10 +513,10 @@ class ventasController extends BaseController
             WHERE 
                 p.\"id_estado\" = true
                 AND e.\"id_estado\" = true  
-                AND p.dip ILIKE ?              
+                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
 
-        $query = $db->query($sql, [$dipPattern]);
+        $query = $db->query($sql, [$searchPattern, $searchPattern]);
         $results = $query->getResult();
 
 
@@ -987,7 +988,7 @@ class ventasController extends BaseController
         // Si tiene personal_uto_id, cargar datos del personal UTO
         elseif (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
