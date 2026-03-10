@@ -221,6 +221,13 @@ $userRoleName = session()->get('rol_nombre');
 
         <?php if ($userRoleName === 'almacen'): ?>
           <li class="menu-title"><span>Inventario</span></li>
+          
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('usuarios') ?>">
+              <i class="ri-group-line"></i> <span>Gestión de Usuarios</span>
+            </a>
+          </li>
+
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarInventario" data-bs-toggle="collapse">
               <i class="ri-fridge-line"></i> <span>Inventario Lácteo</span>
