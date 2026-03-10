@@ -127,9 +127,14 @@ $userSucursal = session()->get('sucursal_id');
               <label for="nombre" class="form-label">Materia Prima *</label>
               <select class="form-select" id="nombre" name="nombre" required>
                 <option value="" disabled <?= empty(old('nombre', $inventario->nombre ?? '')) ? 'selected' : '' ?>>Seleccione la materia prima</option>
-                <option value="LECHE" <?= (old('nombre', $inventario->nombre ?? '') === 'LECHE') ? 'selected' : '' ?>>LECHE</option>
-                <option value="SUERO LECHE" <?= (old('nombre', $inventario->nombre ?? '') === 'SUERO LECHE') ? 'selected' : '' ?>>SUERO LACTEO</option>
-                <option value="SUERO QUESO" <?= (old('nombre', $inventario->nombre ?? '') === 'SUERO QUESO') ? 'selected' : '' ?>>SUERO QUESERIA</option>
+                <?php if (isset($materiasPrimas) && !empty($materiasPrimas)): ?>
+                  <?php foreach ($materiasPrimas as $mp): ?>
+                    <?php $nombreMp = is_object($mp) ? $mp->nombre : $mp['nombre']; ?>
+                    <option value="<?= esc($nombreMp) ?>" <?= (old('nombre', $inventario->nombre ?? '') === $nombreMp) ? 'selected' : '' ?>>
+                      <?= esc($nombreMp) ?>
+                    </option>
+                  <?php endforeach; ?>
+                <?php endif; ?>
               </select>
               <div class="invalid-feedback">Seleccione la materia prima.</div>
             </div>
