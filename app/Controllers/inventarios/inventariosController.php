@@ -18,6 +18,7 @@ use App\Models\StockSucursal\StockSucursalModel;
 use App\Models\Unidad\UnidadModel;
 use App\Models\Venta\DetalleModel;
 use App\Models\Venta\VentaModel;
+use App\Models\MateriaPrima\MateriaPrimaModel;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -31,6 +32,7 @@ class InventariosController extends BaseController
     protected $ventaModel;
     protected $detalleModel;
     protected $stockSucursalModel;
+    protected $materiaPrimaModel;
 
 
     public function __construct()
@@ -42,6 +44,7 @@ class InventariosController extends BaseController
         $this->clienteModel = new ClienteModel();
         $this->ventaModel = new VentaModel();
         $this->detalleModel = new DetalleModel();
+        $this->materiaPrimaModel = new MateriaPrimaModel();
         helper(['form', 'url']);
     }
 
@@ -159,7 +162,8 @@ class InventariosController extends BaseController
                 'sucursal_id' => $sucursalId,
                 'user_id' => $userId
             ],
-            'auto_generate_code' => true
+            'auto_generate_code' => true,
+            'materiasPrimas' => $this->materiaPrimaModel->findAll()
         ];
 
         return view('inventarios/inventariosForm', $data);
@@ -285,7 +289,8 @@ class InventariosController extends BaseController
         $data = [
             'inventario' => $inventario,
             'title' => 'Editar Inventario',
-            'auto_generate_code' => false
+            'auto_generate_code' => false,
+            'materiasPrimas' => $this->materiaPrimaModel->findAll()
         ];
 
         return view('inventarios/inventariosForm', $data);
@@ -1862,6 +1867,29 @@ class InventariosController extends BaseController
                 'totales' => $resumen['totales_generales']
             ]
         );
+    }
+
+    public function updateMateriaPrima()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Solicitud inválida']);
+        }
+
+        $id = $this->request->getPost('id');
+        $nombre = trim($this->request->getPost('nombre'));
+
+        if (empty($id) || empty($nombre)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Datos incompletos']);
+        }
+
+        try {
+            if ($this->materiaPrimaModel->update($id, ['nombre' => $nombre])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Materia prima actualizada']);
+            }
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al actualizar']);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
     public function reporteInventario()
     {

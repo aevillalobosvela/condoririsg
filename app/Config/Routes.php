@@ -119,6 +119,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('resumen', 'inventarios\inventariosController::getResumen', ['filter' => 'role:admin,almacen']);
     $routes->get('resumenNombre', 'inventarios\inventariosController::getResumenPorNombre', ['filter' => 'role:admin,almacen']);
     $routes->get('reporteInventario', 'inventarios\inventariosController::reporteInventario', ['filter' => 'role:admin,almacen']);
+    $routes->post('updateMateriaPrima', 'inventarios\inventariosController::updateMateriaPrima', ['filter' => 'role:admin,almacen']);
     
     // Sistema de ventas integrado (legacy)
     $routes->get('ventas', 'inventarios\inventariosController::indexVenta', ['filter' => 'role:admin,almacen,contabilidad']);
