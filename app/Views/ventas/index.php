@@ -85,6 +85,33 @@
   .card-cierre-caja {
     border: 3px solid #ffc107;
   }
+
+  /* Colores para diferenciar tipo de pago */
+  .venta-contado {
+    background-color: #d4edda !important;
+    border-left: 4px solid #28a745 !important;
+  }
+
+  .venta-credito {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107 !important;
+  }
+
+  .badge-tipo-contado {
+    background-color: #28a745;
+    color: white;
+    font-weight: 600;
+    padding: 0.35em 0.6em;
+    border-radius: 6px;
+  }
+
+  .badge-tipo-credito {
+    background-color: #ffc107;
+    color: #000;
+    font-weight: 600;
+    padding: 0.35em 0.6em;
+    border-radius: 6px;
+  }
 </style>
 <?php $this->endSection() ?>
 
@@ -429,8 +456,12 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <?php foreach ($ventas as $venta): ?>
-                    <tr>
+                  <?php foreach ($ventas as $venta): 
+                    $tipoPago = strtolower($venta->tipo_pago ?? '');
+                    $claseRow = ($tipoPago === 'contado') ? 'venta-contado' : 'venta-credito';
+                    $claseBadge = ($tipoPago === 'contado') ? 'badge-tipo-contado' : 'badge-tipo-credito';
+                  ?>
+                    <tr class="<?= $claseRow ?>">
                       <td><strong><?= esc($venta->id ?? 'N/A') ?></strong></td>
                       <td>
                         <?php if (!empty($venta->personal_uto_id)): ?>
@@ -441,7 +472,7 @@
                         <?php endif; ?>
                       </td>
                       <td><strong class="text-success">Bs. <?= esc(number_format($venta->monto_total, 2)) ?></strong></td>
-                      <td><?= esc(ucfirst($venta->tipo_pago ?? 'N/A')) ?></td>
+                      <td><span class="<?= $claseBadge ?>"><?= esc(ucfirst($venta->tipo_pago ?? 'N/A')) ?></span></td>
                       <td><?= esc(date('d/m/Y H:i', strtotime($venta->created_at))) ?></td>
                       <td>
                         <?php if ($venta->estado == 1): ?>
@@ -451,7 +482,6 @@
                         <?php endif; ?>
                       </td>
                       <td>
-
                         <a href="<?= base_url('ventas/recibo/' . $venta->id) ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimir Recibo">
                           <i class="ri-printer-line"></i>
                         </a>
