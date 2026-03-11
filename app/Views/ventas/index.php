@@ -4,101 +4,162 @@
 
 <?php $this->section('styles') ?>
 <style>
-  .bg-soft-total {
-    background-color: #d4edda;
-    color: #155724;
-  }
-
-  .bg-soft-stock {
-    background-color: #f8fdfa !important;
-    color: #28a745 !important;
+  :root {
+    --color-contado: #10b981;
+    --color-contado-light: #d1fae5;
+    --color-contado-dark: #059669;
+    --color-credito: #f59e0b;
+    --color-credito-light: #fef3c7;
+    --color-credito-dark: #d97706;
+    --color-total: #6366f1;
+    --color-total-light: #e0e7ff;
+    --color-total-dark: #4f46e5;
+    --color-cierre: #8b5cf6;
+    --color-cierre-light: #ede9fe;
+    --color-cierre-dark: #7c3aed;
   }
 
   .card {
-    border: 1px solid #e0f0e9;
-    box-shadow: 0 0.125rem 0.25rem rgba(40, 167, 69, 0.08);
-    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .card-animate {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .card-animate::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+  }
+
+  .card-animate:hover::before {
+    left: 100%;
+  }
+
+  /* Cards de Venta al Contado */
+  .card-venta-contado {
+    background: linear-gradient(135deg, var(--color-contado-light) 0%, #ffffff 100%);
+    border-left: 4px solid var(--color-contado) !important;
+  }
+
+  .card-venta-contado .avatar-title {
+    background: var(--color-contado-light) !important;
+  }
+
+  .card-venta-contado .text-primary-custom {
+    color: var(--color-contado-dark) !important;
+  }
+
+  /* Cards de Venta a Crédito */
+  .card-venta-credito {
+    background: linear-gradient(135deg, var(--color-credito-light) 0%, #ffffff 100%);
+    border-left: 4px solid var(--color-credito) !important;
+  }
+
+  .card-venta-credito .avatar-title {
+    background: var(--color-credito-light) !important;
+  }
+
+  .card-venta-credito .text-primary-custom {
+    color: var(--color-credito-dark) !important;
+  }
+
+  /* Cards de Total General */
+  .card-total-general {
+    background: linear-gradient(135deg, var(--color-total-light) 0%, #ffffff 100%);
+    border-left: 4px solid var(--color-total) !important;
+  }
+
+  .card-total-general .avatar-title {
+    background: var(--color-total-light) !important;
+  }
+
+  .card-total-general .text-primary-custom {
+    color: var(--color-total-dark) !important;
+  }
+
+  /* Card de Cierre de Caja */
+  .card-cierre-caja {
+    background: linear-gradient(135deg, var(--color-cierre-light) 0%, #ffffff 100%);
+    border: 3px solid var(--color-cierre) !important;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+  }
+
+  .card-cierre-caja .avatar-title {
+    background: var(--color-cierre) !important;
+    color: white !important;
+  }
+
+  .card-cierre-caja .text-primary-custom {
+    color: var(--color-cierre-dark) !important;
   }
 
   .card-header {
-    background-color: #f8fdfa;
-    border-bottom: 1px solid #e0f0e9;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
     font-weight: 600;
-    color: #28a745;
+    color: #374151;
   }
 
   .btn-success {
-    background-color: #28a745 !important;
-    border-color: #28a745 !important;
+    background-color: var(--color-contado) !important;
+    border-color: var(--color-contado) !important;
   }
 
   .btn-success:hover {
-    background-color: #218838 !important;
-    border-color: #1e7e34 !important;
+    background-color: var(--color-contado-dark) !important;
+    border-color: var(--color-contado-dark) !important;
   }
 
   .badge-finalizada {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: var(--color-contado-light);
+    color: var(--color-contado-dark);
     font-weight: 600;
     padding: 0.35em 0.6em;
     border-radius: 6px;
   }
 
   .badge-cancelada {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #fee2e2;
+    color: #991b1b;
     font-weight: 600;
     padding: 0.35em 0.6em;
     border-radius: 6px;
   }
 
-  .table-light {
-    background-color: #f8fdfa !important;
-    border-color: #e0f0e9 !important;
-  }
-
-  .table {
-    border-color: #e0f0e9 !important;
-  }
-
-  .filter-section {
-    background-color: #f8fdfa;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-
-  .btn-cierre-caja,
-  .btn-cierre-caja:focus {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #343a40;
-  }
-
-  .btn-cierre-caja:hover {
-    background-color: #e0a800;
-    border-color: #d39e00;
-    color: #343a40;
-  }
-
-  .card-cierre-caja {
-    border: 3px solid #ffc107;
-  }
-
-  /* Colores para diferenciar tipo de pago */
+  /* Colores para filas de tabla */
   .venta-contado {
-    background-color: #d4edda !important;
-    border-left: 4px solid #28a745 !important;
+    background-color: var(--color-contado-light) !important;
+    border-left: 4px solid var(--color-contado) !important;
   }
 
   .venta-credito {
-    background-color: #fff3cd !important;
-    border-left: 4px solid #ffc107 !important;
+    background-color: var(--color-credito-light) !important;
+    border-left: 4px solid var(--color-credito) !important;
   }
 
   .badge-tipo-contado {
-    background-color: #28a745;
+    background-color: var(--color-contado);
     color: white;
     font-weight: 600;
     padding: 0.35em 0.6em;
@@ -106,11 +167,42 @@
   }
 
   .badge-tipo-credito {
-    background-color: #ffc107;
-    color: #000;
+    background-color: var(--color-credito);
+    color: white;
     font-weight: 600;
     padding: 0.35em 0.6em;
     border-radius: 6px;
+  }
+
+  .table-light {
+    background-color: #f9fafb !important;
+    border-color: #e5e7eb !important;
+  }
+
+  .table {
+    border-color: #e5e7eb !important;
+  }
+
+  .filter-section {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #d1fae5;
+  }
+
+  .avatar-sm {
+    width: 48px;
+    height: 48px;
+  }
+
+  .avatar-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
   }
 </style>
 <?php $this->endSection() ?>
@@ -166,7 +258,7 @@
       <div class="col-xl-3 col-md-6">
         <?php if ($canSell): ?>
           <a href="<?= base_url('ventas/register') ?>" class="text-decoration-none">
-            <div class="card card-animate">
+            <div class="card card-animate card-venta-contado">
               <div class="card-body">
                 <div class="d-flex align-items-center">
                   <div class="flex-grow-1 overflow-hidden">
@@ -175,12 +267,12 @@
                 </div>
                 <div class="d-flex align-items-end justify-content-between mt-4">
                   <div>
-                    <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-success">VENTAS AL CONTADO</h4>
-                    <span class="text-decoration-underline text-success">Registrar Ahora</span>
+                    <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary-custom">VENTAS AL CONTADO</h4>
+                    <span class="text-decoration-underline text-primary-custom">Registrar Ahora</span>
                   </div>
                   <div class="avatar-sm flex-shrink-0">
-                    <span class="avatar-title bg-soft-total rounded fs-3">
-                      <i class="ri-shopping-cart-line text-success"></i>
+                    <span class="avatar-title rounded fs-3">
+                      <i class="ri-shopping-cart-line text-primary-custom"></i>
                     </span>
                   </div>
                 </div>
@@ -220,12 +312,12 @@
               </div>
               <div class="d-flex align-items-end justify-content-between mt-4">
                 <div>
-                  <h4 class="fs-22 fw-semibold ff-secondary mb-4">Solo Consulta</h4>
+                  <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-muted">Solo Consulta</h4>
                   <span class="text-muted">No es día de hoy o es rango de fechas.</span>
                 </div>
                 <div class="avatar-sm flex-shrink-0">
-                  <span class="avatar-title bg-soft-total rounded fs-3">
-                    <i class="ri-history-line text-info"></i>
+                  <span class="avatar-title rounded fs-3" style="background-color: #e5e7eb;">
+                    <i class="ri-history-line" style="color: #6b7280;"></i>
                   </span>
                 </div>
               </div>
@@ -237,7 +329,7 @@
     <?php if (!$isContabilidad): ?>
       <div class="col-xl-3 col-md-6">
         <a href="<?= base_url('ventas/credito') ?>" class="text-decoration-none">
-          <div class="card card-animate">
+          <div class="card card-animate card-venta-credito">
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1 overflow-hidden">
@@ -246,12 +338,12 @@
               </div>
               <div class="d-flex align-items-end justify-content-between mt-4">
                 <div>
-                  <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-success">VENTAS A CRÉDITO</h4>
-                  <span class="text-decoration-underline text-success">Registrar Ahora</span>
+                  <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary-custom">VENTAS A CRÉDITO</h4>
+                  <span class="text-decoration-underline text-primary-custom">Registrar Ahora</span>
                 </div>
                 <div class="avatar-sm flex-shrink-0">
-                  <span class="avatar-title bg-soft-total rounded fs-3">
-                    <i class="ri-shopping-cart-line text-success"></i>
+                  <span class="avatar-title rounded fs-3">
+                    <i class="ri-wallet-3-line text-primary-custom"></i>
                   </span>
                 </div>
               </div>
@@ -261,7 +353,7 @@
       </div>
     <?php endif; ?>
     <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
+      <div class="card card-animate card-total-general">
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
@@ -270,7 +362,7 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-success">
+              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary-custom">
                 Bs. <?= number_format($totalVentas, 2) ?>
               </h4>
               <span class="text-muted">
@@ -278,8 +370,8 @@
               </span>
             </div>
             <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-total rounded fs-3">
-                <i class="ri-money-dollar-circle-line text-success"></i>
+              <span class="avatar-title rounded fs-3">
+                <i class="ri-money-dollar-circle-line text-primary-custom"></i>
               </span>
             </div>
           </div>
@@ -289,7 +381,7 @@
 
 
     <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
+      <div class="card card-animate card-venta-contado">
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
@@ -298,7 +390,7 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary">
+              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary-custom">
                 Bs. <?= number_format($totalContado, 2) ?>
               </h4>
               <span class="text-muted">
@@ -306,8 +398,8 @@
               </span>
             </div>
             <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-primary rounded fs-3">
-                <i class="ri-hand-coin-line text-primary"></i>
+              <span class="avatar-title rounded fs-3">
+                <i class="ri-hand-coin-line text-primary-custom"></i>
               </span>
             </div>
           </div>
@@ -316,7 +408,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-      <div class="card card-animate">
+      <div class="card card-animate card-venta-credito">
         <div class="card-body">
           <div class="d-flex align-items-center">
             <div class="flex-grow-1 overflow-hidden">
@@ -325,7 +417,7 @@
           </div>
           <div class="d-flex align-items-end justify-content-between mt-4">
             <div>
-              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-warning">
+              <h4 class="fs-22 fw-semibold ff-secondary mb-4 text-primary-custom">
                 Bs. <?= number_format($totalCredito, 2) ?>
               </h4>
               <span class="text-muted">
@@ -333,8 +425,8 @@
               </span>
             </div>
             <div class="avatar-sm flex-shrink-0">
-              <span class="avatar-title bg-soft-warning rounded fs-3">
-                <i class="ri-wallet-3-line text-warning"></i>
+              <span class="avatar-title rounded fs-3">
+                <i class="ri-wallet-3-line text-primary-custom"></i>
               </span>
             </div>
           </div>
