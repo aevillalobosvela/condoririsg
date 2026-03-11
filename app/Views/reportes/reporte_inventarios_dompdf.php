@@ -71,7 +71,7 @@
         <div class="header-content">
             <h1>UNIVERSIDAD TÉCNICA DE ORURO</h1>
             <h2>DIRECCIÓN DE PLANIFICACIÓN Y DESARROLLO INSTITUCIONAL</h2>
-            <p>Telf.: 5281745 – Interno: 120; FAX 5242215; Casilla 49</p>
+            <p>Telf.: 5281745 | Interno: 120; FAX 5242215; Casilla 49</p>
             <p>Email: dpdi@uto.edu.bo; Internet: www.uto.edu.bo</p>
         </div>
         <div class="logo-right">

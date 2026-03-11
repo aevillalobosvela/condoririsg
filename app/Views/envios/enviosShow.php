@@ -370,9 +370,9 @@
             <?= ($envio->sucursal_origen_id == 2) ? 'Historial de Devoluciones' : 'Historial de Transferencias' ?>
           </h5>
           <div class="d-flex align-items-center gap-2">
-            <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
+        <!--     <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
               <i class="ri-file-pdf-line align-bottom me-1"></i> Generar Envio
-            </a>
+            </a> -->
             <a href="<?= base_url('transferencias/envioPdf/' . $envio->id . '?consolidado=1') ?>" target="_blank" class="btn btn-success btn-sm">
               <i class="ri-file-list-3-line align-bottom me-1"></i> Generar Envio Con Productos Resumidos
             </a>

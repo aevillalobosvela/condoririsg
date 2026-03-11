@@ -49,12 +49,7 @@ class FacturaPdf extends FPDF
      */
     public function Footer()
     {
-        // Posición a 15 mm desde abajo
-        $this->SetY(-15);
-        // Configurar la fuente
-        $this->SetFont('Arial', 'I', 8);
-        // Número de página
-        $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
+        // Pie de página vacío
     }
 
     /**
