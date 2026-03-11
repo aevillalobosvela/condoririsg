@@ -73,6 +73,14 @@
     border-radius: 6px;
   }
 
+  .turno-am {
+    background-color: #fff3cd !important;
+  }
+
+  .turno-pm {
+    background-color: #cfe2ff !important;
+  }
+
   .per-page-selector {
     width: auto;
     display: inline-block;
@@ -221,7 +229,7 @@
                     </thead>
                     <tbody class="list form-check-all">
                       <?php foreach ($inventarios as $inventario): ?>
-                        <tr>
+                        <tr class="<?= strtoupper($inventario->turno) === 'AM' ? 'turno-am' : 'turno-pm' ?>">
                           <td><?= esc($inventario->code) ?></td>
                           <td class="inventario-nombre"><?= esc($inventario->nombre) ?></td>
                           <td>
