@@ -183,8 +183,11 @@
                   <a href="<?= base_url('inventarios/exportarExcel?' . http_build_query($filters)) ?>" class="btn btn-soft-success me-1">
                     <i class="ri-file-excel-2-line align-bottom me-1"></i> Excel
                   </a>
-                  <a href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>" class="btn btn-soft-danger">
+                  <a href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>" class="btn btn-soft-danger me-1">
                     <i class="ri-file-pdf-line align-bottom me-1"></i> PDF
+                  </a>
+                  <a href="<?= base_url('inventarios/exportarCalidadExcel?' . http_build_query($filters)) ?>" class="btn btn-soft-info">
+                    <i class="ri-file-excel-2-line align-bottom me-1"></i> Control Calidad
                   </a>
                 </div>
               </div>
