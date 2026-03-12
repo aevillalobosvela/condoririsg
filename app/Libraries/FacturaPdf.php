@@ -36,7 +36,7 @@ class FacturaPdf extends FPDF
         $this->SetFont('Arial', 'B', 12);
         $this->Cell(0, 5, "CONDORIRI - AGRONOMIA", 0, 1, 'C');
         $this->SetFont('Arial', '', 10);
-        $this->Cell(0, 5, "Telf.: 5281745 – Interno: 120;  FAX  5242215;  Casilla 49", 0, 1, 'C');
+        $this->Cell(0, 5, "Telf.: 5281745 | Interno: 120;  FAX  5242215;  Casilla 49", 0, 1, 'C');
         $this->Cell(0, 5, "Email: dpdi@uto.edu.bo; Internet: www.uto.edu.bo", 0, 1, 'C');
 
         // Espacio
@@ -49,12 +49,7 @@ class FacturaPdf extends FPDF
      */
     public function Footer()
     {
-        // Posición a 15 mm desde abajo
-        $this->SetY(-15);
-        // Configurar la fuente
-        $this->SetFont('Arial', 'I', 8);
-        // Número de página
-        $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
+        // Pie de página vacío
     }
 
     /**
@@ -62,8 +57,9 @@ class FacturaPdf extends FPDF
      *
      * @param array $envio      Array asociativo con los datos del envío.
      * @param array $productos  Array de productos transferidos.
+     * @param bool $consolidado Si es true, indica que los productos ya están consolidados.
      */
-    public function generarReporteEnvio($envio, $productos)
+    public function generarReporteEnvio($envio, $productos, $consolidado = false)
     {
         // Configuración de la página en formato A4 vertical
         $this->AddPage('P', 'A4');
@@ -73,7 +69,8 @@ class FacturaPdf extends FPDF
 
         // --- Título del Reporte ---
         $this->SetFont('Arial', 'B', 16);
-        $this->Cell(0, 10, utf8_decode('REPORTE DE CONTROL DE ENVÍO'), 0, 1, 'C');
+        $titulo = $consolidado ? 'REPORTE DE CONTROL DE ENVÍO' : 'REPORTE DE CONTROL DE ENVÍO';
+        $this->Cell(0, 10, utf8_decode($titulo), 0, 1, 'C');
         $this->Ln(10);
 
         // --- Sección de Detalles del Envío ---
@@ -151,6 +148,7 @@ class FacturaPdf extends FPDF
         $this->Cell(0, 5, utf8_decode('Firma del Creador del Envío'), 0, 1, 'C');
 
         // Salida del PDF. La opción 'D' fuerza la descarga del archivo.
-        $this->Output('D', 'reporte_envio_' . $envio['id'] . '.pdf');
+        $nombreArchivo = $consolidado ? 'reporte_envio_consolidado_' . $envio['id'] . '.pdf' : 'reporte_envio_' . $envio['id'] . '.pdf';
+        $this->Output('D', $nombreArchivo);
     }
 }
