@@ -243,11 +243,11 @@ $userRoleName = session()->get('rol_nombre');
             </div>
           </li>
 
-          <li class="nav-item">
+         <!--  <li class="nav-item">
             <a class="nav-link menu-link" href="<?= base_url('productos') ?>">
               <i class="ri-store-3-line"></i> <span>Productos</span>
             </a>
-          </li>
+          </li> -->
 
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarEnvios" data-bs-toggle="collapse">
