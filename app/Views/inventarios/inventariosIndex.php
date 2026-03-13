@@ -182,7 +182,7 @@
 
           <div class="card">
             <div class="card-header border-0">
-              <div class="d-flex align-items-center flex-wrap">
+              <div class="d-flex align-items-center flex-wrap mb-3">
                 <h5 class="card-title mb-0 flex-grow-1">Lista de Inventarios</h5>
                 <div class="flex-shrink-0 d-flex flex-wrap justify-content-end">
                   <a href="<?= base_url('inventarios/register') ?>" class="btn btn-success add-btn me-1">
