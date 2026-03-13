@@ -9,6 +9,7 @@ use App\Libraries\CierreVentaPdf;
 use App\Libraries\ReporteLacteos;
 use App\Libraries\ReporteInventario;
 use App\Libraries\ReporteCalidad;
+use App\Libraries\ReporteControlCalidad;
 use App\Models\Inventario\InventarioModel;
 use App\Models\UsuarioModel;
 use App\Models\Producto\ProductoModel;
@@ -2232,6 +2233,23 @@ class InventariosController extends BaseController
         echo '</Table></Worksheet>';
         echo '</Workbook>';
         exit;
+    }
+
+    public function exportarCalidadPdf()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+
+        $pdfGenerator = new ReporteControlCalidad([
+            'nombre' => $nombre,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin
+        ]);
+
+        $pdfGenerator->generarReporte($inventarios);
     }
 
     public function exportarExcelVentas()
