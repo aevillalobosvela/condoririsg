@@ -5,6 +5,33 @@ $userNombre = session('nombre');
 $userApellidos = session('apellidos');
 ?>
 
+<style>
+  #page-topbar {
+    background-color: #c8e6d4 !important;
+    border-bottom: 1px solid #9ecfb2;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.12);
+  }
+
+  .topbar-user {
+    background-color: #1a6b3a !important;
+    border-radius: 8px;
+  }
+
+  .topbar-user .btn {
+    background-color: transparent !important;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .topbar-user .user-name-text,
+  .topbar-user .user-name-sub-text {
+    color: #ffffff !important;
+  }
+
+  .topbar-user .mdi-account-circle {
+    color: #ffffff !important;
+  }
+</style>
+
 <header id="page-topbar">
     <div class="layout-width">
         <div class="navbar-header">

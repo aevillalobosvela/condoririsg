@@ -374,7 +374,7 @@
               <i class="ri-file-pdf-line align-bottom me-1"></i> Generar Envio
             </a> -->
             <a href="<?= base_url('transferencias/envioPdf/' . $envio->id . '?consolidado=1') ?>" target="_blank" class="btn btn-success btn-sm">
-              <i class="ri-file-list-3-line align-bottom me-1"></i> Generar Envio Con Productos Resumidos
+              <i class="ri-file-list-3-line align-bottom me-1"></i> Generar Envio
             </a>
           </div>
         </div>
