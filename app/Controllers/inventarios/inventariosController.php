@@ -1369,6 +1369,18 @@ class InventariosController extends BaseController
         $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
         $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
 
+        // Usar el servicio de exportación
+        $exportService = new \App\Services\Inventarios\ExportacionExcelService();
+        $exportService->exportarReporteGeneral($nombre, $fecha_inicio, $fecha_fin);
+    }
+
+    public function exportarExcelAntiguo()
+    {
+        // Método antiguo mantenido como respaldo
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
         $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
 
         // Cargar sucursales y usuarios
