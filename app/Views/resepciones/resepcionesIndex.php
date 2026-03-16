@@ -327,6 +327,20 @@
     transform: scale(1.005);
   }
 
+  /* Row colors by estado_id */
+  .table-envios tbody tr.estado-1 { background-color: #ffebee; }
+  .table-envios tbody tr.estado-2 { background-color: #fff9e6; }
+  .table-envios tbody tr.estado-10 { background-color: #fff3cd; }
+  .table-envios tbody tr.estado-11 { background-color: #ffe0b2; }
+  .table-envios tbody tr.estado-9 { background-color: #e8f5e9; }
+  .table-envios tbody tr.estado-3 { background-color: #d4edda; }
+  .table-envios tbody tr.estado-1:hover { background-color: #ffcdd2; }
+  .table-envios tbody tr.estado-2:hover { background-color: #fff59d; }
+  .table-envios tbody tr.estado-10:hover { background-color: #ffe082; }
+  .table-envios tbody tr.estado-11:hover { background-color: #ffcc80; }
+  .table-envios tbody tr.estado-9:hover { background-color: #c8e6c9; }
+  .table-envios tbody tr.estado-3:hover { background-color: #a5d6a7; }
+
   /* Badges */
   .badge-custom {
     font-weight: 600;
@@ -337,26 +351,41 @@
     align-items: center;
     gap: 6px;
   }
-  .badge-pendiente {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    color: #856404;
-    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
+  .badge-estado-1 {
+    background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(239, 83, 80, 0.3);
   }
-  .badge-aceptado {
-    background: linear-gradient(135deg, #d1ecf1 0%, #b8e9f3 100%);
-    color: #0c5460;
-    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+  .badge-estado-2 {
+    background: linear-gradient(135deg, #fff176 0%, #ffee58 100%);
+    color: #f57f17;
+    box-shadow: 0 2px 4px rgba(255, 241, 118, 0.3);
   }
-  .badge-entregado {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    color: #155724;
-    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+  .badge-estado-10 {
+    background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+    color: #e65100;
+    box-shadow: 0 2px 4px rgba(255, 183, 77, 0.3);
   }
-  .badge-enviado {
-    background: linear-gradient(135deg, #cce5ff 0%, #b8daff 100%);
-    color: #004085;
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  .badge-estado-11 {
+    background: linear-gradient(135deg, #ff8a65 0%, #ff7043 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(255, 138, 101, 0.3);
   }
+  .badge-estado-9 {
+    background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(102, 187, 106, 0.3);
+  }
+  .badge-estado-3 {
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+  }
+  /* Legacy badges for compatibility */
+  .badge-pendiente { background: linear-gradient(135deg, #ef5350 0%, #e53935 100%); color: #ffffff; box-shadow: 0 2px 4px rgba(239, 83, 80, 0.3); }
+  .badge-aceptado { background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%); color: #ffffff; box-shadow: 0 2px 4px rgba(102, 187, 106, 0.3); }
+  .badge-entregado { background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); color: #ffffff; box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3); }
+  .badge-enviado { background: linear-gradient(135deg, #fff176 0%, #ffee58 100%); color: #f57f17; box-shadow: 0 2px 4px rgba(255, 241, 118, 0.3); }
 
   /* Empty state */
   .empty-state {
@@ -572,7 +601,7 @@ foreach ($envios ?? [] as $envio) {
             <tbody>
               <?php if (!empty($enviosTab)): ?>
                 <?php foreach ($enviosTab as $envio): ?>
-                  <tr>
+                  <tr class="estado-<?= $envio['estado_id'] ?>">
                     <td><strong><?= esc($envio['code']) ?></strong></td>
                     <td>
                       <?php
@@ -590,28 +619,29 @@ foreach ($envios ?? [] as $envio) {
                     <td>
                       <?php 
                         $estado_id = $envio['estado_id'];
-                        $badge_class = '';
+                        $badge_class = 'badge-estado-' . $estado_id;
                         $estado_nombre = '';
                         $icon = '';
 
                         if ($estado_id == 1) {
-                            $badge_class = 'badge-pendiente';
                             $estado_nombre = 'Pendiente';
                             $icon = 'ri-time-line';
                         } elseif ($estado_id == 2) {
-                            $badge_class = 'badge-enviado';
                             $estado_nombre = 'Enviado';
                             $icon = 'ri-truck-line';
                         } elseif ($estado_id == 9) {
-                            $badge_class = 'badge-aceptado';
                             $estado_nombre = 'Aceptado';
                             $icon = 'ri-check-double-line';
                         } elseif ($estado_id == 3) {
-                            $badge_class = 'badge-entregado';
                             $estado_nombre = 'Entregado';
                             $icon = 'ri-checkbox-circle-line';
+                        } elseif ($estado_id == 10) {
+                            $estado_nombre = 'Proceso';
+                            $icon = 'ri-loader-line';
+                        } elseif ($estado_id == 11) {
+                            $estado_nombre = 'Observado';
+                            $icon = 'ri-alert-line';
                         } else {
-                            $badge_class = 'badge-secondary';
                             $estado_nombre = 'Desconocido';
                             $icon = 'ri-question-line';
                         }

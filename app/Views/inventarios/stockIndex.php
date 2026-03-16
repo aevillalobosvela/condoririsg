@@ -267,16 +267,46 @@
                           </thead>
                           <tbody>
                             <?php if (!empty($stockAgrupado)): ?>
+                              <?php 
+                                // Encontrar el valor mínimo y máximo para calcular el gradiente
+                                $stocks = array_column($stockAgrupado, 'suma_stock_inve');
+                                $minStock = !empty($stocks) ? min($stocks) : 0;
+                                $maxStock = !empty($stocks) ? max($stocks) : 1;
+                                $rango = $maxStock - $minStock;
+                              ?>
                               <?php foreach ($stockAgrupado as $item): ?>
+                                <?php
+                                  $stock = $item->suma_stock_inve ?? 0;
+                                  // Calcular el porcentaje normalizado (0 a 1)
+                                  $porcentaje = $rango > 0 ? ($stock - $minStock) / $rango : 0.5;
+                                  
+                                  // Gradiente de rojo a verde (colores sutiles)
+                                  if ($porcentaje < 0.5) {
+                                    // De rojo a amarillo
+                                    $r = 255;
+                                    $g = (int)(255 * ($porcentaje * 2));
+                                    $b = 200;
+                                  } else {
+                                    // De amarillo a verde
+                                    $r = (int)(255 * (1 - ($porcentaje - 0.5) * 2));
+                                    $g = 255;
+                                    $b = 200;
+                                  }
+                                  
+                                  // Hacer los colores más sutiles (más claros)
+                                  $r = (int)($r * 0.25 + 255 * 0.75);
+                                  $g = (int)($g * 0.25 + 255 * 0.75);
+                                  $b = (int)($b * 0.25 + 255 * 0.75);
+                                  
+                                  $bgColor = sprintf('rgb(%d, %d, %d)', $r, $g, $b);
+                                ?>
                                 <tr>
                                   <td><?= esc($item->nombre) ?></td>
                                   <td class="text-end">
                                     <?= esc($item->cantidad_registros ?? 0) ?>
                                   </td>
-                                  <td class="text-end">
-                                    <span class="badge <?= ($item->suma_stock_inve > 0) ? 'bg-success' : 'bg-danger' ?>">
-                                      <?= esc($item->suma_stock_inve ?? 0) ?>
-                                    </span>
+                                  <td class="text-end" style="background-color: <?= $bgColor ?>; font-weight: 600;">
+                                    <?= esc($stock) ?>
                                   </td>
                                 </tr>
                               <?php endforeach; ?>

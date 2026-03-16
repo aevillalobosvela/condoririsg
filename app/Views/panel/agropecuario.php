@@ -97,34 +97,39 @@
     gap: 1.25rem;
   }
 
+  .quick-link { text-decoration: none; color: inherit; display: block; }
+
   .quick-item {
-    background: var(--white);
     border-radius: 12px;
     padding: 1.25rem;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     transition: all 0.3s ease;
-    border: 1px solid #e9ecef;
+    border: 1.5px solid transparent;
   }
 
   .quick-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-    border-color: var(--primary-green);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    filter: brightness(0.96);
   }
+
+  .quick-item.orange { background-color: #fff0e0; border-color: #fd7e14; }
+  .quick-item.green  { background-color: #e6f4ea; border-color: #28a745; }
 
   .qi-icon {
     width: 56px;
     height: 56px;
-    background-color: var(--primary-green-light);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1rem;
-    color: var(--primary-green);
     font-size: 1.5rem;
   }
+
+  .quick-item.orange .qi-icon { background-color: #fd7e14; color: #fff; }
+  .quick-item.green  .qi-icon { background-color: #28a745; color: #fff; }
 
   .qi-title {
     font-weight: 600;
@@ -151,7 +156,7 @@
     <div class="quick-grid">
 
       <a href="<?= base_url('resepciones') ?>" class="quick-link" aria-label="Aceptación de Envíos">
-        <div class="quick-item">
+        <div class="quick-item orange">
           <div class="qi-icon"><i class="mdi mdi-clipboard-check"></i></div>
           <div class="qi-title">Aceptación de Envíos</div>
           <div class="qi-sub">Recibe y verifica mercancía</div>
@@ -159,7 +164,7 @@
       </a>
 
       <a href="<?= base_url('ventas') ?>" class="quick-link" aria-label="Punto de Venta">
-        <div class="quick-item">
+        <div class="quick-item green">
           <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
           <div class="qi-title">Punto de Venta</div>
           <div class="qi-sub">Registra ventas y pagos</div>

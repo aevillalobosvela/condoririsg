@@ -21,11 +21,65 @@
     transition: transform 0.2s, box-shadow 0.2s;
     border: 1px solid #e0f0e9;
     border-radius: 8px;
+    position: relative;
   }
 
   .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
+  }
+
+  .product-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #f5f5f5;
+  }
+
+  .product-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .product-card.disabled .card {
+    border-color: #dc3545;
+    background-color: #f8f9fa;
+  }
+
+  .product-card .stock-depleted-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  }
+
+  .product-card.disabled .stock-depleted-badge {
+    display: flex;
+  }
+
+  .product-card .stock-available-badge {
+    display: none;
+  }
+
+  .product-card .stock-available-text {
+    font-size: 0.8rem;
+    color: #28a745;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .product-card.disabled .stock-available-text {
+    color: #dc3545;
   }
 
   /* Precios */
@@ -270,8 +324,12 @@
                         data-inventario-id="<?= esc($producto->inventario_id) ?>"
                         data-nombre="<?= esc($producto->nombre) ?>"
                         data-stock="<?= (int)($producto->stock_inve ?? 0) ?>"
+                        data-stock-original="<?= (int)($producto->stock_inve ?? 0) ?>"
                         data-precio-contado="<?= esc($producto->precio_contado ?? '0.00') ?>"
                         data-precio-credito="<?= esc($producto->precio_credito ?? '0.00') ?>">
+                        <div class="stock-depleted-badge">
+                          <i class="ri-close-line"></i>
+                        </div>
                         <div class="card h-100">
                           <div class="card-body text-center">
                             <h6 class="card-title"><?= esc($producto->nombre) ?></h6>
@@ -279,13 +337,17 @@
                               <span class="fw-bold">Lote:</span> <?= esc($producto->inventario_id) ?><br>
                               <span class="fw-bold">Stock:</span> <?= (int)($producto->stock_inve) ?>
                             </p>
+                            <p class="stock-available-text mb-1">
+                              Disponible: <span class="available-count"><?= (int)($producto->stock_inve ?? 0) ?></span>
+                            </p>
                             <p class="card-text mt-2 mb-0 price-text">Bs. <?= number_format($producto->precio_contado ?? 0, 2) ?></p>
                             <div class="input-group mt-2">
                               <input type="number" class="form-control form-control-sm quantity-input" value="1" min="1" max="<?= (int)($producto->stock_inve) ?>">
                               <button type="button" class="btn btn-success btn-sm addItemBtn">
-                                <i class="ri-add-line"></i>
+                                <i class="ri-add-line"></i> Agregar
                               </button>
                             </div>
+                            <small class="text-muted mt-1 d-block stock-remaining-text">Stock original: <?= (int)($producto->stock_inve) ?></small>
                           </div>
                         </div>
                       </div>
@@ -307,13 +369,13 @@
           <h5 class="card-title mb-0">
             <?= ($envio->sucursal_origen_id == 2) ? 'Historial de Devoluciones' : 'Historial de Transferencias' ?>
           </h5>
-          <div>
-            <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
+          <div class="d-flex align-items-center gap-2">
+        <!--     <a href="<?= base_url('transferencias/envioPdf/' . $envio->id) ?>" target="_blank" class="btn btn-info btn-sm">
               <i class="ri-file-pdf-line align-bottom me-1"></i> Generar Envio
-            </a>
-            <!-- <a href="<?= base_url('envios/exportarExcelEnvio/' . $envio->id) ?>" class="btn btn-success btn-sm">
-              <i class="ri-file-excel-line align-bottom me-1"></i> Resumen de Productos
             </a> -->
+            <a href="<?= base_url('transferencias/envioPdf/' . $envio->id . '?consolidado=1') ?>" target="_blank" class="btn btn-success btn-sm">
+              <i class="ri-file-list-3-line align-bottom me-1"></i> Generar Envio
+            </a>
           </div>
         </div>
         <div class="card-body">
@@ -323,6 +385,7 @@
                 <tr>
                   <th>#</th>
                   <th>Producto</th>
+                  <th>Lote</th>
                   <th>Cantidad</th>
                   <th>Cantidad Acep.</th>
                   <th>Precio Contado</th>
@@ -339,7 +402,7 @@
                 ?>
                 <?php if (empty($transferencias_filtradas)): ?>
                   <tr>
-                    <td colspan="8" class="text-center py-4">
+                    <td colspan="9" class="text-center py-4">
                       <i class="ri-inbox-line display-4 text-muted mb-2"></i>
                       <p class="text-muted">No hay registros para esta <?= strtolower($tipoAccion) ?>.</p>
                     </td>
@@ -355,6 +418,7 @@
                     <tr style="<?= $highlight ?>">
                       <td><?= $counter++ ?></td>
                       <td><?= esc($transferencia->producto_nombre) ?></td>
+                      <td><span class="badge bg-secondary"><?= esc($transferencia->inventario_id ?? 'N/A') ?></span></td>
                       <td><span class="badge bg-primary rounded-pill"><?= esc($cantidad) ?></span></td>
                       <td>
                         <?php if ($cantidad_acep > 0): ?>
@@ -444,6 +508,9 @@
     const itemsCountBadge = document.getElementById('itemsCountBadge');
     const emptyRow = document.getElementById('emptyRow');
 
+    // Objeto para rastrear cantidades agregadas por producto
+    const addedQuantities = {};
+
     function updateItemsTableDisplay() {
       const rowCount = itemsTableBody.querySelectorAll('tr[data-id]').length;
       if (itemsCountBadge) itemsCountBadge.textContent = rowCount;
@@ -452,7 +519,70 @@
       }
     }
 
+    function updateProductCardAvailability() {
+      productCards.forEach(card => {
+        const productoId = parseInt(card.dataset.productoId);
+        const inventarioId = card.dataset.inventarioId;
+        const uniqueId = `p${productoId}_i${inventarioId}`;
+        const originalStock = parseInt(card.dataset.stockOriginal);
+        
+        // Calcular cantidad agregada desde la tabla
+        let totalAdded = 0;
+        const row = itemsTableBody.querySelector(`tr[data-id="${uniqueId}"]`);
+        if (row) {
+          const quantityInput = row.querySelector('input[name*="[cantidad]"]');
+          totalAdded = parseInt(quantityInput?.value || 0);
+        }
+        
+        const availableStock = originalStock - totalAdded;
+        
+        // Actualizar el badge de disponibilidad
+        const availableCountSpan = card.querySelector('.available-count');
+        if (availableCountSpan) {
+          availableCountSpan.textContent = availableStock;
+        }
+        
+        // Actualizar el input de cantidad
+        const quantityInput = card.querySelector('.quantity-input');
+        if (quantityInput) {
+          quantityInput.max = availableStock;
+          if (parseInt(quantityInput.value) > availableStock) {
+            quantityInput.value = Math.max(1, availableStock);
+          }
+        }
+        
+        // Actualizar texto de stock restante
+        const stockRemainingText = card.querySelector('.stock-remaining-text');
+        if (stockRemainingText) {
+          if (totalAdded > 0) {
+            stockRemainingText.innerHTML = `Stock original: ${originalStock} | <span class="text-danger">En envío: ${totalAdded}</span>`;
+          } else {
+            stockRemainingText.innerHTML = `Stock original: ${originalStock}`;
+          }
+        }
+        
+        // Deshabilitar/habilitar tarjeta
+        const addBtn = card.querySelector('.addItemBtn');
+        if (availableStock <= 0) {
+          card.classList.add('disabled');
+          if (addBtn) {
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<i class="ri-close-line"></i> Agotado';
+          }
+          if (quantityInput) quantityInput.disabled = true;
+        } else {
+          card.classList.remove('disabled');
+          if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<i class="ri-add-line"></i> Agregar';
+          }
+          if (quantityInput) quantityInput.disabled = false;
+        }
+      });
+    }
+
     updateItemsTableDisplay();
+    updateProductCardAvailability();
 
     if (productSearchInput) {
       productSearchInput.addEventListener('input', function(e) {
@@ -467,12 +597,12 @@
     if (productCardsContainer) {
       productCardsContainer.addEventListener('click', function(e) {
         const addItemBtn = e.target.closest('.addItemBtn');
-        if (addItemBtn) {
+        if (addItemBtn && !addItemBtn.disabled) {
           const card = addItemBtn.closest('.product-card');
           const productoId = parseInt(card.dataset.productoId);
           const inventarioId = card.dataset.inventarioId;
           const nombreProducto = card.dataset.nombre;
-          const availableStock = parseInt(card.dataset.stock);
+          const originalStock = parseInt(card.dataset.stockOriginal);
           const quantityInput = card.querySelector('.quantity-input');
           const quantity = parseInt(quantityInput.value);
 
@@ -484,14 +614,29 @@
             alert('Ingrese una cantidad válida mayor que 0.');
             return;
           }
-          if (isNaN(availableStock) || quantity > availableStock) {
-            alert(`Stock insuficiente (${availableStock}).`);
+
+          const uniqueId = `p${productoId}_i${inventarioId}`;
+          const existingRow = itemsTableBody.querySelector(`tr[data-id="${uniqueId}"]`);
+          
+          if (existingRow) {
+            // Si ya existe, actualizar la cantidad
+            const existingQuantityInput = existingRow.querySelector('input[name*="[cantidad]"]');
+            const currentQuantity = parseInt(existingQuantityInput.value);
+            const newQuantity = currentQuantity + quantity;
+            
+            if (newQuantity > originalStock) {
+              alert(`No puede agregar más de ${originalStock} unidades (stock disponible).`);
+              return;
+            }
+            
+            existingQuantityInput.value = newQuantity;
+            quantityInput.value = 1;
+            updateProductCardAvailability();
             return;
           }
 
-          const uniqueId = `p${productoId}_i${inventarioId}`;
-          if (itemsTableBody.querySelector(`tr[data-id="${uniqueId}"]`)) {
-            alert(`El producto "${nombreProducto}" (lote ${inventarioId}) ya fue añadido.`);
+          if (quantity > originalStock) {
+            alert(`Stock insuficiente. Disponible: ${originalStock}`);
             return;
           }
 
@@ -506,7 +651,7 @@
               <input type="hidden" name="productos[${safeIndex}][inventario_id]" value="${inventarioId}">
             </td>
             <td>
-              <input type="number" name="productos[${safeIndex}][cantidad]" class="form-control" value="${quantity}" min="1" max="${availableStock}" required>
+              <input type="number" name="productos[${safeIndex}][cantidad]" class="form-control cantidad-input" value="${quantity}" min="1" max="${originalStock}" required data-producto-id="${productoId}" data-inventario-id="${inventarioId}">
             </td>
             <td>
               <textarea name="productos[${safeIndex}][observacion_origen]" class="form-control" rows="1" placeholder="Observación opcional"></textarea>
@@ -518,6 +663,7 @@
           itemsTableBody.appendChild(newRow);
           quantityInput.value = 1;
           updateItemsTableDisplay();
+          updateProductCardAvailability();
         }
       });
     }
@@ -527,6 +673,34 @@
         if (e.target.closest('.removeItemBtn')) {
           e.target.closest('tr').remove();
           updateItemsTableDisplay();
+          updateProductCardAvailability();
+        }
+      });
+      
+      // Escuchar cambios en las cantidades de la tabla
+      itemsTableBody.addEventListener('input', function(e) {
+        if (e.target.classList.contains('cantidad-input')) {
+          const productoId = e.target.dataset.productoId;
+          const inventarioId = e.target.dataset.inventarioId;
+          const uniqueId = `p${productoId}_i${inventarioId}`;
+          
+          // Encontrar la tarjeta correspondiente
+          const card = productCards.find(c => 
+            c.dataset.productoId === productoId && 
+            c.dataset.inventarioId === inventarioId
+          );
+          
+          if (card) {
+            const originalStock = parseInt(card.dataset.stockOriginal);
+            const newValue = parseInt(e.target.value);
+            
+            if (newValue > originalStock) {
+              alert(`No puede agregar más de ${originalStock} unidades.`);
+              e.target.value = originalStock;
+            }
+          }
+          
+          updateProductCardAvailability();
         }
       });
     }
