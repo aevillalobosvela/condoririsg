@@ -51,6 +51,8 @@
 	<?= $this->include('partials/vendor-scripts') ?>
 	<!-- App js -->
 	<script src="/assets/js/app.js"></script>
+	<!-- Prevención de doble submit en formularios -->
+	<script src="/assets/js/prevent-double-submit.js"></script>
 	<!-- Scripts específicos de página -->
 	<?= $this->renderSection('scripts') ?>
 </body>

@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title) ?></title>
     <style>
-        /* Estilos base de la página, invisible bajo el modal */
         body {
             background-color: #f0f0f0;
             margin: 0;
             padding: 0;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 9px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
             color: #000;
         }
 
-        /* --- ESTILOS DEL MODAL (Overlay de pantalla completa) --- */
         #print-modal {
             position: fixed;
             top: 0;
@@ -29,81 +27,131 @@
             z-index: 1000;
         }
 
-        /* --- CONTENEDOR DEL RECIBO (Simulando 80mm de ancho) --- */
         #receipt-container {
             background-color: #fff;
-            width: 300px; 
-            padding: 10px;
+            width: 300px;
+            padding: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             border-radius: 4px;
             max-height: 95vh;
             overflow-y: auto;
+            position: relative;
         }
-
-        /* --- ESTILOS DEL RECIBO INTERNO --- */
-        .header, .footer {
-            text-align: center;
-            margin-bottom: 8px;
-        }
-        .header h1 {
-            font-size: 14px;
-            margin: 0 0 3px 0;
-            font-weight: bold;
-        }
-        .info p {
-            margin: 1px 0;
-            line-height: 1.2;
-        }
-        .details table {
+        
+        #receipt-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
+            height: 100%;
+            background-image: url('<?= base_url("assets/images/watermark.png") ?>');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 60%;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
         }
-        .details th, .details td {
-            text-align: left;
-            padding: 2px 0;
-            border-bottom: 1px dashed #777;
-        }
-        .details th {
-            font-weight: bold;
-            font-size: 9px;
-        }
-        .total {
-            text-align: right;
-            margin-top: 10px;
-            border-top: 1px solid #000; 
-            padding-top: 5px;
-        }
-        .total p {
-            font-size: 11px;
-            font-weight: bold;
-            margin: 0;
-        }
-        .cliente-info {
-            margin: 8px 0;
-            padding: 5px 0;
-            border-top: 1px dashed #000; 
-            border-bottom: 1px dashed #000;
-        }
-        .gracias {
-            margin-top: 12px;
-            font-style: italic;
-            font-size: 10px;
+        
+        #receipt-container > * {
+            position: relative;
+            z-index: 1;
         }
 
-        /* --- ESTILOS DE CONTROL DEL MODAL (Botones) --- */
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header .recibo {
+            font-size: 16px;
+            margin: 0 0 4px 0;
+            font-weight: bold;
+        }
+        .header .universidad {
+            font-size: 12px;
+            margin: 3px 0;
+            font-weight: bold;
+        }
+        .header .centro {
+            font-size: 11px;
+            margin: 2px 0;
+        }
+        .header .direccion {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .header .telefono {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .header .ciudad {
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        .separator {
+            border-top: 1px dashed #000;
+            margin: 8px 0;
+        }
+        .info-line {
+            margin: 3px 0;
+            font-size: 12px;
+        }
+        .cliente-section {
+            margin: 10px 0;
+        }
+        .productos-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin: 10px 0 5px 0;
+            font-size: 11px;
+        }
+        .producto-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        .producto-nombre {
+            flex: 1;
+        }
+        .producto-precio {
+            text-align: right;
+            min-width: 60px;
+        }
+        .total-section {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+        }
+        .total-section p {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .footer p {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
         .modal-controls {
             text-align: center;
             padding: 10px 0 0;
             margin-top: 10px;
         }
         .modal-controls button {
-            padding: 6px 12px;
+            padding: 8px 16px;
             margin: 0 5px;
             cursor: pointer;
             border: none;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
         }
         #print-button {
@@ -120,25 +168,31 @@
                 visibility: hidden;
                 display: none;
             }
-            
-            #print-modal, #receipt-container, #receipt-container * {
-                visibility: visible;
-                display: block;
-            }
-            
             #print-modal {
                 position: absolute;
                 left: 0;
                 top: 0;
                 background: none;
+                display: flex !important;
+                visibility: visible;
             }
             #receipt-container {
-                width: 100%;
+                width: 80mm;
                 box-shadow: none;
                 margin: 0;
-                padding: 0;
+                padding: 5mm;
                 max-height: none;
                 overflow-y: visible;
+                display: block !important;
+                visibility: visible;
+            }
+            #receipt-container > * {
+                visibility: visible;
+                display: block;
+            }
+            .productos-header,
+            .producto-item {
+                display: flex !important;
             }
             .no-print {
                 display: none !important;
@@ -157,71 +211,66 @@ $userSucursalName = session()->get('sucursal_nombre');
     <div id="print-modal">
         <div id="receipt-container">
             <div class="header">
-                <h1><?= esc($userSucursalName) ?></h1>
-                <p><?= esc($sucursal['direccion']) ?></p>
-                <p>Tel: <?= esc($sucursal['telefono']) ?> | Recibo</p>
-                <p>-----------------------------------</p>
+                <div class="recibo">RECIBO</div>
+                <div class="universidad">UNIVERSIDAD TECNICA DE ORURO</div>
+                <div class="centro">CENTRO EXP. AGROPECUARIO CONDORIRI</div>
+                <div class="direccion">6 de Octubre y Aroma</div>
+                <div class="telefono">Tel: 55693</div>
+                <div class="ciudad">Oruro - Bolivia</div>
             </div>
 
-            <div class="info">
-                <p><strong>Fecha:</strong> <?= date('d/m/Y H:i', strtotime($venta->created_at)) ?></p>
-                <p><strong>Nro:</strong> <?= esc($venta->id) ?></p>
-                <p><strong>Código:</strong> <?= esc($venta->code) ?></p>
-                <p><strong>Tipo Pago:</strong> <?= esc(ucfirst($venta->tipo_pago)) ?></p>
-            </div>
+            <div class="separator"></div>
+
+            <div class="info-line">Sucursal: <?= esc($userSucursalName) ?></div>
+            <div class="info-line">Fecha: <?= date('d/m/Y H:i', strtotime($venta->created_at)) ?></div>
+            <div class="info-line">Nro: <?= esc($venta->id) ?></div>
+            <div class="info-line">Código: <?= esc($venta->code) ?></div>
+            <div class="info-line">Tipo Pago: <?= esc(ucfirst($venta->tipo_pago)) ?></div>
+
+            <div class="separator"></div>
             
-            <!-- SECCIÓN DE CLIENTE O PERSONAL UTO -->
-            <div class="cliente-info">
+            <div class="cliente-section">
                 <?php if (!empty($venta->personal_uto_id) && !empty($personal)): ?>
-                    <!-- VENTA A CRÉDITO PARA PERSONAL UTO -->
-                    <p><strong>Personal UTO:</strong> <?= esc($personal['nombre'] ?? 'N/A') ?></p>
-                    <p><strong>CI:</strong> <?= esc($personal['dip'] ?? 'N/A') ?></p>
-                    <p><strong>Cargo:</strong> <?= esc($personal['cargo'] ?? 'Sin cargo') ?></p>
-                    <p><strong>Sección:</strong> <?= esc($personal['seccion'] ?? 'Sin sección') ?></p>
+                    <div class="info-line">Cliente: <?= esc($personal['nombre_completo'] ?? 'N/A') ?></div>
+                    <div class="info-line">Documento: <?= esc($personal['dip'] ?? 'N/A') ?></div>
                 <?php elseif (!empty($cliente)): ?>
-                    <!-- VENTA NORMAL A CLIENTE -->
-                    <p><strong>Cliente:</strong> <?= esc($cliente['nombre_completo'] ?? 'N/A') ?></p>
-                    <p><strong>Documento:</strong> <?= esc($cliente['ci_nit'] ?? 'N/A') ?></p>
+                    <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
+                    <div class="info-line">Documento: <?= esc($cliente['ci_nit'] ?? '0') ?></div>
                 <?php else: ?>
-                    <!-- CONSUMIDOR FINAL -->
-                    <p><strong>Cliente:</strong> Consumidor Final</p>
+                    <div class="info-line">Cliente: CLIENTE</div>
+                    <div class="info-line">Documento: 0</div>
                 <?php endif; ?>
             </div>
 
-            <div class="details">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Cant.</th>
-                            <th style="width: 45%;">Producto</th>
-                            <th style="width: 20%; text-align: right;">P.U.</th>
-                            <th style="width: 20%; text-align: right;">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($detalles as $item): ?>
-                            <tr>
-                                <td><?= esc($item['cantidad']) ?></td>
-                                <td><?= esc($item['nombre'] ?? 'Producto Desconocido') ?></td>
-                                <td style="text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></td>
-                                <td style="text-align: right;"><?= number_format($item['subtotal'], 2) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="separator"></div>
+
+            <div class="productos-header">
+                <span style="width: 15%;">Cant.</span>
+                <span style="width: 40%;">Producto</span>
+                <span style="width: 20%; text-align: right;">P.U.</span>
+                <span style="width: 25%; text-align: right;">Subtotal</span>
             </div>
 
-            <div class="total">
+            <?php foreach ($detalles as $item): ?>
+                <div class="producto-item">
+                    <span style="width: 15%;"><?= esc($item['cantidad']) ?></span>
+                    <span style="width: 40%;"><?= esc(strtoupper($item['nombre'] ?? 'PRODUCTO')) ?></span>
+                    <span style="width: 20%; text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></span>
+                    <span style="width: 25%; text-align: right;"><?= number_format($item['subtotal'], 2) ?></span>
+                </div>
+            <?php endforeach; ?>
+
+            <div class="total-section">
                 <p>TOTAL PAGADO: <?= number_format($venta->monto_total, 2) ?> Bs</p>
             </div>
 
+            <div class="separator"></div>
+
             <div class="footer">
-                <p>-----------------------------------</p>
-                <p class="gracias">¡Gracias por su compra!</p>
-                <p style="font-size:9px; margin-top:5px;">Atendido por: <?= esc($nombreUsuario) ?></p>
-                <?php if (!empty($venta->personal_uto_id)): ?>
-                    <p style="font-size:9px; margin-top:5px;">Venta a crédito para personal UTO.</p>
-                <?php endif; ?>
+                <p>¡Gracias por su compra!</p>
+                <p>Atendido por: <?= esc($nombreUsuario) ?></p>
+                <p style="margin-top: 30px;">&nbsp;</p>
+                <p style="border-top: 1px solid #000; width: 60%; margin: 0 auto;">&nbsp;</p>
             </div>
 
             <div class="modal-controls no-print">

@@ -218,29 +218,67 @@ class transferenciasController extends BaseController
      */
     public function generarFactura($envioId)
     {
-        $envioModel = new EnviosModel();
-        $transferenciasModel = new TransferirProductosModel();
+        $db = \Config\Database::connect();
+        $consolidado = $this->request->getGet('consolidado') == 1;
 
-        // Obtener los datos del envío
-        $envio = $envioModel
-            ->select('envios.*, sucursal_origen.nombre as sucursal_origen_nombre, sucursal_destino.nombre as sucursal_destino_nombre')
-            ->join('sucursales as sucursal_origen', 'sucursal_origen.id = envios.sucursal_origen_id')
-            ->join('sucursales as sucursal_destino', 'sucursal_destino.id = envios.sucursal_destino_id')
-            ->where('envios.id', $envioId)
-            ->first();
+        // Obtener los datos del envío con JOINs
+        $query = $db->query("
+            SELECT 
+                e.*,
+                so.nombre as sucursal_origen_nombre,
+                sd.nombre as sucursal_destino_nombre,
+                uc.nombre as creador_nombre,
+                uc.apellidos as creador_apellido,
+                uc.ci as creador_ci,
+                ut.nombre as transporte_nombre,
+                ut.apellidos as transporte_apellido,
+                ut.ci as transporte_ci
+            FROM condoriri.envios e
+            JOIN condoriri.sucursales so ON so.id = e.sucursal_origen_id
+            JOIN condoriri.sucursales sd ON sd.id = e.sucursal_destino_id
+            LEFT JOIN condoriri.usuarios uc ON uc.id = e.user_id
+            LEFT JOIN condoriri.usuarios ut ON ut.id = e.user_transporte_id
+            WHERE e.id = ?
+        ", [$envioId]);
+        
+        $envio = $query->getRowArray();
 
         // Obtener los productos asociados a la transferencia
-        $productos = $transferenciasModel
-            ->select('transferencias_productos.*, productos.nombre as producto_nombre')
-            ->join('productos', 'productos.id = transferencias_productos.producto_id')
-            ->where('transferencias_productos.envio_id', $envioId)
-            ->findAll();
+        $queryProductos = $db->query("
+            SELECT 
+                tp.*,
+                p.nombre as producto_nombre,
+                p.precio_contado as precio_unitario
+            FROM condoriri.transferencias_productos tp
+            JOIN condoriri.productos p ON p.id = tp.producto_id
+            WHERE tp.envio_id = ?
+        ", [$envioId]);
+        
+        $productos = $queryProductos->getResult();
 
         if (empty($envio) || empty($productos)) {
             return $this->response->setStatusCode(404)->setBody('Envío no encontrado.');
         }
 
+        // Si es consolidado, agrupar productos por nombre
+        if ($consolidado) {
+            $productosConsolidados = [];
+            foreach ($productos as $producto) {
+                $nombre = $producto->producto_nombre;
+                if (!isset($productosConsolidados[$nombre])) {
+                    $productosConsolidados[$nombre] = (object) [
+                        'producto_nombre' => $nombre,
+                        'cantidad' => 0,
+                        'precio_unitario' => $producto->precio_unitario,
+                        'observacion_origen' => $producto->observacion_origen ?? ''
+                    ];
+                }
+                $productosConsolidados[$nombre]->cantidad += $producto->cantidad;
+            }
+            $productos = array_values($productosConsolidados);
+        }
+
         $pdf = new FacturaPdf();
-        $pdf->generarReporteEnvio($envio, $productos);
+        $pdf->generarReporteEnvio($envio, $productos, $consolidado);
     }
 }

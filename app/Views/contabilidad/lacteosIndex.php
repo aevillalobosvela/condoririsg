@@ -397,15 +397,27 @@ if (!$sucursal_id) {
       </form>
 
       <div class="pdf-buttons">
-        <a href="<?= base_url('contabilidad/reporte?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=general') ?>"
+        <a href="<?= base_url('contabilidad/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=general') ?>"
+           class="btn btn-success btn-pdf">
+          <i class="ri-file-excel-2-line"></i> Excel General
+        </a>
+        <a href="<?= base_url('contabilidad/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=general') ?>"
            class="btn btn-info btn-pdf" target="_blank">
           <i class="ri-file-pdf-2-line"></i> General
         </a>
-        <a href="<?= base_url('contabilidad/reporte?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=credito') ?>"
+        <a href="<?= base_url('contabilidad/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=credito') ?>"
+           class="btn btn-success btn-pdf">
+          <i class="ri-file-excel-2-line"></i> Excel Crédito
+        </a>
+        <a href="<?= base_url('contabilidad/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=credito') ?>"
            class="btn btn-warning btn-pdf" target="_blank">
           <i class="ri-file-pdf-2-line"></i> Crédito
         </a>
-        <a href="<?= base_url('contabilidad/reporte?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=contado') ?>"
+        <a href="<?= base_url('contabilidad/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=contado') ?>"
+           class="btn btn-success btn-pdf">
+          <i class="ri-file-excel-2-line"></i> Excel Contado
+        </a>
+        <a href="<?= base_url('contabilidad/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&sucursal_id=' . urlencode($sucursal_id) . '&tipo=contado') ?>"
            class="btn btn-primary btn-pdf" target="_blank">
           <i class="ri-file-pdf-2-line"></i> Contado
         </a>

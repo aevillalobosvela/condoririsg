@@ -131,9 +131,14 @@
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5 class="card-title mb-0"><i class="ri-ruler-line align-bottom me-1"></i> Control de Calidad</h5>
                     <?php if (!empty($inventario->fecha_calidad)): ?>
-                        <a href="<?= base_url('inventarios/control-calidad-pdf/' . $inventario->id) ?>" class="btn btn-danger btn-sm">
-                            <i class="ri-file-pdf-line align-bottom me-1"></i> PDF
-                        </a>
+                        <div class="btn-group">
+                            <a href="<?= base_url('inventarios/control-calidad-pdf/' . $inventario->id) ?>" class="btn btn-danger btn-sm">
+                                <i class="ri-file-pdf-line align-bottom me-1"></i> PDF
+                            </a>
+                            <a href="<?= base_url('inventarios/control-calidad-excel/' . $inventario->id) ?>" class="btn btn-success btn-sm">
+                                <i class="ri-file-excel-2-line align-bottom me-1"></i> Excel
+                            </a>
+                        </div>
                     <?php endif; ?>
                 </div>
                 <div class="card-body">

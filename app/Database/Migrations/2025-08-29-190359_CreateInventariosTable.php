@@ -8,20 +8,33 @@ class CreateInventariosTable extends Migration
 {
     public function up()
     {
-        // SQL DIRECTO - 100% funcional en Docker
+        // SQL DIRECTO siguiendo estructura_DB.sql
         $sql = "CREATE TABLE condoriri.inventarios (
             id SERIAL PRIMARY KEY,
             nombre VARCHAR(100) NOT NULL,
             code VARCHAR(100) NOT NULL,
             descripcion TEXT NULL,
-            stock INT DEFAULT 0 NOT NULL,
+            stock NUMERIC DEFAULT 0 NOT NULL,
             turno VARCHAR(100) NOT NULL,
             estado BOOLEAN DEFAULT TRUE NOT NULL,
             sucursal_id INT NOT NULL,
             user_id INT NOT NULL,
             created_at TIMESTAMP NULL,
             updated_at TIMESTAMP NULL,
-            deleted_at TIMESTAMP NULL
+            deleted_at TIMESTAMP NULL,
+            reserva NUMERIC NULL,
+            grasa FLOAT NULL,
+            sng FLOAT NULL,
+            densidad FLOAT NULL,
+            lactosa FLOAT NULL,
+            solidos FLOAT NULL,
+            proteina FLOAT NULL,
+            agua FLOAT NULL,
+            temperatura FLOAT NULL,
+            congelacion FLOAT NULL,
+            ph FLOAT NULL,
+            fecha_calidad TIMESTAMP NULL,
+            user_cali INT NULL
         )";
         
         $this->db->query($sql);

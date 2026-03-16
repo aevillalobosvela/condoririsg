@@ -2,7 +2,35 @@
 $session = session();
 $userRoleName = session()->get('rol_nombre');
 $userNombre = session('nombre');
+$userApellidos = session('apellidos');
 ?>
+
+<style>
+  #page-topbar {
+    background-color: #c8e6d4 !important;
+    border-bottom: 1px solid #9ecfb2;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.12);
+  }
+
+  .topbar-user {
+    background-color: #1a6b3a !important;
+    border-radius: 8px;
+  }
+
+  .topbar-user .btn {
+    background-color: transparent !important;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .topbar-user .user-name-text,
+  .topbar-user .user-name-sub-text {
+    color: #ffffff !important;
+  }
+
+  .topbar-user .mdi-account-circle {
+    color: #ffffff !important;
+  }
+</style>
 
 <header id="page-topbar">
     <div class="layout-width">
@@ -29,43 +57,48 @@ $userNombre = session('nombre');
                 </div>
 
                 <!-- Botón hamburguesa para móviles -->
-                <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger" id="topnav-hamburger-icon">
+                <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger"
+                    id="topnav-hamburger-icon">
                     <span class="hamburger-icon">
                         <span></span>
                         <span></span>
                         <span></span>
                     </span>
                 </button>
+                <div class="d-flex align-items-center">
+                    <div class="ms-3 d-none d-md-block">
+                        <h4 class="mb-0 fw-bold text-primary">Condoriri SG</h4>
+                        <small class="text-muted">Sistema de Gestión - <?= esc(session('sucursal_nombre') ?? 'N/A') ?></small>
+                        <small class="text-muted">N° - <?= esc(session('sucursal_id') ?? 'N/A') ?></small>
+                    </div>
+                </div>
             </div>
 
             <div class="d-flex align-items-center">
                 <!-- Fullscreen -->
                 <div class="ms-1 header-item d-none d-sm-flex">
-                    <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle" data-toggle="fullscreen">
+                    <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
+                        data-toggle="fullscreen">
                         <i class='bx bx-fullscreen fs-22'></i>
                     </button>
                 </div>
 
-                <!-- Modo oscuro
-                <div class="ms-1 header-item d-none d-sm-flex">
-                    <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode">
-                        <i class='bx bx-moon fs-22'></i>
-                    </button>
-                </div> -->
-
                 <!-- Menú de usuario -->
                 <div class="dropdown ms-sm-3 header-item topbar-user">
-                    <button type="button" class="btn" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn" id="page-header-user-dropdown" data-bs-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
                         <span class="d-flex align-items-center">
-                            <img class="rounded-circle header-profile-user" src="/assets/images/users/avatar-1.jpg" alt="Header Avatar">
+                            <i class="mdi mdi-account-circle fs-24 text-primary me-2"></i>
                             <span class="text-start ms-xl-2">
-                                <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text"><?= esc($userNombre) ?></span>
-                                <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"><?= esc($userRoleName) ?></span>
+                                <span
+                                    class="d-none d-xl-inline-block ms-1 fw-medium user-name-text"><?= esc($userNombre . ' ' . $userApellidos) ?></span>
+                                <span
+                                    class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"><?= esc($userRoleName) ?></span>
                             </span>
                         </span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end">
-                        <h6 class="dropdown-header"><?= esc($userNombre) ?></h6>
+                        <h6 class="dropdown-header"><?= esc($userNombre . ' ' . $userApellidos) ?></h6>
                         <a class="dropdown-item" href="<?= base_url('perfil') ?>">
                             <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
                             <span class="align-middle">Perfil</span>

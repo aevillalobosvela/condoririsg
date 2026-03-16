@@ -668,6 +668,118 @@ public function confirmarEnvio(): RedirectResponse
 
 
 
+    public function exportarExcelEnvio(int $id)
+    {
+        $envio = $this->envioModel->find($id);
+        if (!$envio) {
+            return redirect()->to('/envios')->with('error', 'Envío no encontrado.');
+        }
+
+        $sucursalDestino = $this->sucursalModel->find($envio['sucursal_destino_id']);
+        $userTransporte = $this->userModel->find($envio['user_transporte_id']);
+
+        try {
+            $transferencias = $this->transferenciasModel->where('envio_id', $id)->orderBy('id')->findAll();
+            foreach ($transferencias as $t) {
+                $producto = $this->productosModel->find($t->producto_id);
+                $t->producto_nombre = $producto->nombre ?? '';
+                $t->unidad = $producto->unidad ?? '';
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Error en exportarExcelEnvio: ' . $e->getMessage());
+            $transferencias = [];
+        }
+
+        $totalImporte = 0;
+        foreach ($transferencias as $t) {
+            $totalImporte += ($t->cantidad ?? 0) * ($t->precio_contado ?? 0);
+        }
+
+        $filename = 'envio_' . ($envio['code'] ?? $id) . '_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="10"/><Alignment ss:Horizontal="Left" ss:Vertical="Top"/></Style>';
+        echo '<Style ss:ID="titulo"><Font ss:Bold="1" ss:Size="16"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info"><Font ss:Size="10"/><Alignment ss:Horizontal="Left"/></Style>';
+        echo '<Style ss:ID="tableHeader"><Font ss:Bold="1" ss:Size="10"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="cell"><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="cellLeft"><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="total"><Font ss:Bold="1" ss:Size="11"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Nota de Entrega">';
+        echo '<Table>';
+        echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="250"/>';
+        echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="100"/>';
+
+        // Encabezado institucional
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2" ss:StyleID="header"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">N° ' . htmlspecialchars($envio['code'] ?? $id) . '</Data></Cell></Row>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2" ss:StyleID="header"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">ENVÍO DE PRODUCTOS</Data></Cell></Row>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2" ss:StyleID="header"><Data ss:Type="String">CENTRO EXPERIMENTAL AGROPECUARIO CONDORIRI</Data></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">ENTREGADO A: ' . htmlspecialchars($userTransporte->usuario ?? '') . '</Data></Cell></Row>';
+        echo '<Row ss:Height="15"><Cell ss:MergeAcross="5"></Cell></Row>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2"></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">CONDORIRI</Data></Cell></Row>';
+        echo '<Row ss:Height="25"><Cell ss:MergeAcross="5" ss:StyleID="titulo"><Data ss:Type="String">NOTA DE ENTREGA</Data></Cell></Row>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2"></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">DESTINO: ' . htmlspecialchars($sucursalDestino['nombre'] ?? '') . '</Data></Cell></Row>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="2"></Cell><Cell ss:MergeAcross="2" ss:StyleID="info"><Data ss:Type="String">FECHA: ' . date('d/m/Y', strtotime($envio['fecha_envio'] ?? 'now')) . '</Data></Cell></Row>';
+        echo '<Row ss:Height="15"><Cell ss:MergeAcross="5"></Cell></Row>';
+
+        // Encabezados de tabla
+        echo '<Row>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">CANT.</Data></Cell>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">UNIDAD</Data></Cell>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">DETALLE</Data></Cell>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">s/g Dcto</Data></Cell>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">UNIT.</Data></Cell>';
+        echo '<Cell ss:StyleID="tableHeader"><Data ss:Type="String">TOTAL</Data></Cell>';
+        echo '</Row>';
+
+        if (empty($transferencias)) {
+            echo '<Row><Cell ss:MergeAcross="5" ss:StyleID="cell"><Data ss:Type="String">No hay productos registrados</Data></Cell></Row>';
+        } else {
+            foreach ($transferencias as $t) {
+                $precioUnit = $t->precio_contado ?? 0;
+                $cantidad = $t->cantidad ?? 0;
+                $total = $cantidad * $precioUnit;
+                
+                echo '<Row>';
+                echo '<Cell ss:StyleID="cell"><Data ss:Type="Number">' . $cantidad . '</Data></Cell>';
+                echo '<Cell ss:StyleID="cell"><Data ss:Type="String">' . htmlspecialchars($t->unidad ?? '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="cellLeft"><Data ss:Type="String">' . htmlspecialchars($t->producto_nombre ?? '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="cell"></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . $precioUnit . '</Data></Cell>';
+                echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . $total . '</Data></Cell>';
+                echo '</Row>';
+            }
+            
+            echo '<Row>';
+            echo '<Cell ss:MergeAcross="4" ss:StyleID="total"><Data ss:Type="String">TOTAL (Bs)</Data></Cell>';
+            echo '<Cell ss:StyleID="total"><Data ss:Type="Number">' . $totalImporte . '</Data></Cell>';
+            echo '</Row>';
+        }
+
+        echo '<Row ss:Height="15"><Cell ss:MergeAcross="5"></Cell></Row>';
+        echo '<Row><Cell ss:MergeAcross="5" ss:StyleID="info"><Data ss:Type="String">OBSERVACIONES</Data></Cell></Row>';
+
+        echo '</Table>';
+        echo '</Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+
     public function devShow(int $id)
 {
     $envio = $this->envioModel->find($id);

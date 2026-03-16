@@ -73,6 +73,14 @@
     border-radius: 6px;
   }
 
+  .turno-am {
+    background-color: #fff3cd !important;
+  }
+
+  .turno-pm {
+    background-color: #cfe2ff !important;
+  }
+
   .per-page-selector {
     width: auto;
     display: inline-block;
@@ -156,82 +164,84 @@
   <div class="tab-content" id="myTabContent">
     <div class="tab-pane fade show active" id="inventarios" role="tabpanel" aria-labelledby="inventarios-tab">
       <div class="row">
-        <div class="col-lg-12">
-          <div class="card" id="inventarioList">
-            <div class="card-header border-0">
-              <div class="d-flex align-items-center flex-wrap">
-                <h5 class="card-title mb-0 flex-grow-1">Filtros de Búsqueda</h5>
-                <div class="flex-shrink-0 d-flex flex-wrap justify-content-end">
-                  <a href="<?= base_url('inventarios') ?>" class="btn btn-soft-secondary me-2">
-                    <i class="ri-refresh-line align-bottom me-1"></i> Recargar Hoy
-                  </a>
-                  <a href="<?= base_url('inventarios?mostrar_todos=1') ?>" class="btn btn-soft-secondary">
-                    <i class="ri-list-check align-bottom me-1"></i> Mostrar Todos
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div class="card-body border-dashed border-end-0 border-start-0">
-              <form action="<?= base_url('inventarios/filtered') ?>" method="get" id="filterForm">
-                <div class="row g-3">
-                  <div class="col-xxl-4 col-sm-6">
-                    <label for="nombre" class="form-label">Nombre del Inventario</label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Buscar por nombre..." value="<?= esc($filters['nombre'] ?? '') ?>">
-                  </div>
-                  <div class="col-xxl-3 col-sm-6">
-                    <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
-                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= esc($filters['fecha_inicio'] ?? '') ?>">
-                  </div>
-                  <div class="col-xxl-3 col-sm-6">
-                    <label for="fecha_fin" class="form-label">Fecha de Fin</label>
-                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="<?= esc($filters['fecha_fin'] ?? '') ?>">
-                  </div>
-                  <div class="col-xxl-2 col-sm-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-success w-100">
-                      <i class="ri-search-line me-1 align-bottom"></i> Buscar
-                    </button>
-                  </div>
-                </div>
-              </form>
+        <!-- Tabla a la izquierda (col-9) -->
+        <div class="col-lg-9">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="perPageSelect" class="form-label">Mostrar:</label>
+              <select id="perPageSelect" class="form-select per-page-selector">
+                <option value="10" <?= (isset($per_page) && $per_page == 10) ? 'selected' : '' ?>>10</option>
+                <option value="20" <?= (isset($per_page) && $per_page == 20) ? 'selected' : '' ?>>20</option>
+                <option value="40" <?= (isset($per_page) && $per_page == 40) ? 'selected' : '' ?>>40</option>
+                <option value="50" <?= (isset($per_page) && $per_page == 50) ? 'selected' : '' ?>>50</option>
+                <option value="100" <?= (isset($per_page) && $per_page == 100) ? 'selected' : '' ?>>100</option>
+                <option value="all" <?= (isset($per_page) && $per_page == 'all') ? 'selected' : '' ?>>Todos</option>
+              </select>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <label for="perPageSelect" class="form-label">Mostrar por página:</label>
-          <select id="perPageSelect" class="form-select per-page-selector">
-            <option value="10" <?= (isset($per_page) && $per_page == 10) ? 'selected' : '' ?>>10</option>
-            <option value="20" <?= (isset($per_page) && $per_page == 20) ? 'selected' : '' ?>>20</option>
-            <option value="40" <?= (isset($per_page) && $per_page == 40) ? 'selected' : '' ?>>40</option>
-            <option value="50" <?= (isset($per_page) && $per_page == 50) ? 'selected' : '' ?>>50</option>
-            <option value="100" <?= (isset($per_page) && $per_page == 100) ? 'selected' : '' ?>>100</option>
-            <option value="all" <?= (isset($per_page) && $per_page == 'all') ? 'selected' : '' ?>>Todos</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-lg-12">
           <div class="card">
             <div class="card-header border-0">
-              <div class="d-flex align-items-center flex-wrap">
+              <div class="d-flex align-items-center flex-wrap mb-3">
                 <h5 class="card-title mb-0 flex-grow-1">Lista de Inventarios</h5>
                 <div class="flex-shrink-0 d-flex flex-wrap justify-content-end">
                   <a href="<?= base_url('inventarios/register') ?>" class="btn btn-success add-btn me-1">
-                    <i class="ri-add-line align-bottom me-1"></i> Nuevo Inventario
+                    <i class="ri-add-line align-bottom me-1"></i> Nuevo
                   </a>
-                  <a href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>" class="btn btn-soft-danger">
-                    <i class="ri-file-pdf-line align-bottom me-1"></i> Exportar a PDF
-                  </a>
+                  
+                  <!-- Dropdown Reporte General -->
+                  <div class="btn-group me-1" role="group">
+                    <button type="button" class="btn btn-soft-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-file-list-3-line align-bottom me-1"></i> Reporte General
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarExcel?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Excel
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>">
+                          <i class="ri-file-pdf-line align-bottom me-1 text-danger"></i> PDF
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <!-- Dropdown Control de Calidad -->
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-soft-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-shield-check-line align-bottom me-1"></i> Control de Calidad
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarCalidadExcel?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Excel
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarCalidadPdf?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-pdf-line align-bottom me-1 text-danger"></i> PDF
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="card-body pt-0">
+              <?php 
+                $hasCustomFilters = !empty($filters['nombre']) || (!empty($filters['fecha_inicio']) && !empty($filters['fecha_fin']));
+              ?>
+              <?php if (!$mostrar_todos && !$hasCustomFilters): ?>
+                <div class="alert alert-info d-flex align-items-center mb-3" style="background-color: #e3f2fd; border-color: #2196f3; color: #1976d2;">
+                  <i class="ri-information-line fs-5 me-2"></i>
+                  <div>Mostrando inventarios del día de hoy.</div>
+                </div>
+              <?php endif; ?>
               <?php if (empty($inventarios)): ?>
                 <div class="alert alert-info text-center mt-3" style="background-color: #f8fdfa; border-color: #e0f0e9; color: #28a745;">
-                  No se encontraron inventarios con los filtros aplicados.
+                  No se encontraron inventarios.
                 </div>
               <?php else: ?>
                 <div class="table-responsive table-card mb-1">
@@ -248,7 +258,7 @@
                     </thead>
                     <tbody class="list form-check-all">
                       <?php foreach ($inventarios as $inventario): ?>
-                        <tr>
+                        <tr class="<?= strtoupper($inventario->turno) === 'AM' ? 'turno-am' : 'turno-pm' ?>">
                           <td><?= esc($inventario->code) ?></td>
                           <td class="inventario-nombre"><?= esc($inventario->nombre) ?></td>
                           <td>
@@ -263,11 +273,6 @@
                               <a href="<?= base_url('inventarios/show/' . $inventario->id) ?>" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" title="Ver">
                                 <i class="ri-eye-fill align-bottom"> Ver</i>
                               </a>
-
-
-
-
-
                               <?php if (!isset($inventario->user_cali) || is_null($inventario->user_cali)): ?>
                                 <button type="button"
                                   class="btn btn-sm btn-outline-primary btn-control-calidad"
@@ -279,9 +284,6 @@
                                   <i class="ri-shield-check-line align-bottom me-1"></i> Control Calidad
                                 </button>
                               <?php endif; ?>
-
-
-
                             </div>
                           </td>
                         </tr>
@@ -297,6 +299,40 @@
                 <?php endif; ?>
 
               <?php endif; ?>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros a la derecha (col-3) -->
+        <div class="col-lg-3">
+          <div class="card" id="inventarioList">
+            <div class="card-header border-0">
+              <h5 class="card-title mb-0">Filtros</h5>
+            </div>
+            <div class="card-body">
+              <form action="<?= base_url('inventarios/filtered') ?>" method="get" id="filterForm">
+                <div class="mb-3">
+                  <label for="nombre" class="form-label">Nombre</label>
+                  <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Buscar..." value="<?= esc($filters['nombre'] ?? '') ?>">
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                  <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= esc($filters['fecha_inicio'] ?? '') ?>">
+                </div>
+                <div class="mb-3">
+                  <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                  <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="<?= esc($filters['fecha_fin'] ?? '') ?>">
+                </div>
+                <button type="submit" class="btn btn-success w-100 mb-2">
+                  <i class="ri-search-line me-1"></i> Buscar
+                </button>
+                <a href="<?= base_url('inventarios') ?>" class="btn btn-soft-secondary w-100 mb-2">
+                  <i class="ri-refresh-line me-1"></i> Hoy
+                </a>
+                <a href="<?= base_url('inventarios?mostrar_todos=1') ?>" class="btn btn-soft-secondary w-100">
+                  <i class="ri-list-check me-1"></i> Todos
+                </a>
+              </form>
             </div>
           </div>
         </div>

@@ -1,0 +1,55 @@
+/* Fix para el problema del fondo azul en el hover del sidebar colapsado */
+
+/* Eliminar fondo azul y usar texto oscuro sobre fondo blanco */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item:hover > a.menu-link {
+  background: #fff !important;
+  color: #333 !important;
+}
+
+/* Dropdown con fondo blanco y texto oscuro */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown {
+  background: #fff !important;
+  color: #333 !important;
+}
+
+/* Enlaces del dropdown con texto oscuro */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown .nav-link {
+  color: #555 !important;
+}
+
+/* Hover en subelementos */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown .nav-link:hover {
+  color: #333 !important;
+  background-color: #f8f9fa !important;
+}
+
+/* Mantener dropdown visible cuando hover sobre subelementos */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item:hover .menu-dropdown,
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm] .navbar-menu .navbar-nav .nav-item .menu-dropdown:hover {
+  display: block !important;
+}
+
+/* Para el modo sm-hover */
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item:hover > a.menu-link {
+  background: #fff !important;
+  color: #333 !important;
+}
+
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown {
+  background: #fff !important;
+  color: #333 !important;
+}
+
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown .nav-link {
+  color: #555 !important;
+}
+
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item:hover > .menu-dropdown .nav-link:hover {
+  color: #333 !important;
+  background-color: #f8f9fa !important;
+}
+
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item:hover .menu-dropdown,
+:is([data-layout=vertical], [data-layout=semibox])[data-sidebar-size=sm-hover] .navbar-menu .navbar-nav .nav-item .menu-dropdown:hover {
+  display: block !important;
+}

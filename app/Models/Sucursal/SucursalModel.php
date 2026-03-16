@@ -13,7 +13,7 @@ class SucursalModel extends Model
   
     protected $allowedFields = [
       
-        'nombre', 'descripcion', 'direccion','telefono', 'user_id'
+        'nombre', 'descripcion', 'direccion','telefono', 'user_id', 'estado'
 
     ];
 

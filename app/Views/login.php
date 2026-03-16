@@ -18,7 +18,7 @@
         }
 
         .auth-logo img {
-            max-height: 80px;
+            max-height: 120px;
             filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
             transition: var(--transition);
         }
@@ -34,7 +34,7 @@
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
             max-width: 420px;
-            margin: 2rem auto;
+            margin: 1rem auto;
             transition: var(--transition);
         }
 
@@ -45,8 +45,10 @@
         .card-title {
             font-weight: 700;
             color: var(--dark);
-            font-size: 1.75rem;
-            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            margin: 0 0 1rem 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .form-label {
@@ -57,10 +59,10 @@
         }
 
         .form-control {
-            padding: 0.75rem 1rem;
+            padding: 0.6rem 0.8rem;
             border: 1px solid #dee2e6;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             transition: var(--transition);
         }
 
@@ -73,8 +75,8 @@
         .btn-primary {
             background: var(--primary);
             border: none;
-            padding: 0.75rem;
-            font-size: 1.05rem;
+            padding: 0.6rem;
+            font-size: 0.95rem;
             font-weight: 600;
             border-radius: 10px;
             transition: var(--transition);
@@ -88,12 +90,12 @@
 
         .alert {
             border-radius: 10px;
-            margin-bottom: 1.25rem;
-            padding: 0.85rem 1rem;
+            margin-bottom: 0.8rem;
+            padding: 0.6rem 0.8rem;
         }
 
         .footer .text-muted {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         @media (max-width: 576px) {
@@ -102,29 +104,32 @@
                 padding: 1.5rem !important;
             }
             .auth-logo img {
-                max-height: 70px;
+                max-height: 100px;
+            }
+            .card-title {
+                font-size: 1.3rem;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="auth-page-wrapper pt-5">
+    <div class="auth-page-wrapper pt-2">
     
         <!-- auth page content -->
         <div class="auth-page-content">
             <div class="container">
                 <div class="row justify-content-center">
-                    <div class="col-lg-12 text-center mb-4">
-                        <a href="/" class="auth-logo d-inline-block mb-3">
+                    <div class="col-lg-12 text-center mt-3">
+                        <a href="/" class="auth-logo d-inline-block mb-2">
                             <img src="/assets/img/condoriri1.png" alt="CONDORIRI-SG Logo">
                         </a>
-                        <p class="text-white-75 fw-medium mb-0">Sistema de Gestión Integral</p>
+                        <p class="card-title text-white-75 fw-small mb-0">SISTEMA DE GESTION INTEGRAL</p>
                     </div>
 
                     <div class="col-lg-10 col-xl-8">
                         <div class="card shadow-sm login-card">
-                            <div class="card-body p-4 p-sm-5">
+                            <div class="card-body p-3 p-sm-4">
                                 <h3 class="card-title text-center">Iniciar Sesión</h3>
 
                                 <?php if (session()->getFlashdata('message')): ?>
@@ -141,15 +146,15 @@
                                     </div>
                                 <?php endif; ?>
 
-                                <form action="<?= site_url('login') ?>" method="post" class="mt-4">
+                                <form action="<?= site_url('login') ?>" method="post" class="mt-2">
                                     <?= csrf_field() ?>
                                     
-                                    <div class="mb-3">
+                                    <div class="mb-2">
                                         <label for="usuario" class="form-label">Usuario o Correo Electrónico</label>
                                         <input type="text" class="form-control" id="usuario" name="usuario" value="<?= old('usuario') ?>" required autocomplete="username">
                                     </div>
                                     
-                                    <div class="mb-4">
+                                    <div class="mb-3">
                                         <label for="password" class="form-label">Contraseña</label>
                                         <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
                                     </div>

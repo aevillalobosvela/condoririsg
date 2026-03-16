@@ -17,7 +17,7 @@ class UsuarioSeeder extends Seeder
                 'correo' => 'admin@condoriri.com',
                 'password' => password_hash('password123', PASSWORD_DEFAULT),
                 'rol_id' => 1,
-                'sucursal_id' => 1,
+                'sucursal_id' => 5, // ORURO-CENTRAL
                 'estado' => true,
                 'created_at' => Time::now()
             ]

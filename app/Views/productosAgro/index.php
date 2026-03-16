@@ -338,6 +338,25 @@
               <i class="ri-calendar-line me-1"></i> Hoy
             </button>
           </div>
+          <!-- Botones de exportación Excel -->
+          <div class="col-md-2">
+            <a href="<?= base_url('productosagro/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=contado') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel Contado
+            </a>
+          </div>
+          <div class="col-md-2">
+            <a href="<?= base_url('productosagro/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=credito') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel Crédito
+            </a>
+          </div>
+          <div class="col-md-2">
+            <a href="<?= base_url('productosagro/exportarExcelVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=general') ?>"
+              class="btn btn-success w-100">
+              <i class="ri-file-excel-2-line me-1"></i> Excel General
+            </a>
+          </div>
           <!-- Botones de exportación PDF por tipo -->
           <div class="col-md-2">
             <a href="<?= base_url('ventas/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=contado') ?>"

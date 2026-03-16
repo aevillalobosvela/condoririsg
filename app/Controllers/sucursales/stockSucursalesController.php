@@ -167,6 +167,85 @@ class stockSucursalesController extends BaseController
     }
 
     /**
+     * Export stock data to Excel
+     */
+    public function exportarExcelStock()
+    {
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $resumenStock = $this->stockSucursalModel->getResumenStock($fecha_inicio, $fecha_fin);
+        $resumenPorProducto = $this->stockSucursalModel->getResumenPorProducto($fecha_inicio, $fecha_fin);
+
+        $filename = 'inventario_sucursales_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="subheader"><Font ss:Bold="1" ss:Size="10" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="total"><Font ss:Bold="1" ss:Size="11" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Double" ss:Weight="3" ss:Color="#000000"/></Borders></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Resumen">';
+        echo '<Table>';
+        echo '<Column ss:Width="500"/><Column ss:Width="150"/>';
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 | Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">REPORTE DE INVENTARIO DE SUCURSALES</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Generado:</Data></Cell><Cell><Data ss:Type="String">' . date('d/m/Y H:i:s') . '</Data></Cell></Row>';
+        if ($fecha_inicio && $fecha_fin) {
+            echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Inicio:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_inicio . '</Data></Cell></Row>';
+            echo '<Row><Cell ss:StyleID="subheader"><Data ss:Type="String">Fecha Fin:</Data></Cell><Cell><Data ss:Type="String">' . $fecha_fin . '</Data></Cell></Row>';
+        }
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Total Productos</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . ($resumenStock->total_productos ?? 0) . '</Data></Cell></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">Total Stock</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . ($resumenStock->total_stock ?? 0) . '</Data></Cell></Row>';
+        echo '</Table></Worksheet>';
+
+        echo '<Worksheet ss:Name="Detalle por Producto">';
+        echo '<Table>';
+        echo '<Column ss:Width="300"/><Column ss:Width="150"/>';
+        echo '<Row>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Producto</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">Inventario</Data></Cell>';
+        echo '</Row>';
+
+        if (!empty($resumenPorProducto['lista_productos'])) {
+            foreach ($resumenPorProducto['lista_productos'] as $item) {
+                echo '<Row>';
+                echo '<Cell><Data ss:Type="String">' . htmlspecialchars($item->producto ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . ($item->total_stock ?? 0) . '</Data></Cell>';
+                echo '</Row>';
+            }
+        }
+        
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:StyleID="total"><Data ss:Type="String">TOTALES</Data></Cell><Cell ss:StyleID="total"><Data ss:Type="Number">' . ($resumenPorProducto['totales_generales']['total_stock'] ?? 0) . '</Data></Cell></Row>';
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+
+    /**
      * Show sucursal details
      */
     public function show(int $id)

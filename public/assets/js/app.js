@@ -1015,7 +1015,7 @@ File: Main Js File
 		}
 
 		// notification messages
-		if (document.getElementsByClassName("notification-check")) {
+		if (document.getElementsByClassName("notification-check").length > 0) {
 			function emptyNotification() {
 				Array.from(document.querySelectorAll("#notificationItemsTabContent .tab-pane")).forEach(function (elem) {
 					if (elem.querySelectorAll(".notification-item").length > 0) {
@@ -1043,29 +1043,34 @@ File: Main Js File
 			emptyNotification();
 
 
+			// Attach change listeners to each notification checkbox, safely update UI elements
 			Array.from(document.querySelectorAll(".notification-check input")).forEach(function (element) {
 				element.addEventListener("change", function (el) {
-					el.target.closest(".notification-item").classList.toggle("active");
+					var item = el.target.closest(".notification-item");
+					if (item) item.classList.toggle("active");
 
 					var checkedCount = document.querySelectorAll('.notification-check input:checked').length;
 
-					if (el.target.closest(".notification-item").classList.contains("active")) {
-						(checkedCount > 0) ? document.getElementById("notification-actions").style.display = 'block' : document.getElementById("notification-actions").style.display = 'none';
-					} else {
-						(checkedCount > 0) ? document.getElementById("notification-actions").style.display = 'block' : document.getElementById("notification-actions").style.display = 'none';
-					}
-					document.getElementById("select-content").innerHTML = checkedCount
-				});
+					var notificationActions = document.getElementById("notification-actions");
+					if (notificationActions) notificationActions.style.display = (checkedCount > 0) ? 'block' : 'none';
 
-				var notificationDropdown = document.getElementById('notificationDropdown')
-				notificationDropdown.addEventListener('hide.bs.dropdown', function (event) {
-					element.checked = false;
-					document.querySelectorAll('.notification-item').forEach(function (item) {
-						item.classList.remove("active");
-					})
-					document.getElementById('notification-actions').style.display = '';
+					var selectContent = document.getElementById("select-content");
+					if (selectContent) selectContent.innerHTML = checkedCount;
 				});
 			});
+
+			// Attach dropdown listener once (if element exists) to reset states when it hides
+			var notificationDropdown = document.getElementById('notificationDropdown');
+			if (notificationDropdown) {
+				notificationDropdown.addEventListener('hide.bs.dropdown', function (event) {
+					Array.from(document.querySelectorAll('.notification-check input')).forEach(function (el) { el.checked = false; });
+					document.querySelectorAll('.notification-item').forEach(function (item) {
+						item.classList.remove("active");
+					});
+					var notificationActions = document.getElementById('notification-actions');
+					if (notificationActions) notificationActions.style.display = '';
+				});
+			}
 
 			var removeItem = document.getElementById('removeNotificationModal');
 			removeItem.addEventListener('show.bs.modal', function (event) {

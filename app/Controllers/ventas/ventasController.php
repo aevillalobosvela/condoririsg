@@ -493,12 +493,13 @@ class ventasController extends BaseController
     public function buscarPersonalUto()
     {
         $db = db_connect();
-        $dipPattern = $this->request->getGet('dip') . '%';
+        $searchTerm = $this->request->getGet('dip');
+        $searchPattern = '%' . $searchTerm . '%';
 
         $sql = "
             SELECT 
                 p.id_persona, 
-                p.nombre, 
+                p.nombre_completo AS nombre, 
                 p.dip, 
                 p.telefono, 
                 p.celular, 
@@ -512,10 +513,10 @@ class ventasController extends BaseController
             WHERE 
                 p.\"id_estado\" = true
                 AND e.\"id_estado\" = true  
-                AND p.dip ILIKE ?              
+                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
 
-        $query = $db->query($sql, [$dipPattern]);
+        $query = $db->query($sql, [$searchPattern, $searchPattern]);
         $results = $query->getResult();
 
 
@@ -535,33 +536,19 @@ class ventasController extends BaseController
      */
     public function register()
     {
-
-
-        $productos = $this->stockSucursalModel
-                          ->where('stock' . '>' . 0) 
-                          ->findAll();
-
+        $productos = $this->stockSucursalModel->where('stock >', 0)->findAll();
         $clientes = $this->clienteModel->findAll();
+        $categorias = $this->categoriaModel->findAll();
 
         $data = [
             'title'     => 'Registrar Venta',
             'productos' => $productos,
             'clientes'  => $clientes,
+            'categorias' => $categorias,
         ];
-
 
         return view('ventas/ventasIndex', $data);
     }
-
-    
-
-
-
-
-
-
-
-
 
     /**
      * Guarda la venta y actualiza el stock.
@@ -715,7 +702,7 @@ class ventasController extends BaseController
 
             // 8. Inserción de la Cabecera de Venta
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
+                'code' => 'TEMP',
                 'cliente_id' => $clienteId,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
@@ -729,6 +716,10 @@ class ventasController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
+
+            // Actualizar código con formato correlativo basado en ID
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
 
             // 9. Inserción de Detalles y Actualización de Stock
@@ -889,9 +880,8 @@ class ventasController extends BaseController
 
             // 9. ✅ INSERTAR VENTA CON personal_uto_id
             $ventaData = [
-                'code' => 'VENTA-' . strtoupper(bin2hex(random_bytes(4))),
-
-                'cliente_id' => null,                // opcional: dejar en NULL si no se usa
+                'code' => 'TEMP',
+                'cliente_id' => null,
                 'sucursal_id' => $sucursalId,
                 'tipo_pago' => $tipoPago,
                 'monto_total' => $totalVenta,
@@ -905,6 +895,10 @@ class ventasController extends BaseController
             if (!$ventaId) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
+
+            // Actualizar código con formato correlativo basado en ID
+            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             // 10. Insertar detalles y actualizar stock
             foreach ($itemsDetalle as $item) {
@@ -994,7 +988,7 @@ class ventasController extends BaseController
         // Si tiene personal_uto_id, cargar datos del personal UTO
         elseif (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
@@ -1076,5 +1070,243 @@ class ventasController extends BaseController
             'fecha_fin'    => $fecha_fin,
             'tipo'         => $tipo,
         ]);
+    }
+
+    public function exportarExcelVentas()
+    {
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? date('Y-m-d');
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? date('Y-m-d');
+        $tipo = $this->request->getGet('tipo') ?? 'general';
+        $sucursal_id = 2;
+
+        // Obtener datos usando el modelo (igual que PDF)
+        $tipoConsulta = $tipo;
+        if ($tipo === 'deposito_contado') {
+            $tipoConsulta = 'contado';
+        }
+        if (!in_array($tipoConsulta, ['contado', 'credito', 'general'])) {
+            $tipoConsulta = 'general';
+        }
+
+        $reportData = $this->ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipoConsulta);
+
+        // Procesar datos en formato matricial (igual que PDF)
+        $productosUnicos = [];
+        $ventasAgrupadas = [];
+        $totalGeneralBs = 0;
+        $totalGeneralCant = 0;
+
+        foreach ($reportData as $item) {
+            if ($item->estado_venta != 1) continue;
+            $tipoPago = strtolower($item->tipo_pago);
+            
+            // Filtrar según el tipo solicitado
+            if ($tipo === 'contado' && $tipoPago !== 'contado' && $tipoPago !== 'deposito_contado') continue;
+            if ($tipo === 'credito' && $tipoPago !== 'credito') continue;
+            // Si es 'general', incluir todos
+
+            $prodNombre = $item->producto_nombre;
+            
+            if (!isset($productosUnicos[$prodNombre])) {
+                $productosUnicos[$prodNombre] = [
+                    'precio' => $item->precio_unitario,
+                    'total_cantidad' => 0
+                ];
+            }
+            $productosUnicos[$prodNombre]['total_cantidad'] += $item->cantidad;
+
+            $ventaId = $item->venta_id;
+            if (!isset($ventasAgrupadas[$ventaId])) {
+                $cliente = $item->cliente_nombre ?? 'Consumidor Final';
+                if (stripos($cliente, 'Sin Nombre') !== false) {
+                    $cliente = '';
+                }
+                $ventasAgrupadas[$ventaId] = [
+                    'cliente' => $cliente,
+                    'notas' => $ventaId,
+                    'total_venta' => 0,
+                    'items' => []
+                ];
+            }
+
+            if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
+                $ventasAgrupadas[$ventaId]['items'][$prodNombre] = ['q' => 0, 'bs' => 0];
+            }
+            $ventasAgrupadas[$ventaId]['items'][$prodNombre]['q'] += $item->cantidad;
+            $ventasAgrupadas[$ventaId]['items'][$prodNombre]['bs'] += $item->subtotal_item;
+            
+            $ventasAgrupadas[$ventaId]['total_venta'] += $item->subtotal_item;
+            $totalGeneralBs += $item->subtotal_item;
+            $totalGeneralCant += $item->cantidad;
+        }
+
+        ksort($productosUnicos);
+
+        // Preparar fechas para mostrar
+        $meses = ['01'=>'Enero','02'=>'Febrero','03'=>'Marzo','04'=>'Abril','05'=>'Mayo','06'=>'Junio','07'=>'Julio','08'=>'Agosto','09'=>'Septiembre','10'=>'Octubre','11'=>'Noviembre','12'=>'Diciembre'];
+        $d = date('d', strtotime($fecha_inicio));
+        $m = date('m', strtotime($fecha_inicio));
+        $y = date('Y', strtotime($fecha_inicio));
+        
+        if ($fecha_inicio == $fecha_fin) {
+            $fechaTexto = "Del: $d de {$meses[$m]} de $y Al: $d de {$meses[$m]} de $y";
+        } else {
+            $d2 = date('d', strtotime($fecha_fin));
+            $m2 = date('m', strtotime($fecha_fin));
+            $y2 = date('Y', strtotime($fecha_fin));
+            $fechaTexto = "Del: $d de {$meses[$m]} de $y Al: $d2 de {$meses[$m2]} de $y2";
+        }
+
+        $filename = 'ventas_' . $tipo . '_matrix_' . $fecha_inicio . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo_uto"><Font ss:Bold="1" ss:Size="14" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo_uto"><Font ss:Bold="1" ss:Size="11" ss:Color="#1F4E78" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="info_uto"><Font ss:Size="9" ss:Color="#404040" ss:FontName="Calibri"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Calibri"/><Interior ss:Color="#2E5090" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#000000"/></Borders></Style>';
+        echo '<Style ss:ID="header_gray"><Font ss:Bold="1" ss:Size="8" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#DCDCDC" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="header_prod"><Font ss:Bold="1" ss:Size="8" ss:Color="#000000" ss:FontName="Calibri"/><Interior ss:Color="#C8C8C8" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="left"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="row_even"><Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="VENTAS AL CONTADO">';
+        echo '<Table>';
+        
+        // Calcular anchos de columna dinámicamente
+        $numProds = count($productosUnicos);
+        $colWidth = 80;
+        $labelWidth = 150;
+        $notaWidth = 80;
+        $totalWidth = 100;
+        
+        echo '<Column ss:Width="' . $labelWidth . '"/>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Column ss:Width="40"/>';
+            echo '<Column ss:Width="40"/>';
+        }
+        echo '<Column ss:Width="' . $notaWidth . '"/>';
+        echo '<Column ss:Width="' . $totalWidth . '"/>';
+        
+        // Encabezado UTO
+        $totalCols = 1 + ($numProds * 2) + 2 - 1;
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
+        echo '<Row ss:Height="16"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 | Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="header"><Data ss:Type="String">VENTAS ' . strtoupper($tipo === 'contado' ? 'AL CONTADO' : ($tipo === 'credito' ? 'A CRÉDITO' : 'GENERALES')) . ' - TIENDA CEAC</Data></Cell></Row>';
+        echo '<Row></Row>';
+        
+        // Fecha y Total
+        echo '<Row><Cell ss:MergeAcross="' . ($totalCols - 1) . '"><Data ss:Type="String">' . htmlspecialchars($fechaTexto, ENT_XML1) . '</Data></Cell><Cell ss:StyleID="number"><Data ss:Type="String">TOTAL: ' . number_format($totalGeneralBs, 2, ',', '.') . ' Bs.</Data></Cell></Row>';
+        echo '<Row></Row>';
+        
+        // Fila: TOTAL BOLIVIANOS
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL BOLIVIANOS:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            $totalBsProd = $info['precio'] * $info['total_cantidad'];
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . round($totalBsProd) . '</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
+        echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
+        
+        // Fila: TOTAL CANTIDADES
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL CANTIDADES:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . $info['total_cantidad'] . '</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
+        echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . $totalGeneralCant . '</Data></Cell></Row>';
+        
+        // Fila: PRODUCTOS
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRODUCTOS:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars(substr($prod, 0, 15), ENT_XML1) . '</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
+        
+        // Fila: UNIDADES DE MEDIDA
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">UNIDADES DE MEDIDA:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">PIEZA</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
+        echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
+        
+        // Fila: PRECIOS
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRECIOS:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . number_format($info['precio'], 0) . '</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
+        echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
+        
+        echo '<Row></Row>';
+        
+        // Encabezado de tabla de ventas
+        echo '<Row><Cell ss:StyleID="header_prod"><Data ss:Type="String">APELLIDOS Y NOMBRES:</Data></Cell>';
+        foreach ($productosUnicos as $prod => $info) {
+            echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Q</Data></Cell>';
+            echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Bs</Data></Cell>';
+        }
+        echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Nro. Venta</Data></Cell>';
+        echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
+        
+        // Filas de ventas
+        $fill = false;
+        foreach ($ventasAgrupadas as $venta) {
+            $rowStyle = $fill ? 'row_even' : 'left';
+            echo '<Row><Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars(substr($venta['cliente'], 0, 30), ENT_XML1) . '</Data></Cell>';
+            
+            foreach ($productosUnicos as $prod => $info) {
+                if (isset($venta['items'][$prod])) {
+                    $q = $venta['items'][$prod]['q'];
+                    $bs = $venta['items'][$prod]['bs'];
+                    $qStr = $q > 0 ? $q : '';
+                    $bsStr = $bs > 0 ? number_format($bs, 2, '.', '') : '';
+                    echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . $qStr . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . $bsStr . '</Data></Cell>';
+                } else {
+                    echo '<Cell ss:StyleID="center"><Data ss:Type="String"></Data></Cell>';
+                    echo '<Cell ss:StyleID="center"><Data ss:Type="String"></Data></Cell>';
+                }
+            }
+            
+            echo '<Cell ss:StyleID="center"><Data ss:Type="Number">' . $venta['notas'] . '</Data></Cell>';
+            echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($venta['total_venta'], 2, '.', '') . '</Data></Cell></Row>';
+            $fill = !$fill;
+        }
+        
+        echo '<Row></Row>';
+        
+        // Literal del total
+        if (class_exists('NumberFormatter')) {
+            $formatter = new \NumberFormatter("es", \NumberFormatter::SPELLOUT);
+            $literal = strtoupper($formatter->format((float)$totalGeneralBs));
+        } else {
+            $literal = number_format($totalGeneralBs, 2);
+        }
+        echo '<Row><Cell ss:MergeAcross="' . $totalCols . '"><Data ss:Type="String">TOTAL VENTAS ' . strtoupper($tipo === 'contado' ? 'AL CONTADO' : ($tipo === 'credito' ? 'A CRÉDITO' : 'GENERALES')) . ': ' . $literal . ' BOLIVIANOS</Data></Cell></Row>';
+        echo '<Row></Row>';
+        echo '<Row><Cell ss:MergeAcross="' . $totalCols . '"><Data ss:Type="String">NOTA.- El día ' . $d . ' de ' . $meses[$m] . ' de ' . $y . ', ventas ' . ($tipo === 'contado' ? 'al contado' : ($tipo === 'credito' ? 'a crédito' : 'generales')) . '.</Data></Cell></Row>';
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
     }
 }

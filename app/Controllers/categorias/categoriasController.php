@@ -157,14 +157,24 @@ class categoriasController extends BaseController
      * @return RedirectResponse
      */
     public function delete(int $id): RedirectResponse
-{
-  
-    if ($this->categoriaModel->update($id, ['estado' => 0])) { 
-        session()->setFlashdata('success', 'Categoría eliminada (movida a la papelera) exitosamente.');
-    } else {
-        session()->setFlashdata('error', 'No se pudo eliminar (inactivar) la categoría.');
-    }
+    {
+        $categoria = $this->categoriaModel->find($id);
+        
+        if (!$categoria) {
+            session()->setFlashdata('error', 'Categoría no encontrada.');
+            return redirect()->to('/categorias');
+        }
 
-    return redirect()->to('/categorias'); 
-}
+        $estadoActual = ($categoria['estado'] === 't' || $categoria['estado'] === true);
+        $nuevoEstado = !$estadoActual;
+        $accion = $nuevoEstado ? 'reactivada' : 'desactivada';
+        
+        if ($this->categoriaModel->update($id, ['estado' => $nuevoEstado])) {
+            session()->setFlashdata('success', "Categoría {$accion} exitosamente.");
+        } else {
+            session()->setFlashdata('error', 'Error al cambiar el estado de la categoría.');
+        }
+
+        return redirect()->to('/categorias');
+    }
 }

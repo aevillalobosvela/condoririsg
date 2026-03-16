@@ -74,6 +74,9 @@
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalBaja">
               <i class="ri-add-line me-1"></i> Registrar Baja
             </button>
+            <a href="<?= base_url('baja/exportarExcel') ?>?<?= http_build_query($filters) ?>" class="btn btn-success ms-2">
+              <i class="ri-file-excel-2-line me-1"></i> Excel
+            </a>
             <a href="<?= base_url('baja/reportePDF') ?>?<?= http_build_query($filters) ?>" class="btn btn-outline-secondary ms-2">
               <i class="ri-file-pdf-line me-1"></i> PDF
             </a>

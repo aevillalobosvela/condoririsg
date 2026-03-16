@@ -8,7 +8,7 @@ class CreateUsuariosTable extends Migration
 {
     public function up()
     {
-        // SQL DIRECTO - 100% funcional en Docker
+        // SQL DIRECTO siguiendo estructura_DB.sql
         $sql = "CREATE TABLE condoriri.usuarios (
             id SERIAL PRIMARY KEY,
             nombre VARCHAR(100) NOT NULL,
@@ -23,7 +23,8 @@ class CreateUsuariosTable extends Migration
             estado BOOLEAN DEFAULT TRUE NOT NULL,
             created_at TIMESTAMP NULL,
             updated_at TIMESTAMP NULL,
-            deleted_at TIMESTAMP NULL
+            deleted_at TIMESTAMP NULL,
+            ci INT NULL
         )";
         
         $this->db->query($sql);

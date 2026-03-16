@@ -80,6 +80,7 @@ class loginController extends BaseController
           $sessionData = [
         'id'          => $userData['id'], 
         'nombre'      => $userData['nombre'],
+        'apellidos'  => $userData['apellidos'],
         'usuario'     => $userData['usuario'],
         'rol_id'      => $userData['rol_id'],
         'rol_nombre'  => $userData['rol_nombre'], 

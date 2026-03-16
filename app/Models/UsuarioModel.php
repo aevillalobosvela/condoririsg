@@ -69,6 +69,46 @@ class UsuarioModel extends Model
     }
 
     /**
+     * Obtiene todos los usuarios con relaciones y filtros.
+     */
+    public function getRegistrosFiltrados(array $filters = []): array
+    {
+        $builder = $this->select('usuarios.*, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre')
+            ->join('roles', 'roles.id = usuarios.rol_id', 'left')
+            ->join('sucursales', 'sucursales.id = usuarios.sucursal_id', 'left')
+            ->where('usuarios.deleted_at', null);
+        
+        // Filtro de búsqueda
+        if (!empty($filters['search'])) {
+            $searchTerm = "%{$filters['search']}%";
+            $builder->groupStart()
+                ->like('usuarios.nombre', $searchTerm)
+                ->orLike('usuarios.apellidos', $searchTerm)
+                ->orLike('usuarios.usuario', $searchTerm)
+                ->orLike('usuarios.correo', $searchTerm)
+                ->orLike('roles.nombre', $searchTerm)
+                ->orLike('sucursales.nombre', $searchTerm)
+                ->groupEnd();
+        }
+        
+        // Filtro por rol
+        if (!empty($filters['rol'])) {
+            $builder->where('LOWER(roles.nombre)', strtolower($filters['rol']));
+        }
+        
+        // Filtro por estado
+        if (isset($filters['estado']) && $filters['estado'] !== '') {
+            if ($filters['estado'] === 'activo') {
+                $builder->where('usuarios.estado', true);
+            } else {
+                $builder->where('usuarios.estado', false);
+            }
+        }
+        
+        return $builder->orderBy('usuarios.nombre, usuarios.apellidos')->findAll();
+    }
+
+    /**
      * Obtiene todos los usuarios con relaciones.
      */
     public function getRegistros(): array
@@ -116,7 +156,7 @@ class UsuarioModel extends Model
      */
     public function verificarCredenciales(string $identificador, string $password): ?object
     {
-        $user = $this->select('usuarios.*, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre, sucursales.id as sucursal_id')
+        $user = $this->select('usuarios.id, usuarios.nombre, usuarios.apellidos, usuarios.usuario, usuarios.correo, usuarios.rol_id, roles.nombre as rol_nombre, sucursales.nombre as sucursal_nombre, sucursales.id as sucursal_id, usuarios.password')
             ->join('roles', 'roles.id = usuarios.rol_id', 'left')
             ->join('sucursales', 'sucursales.id = usuarios.sucursal_id', 'left')
             ->groupStart()

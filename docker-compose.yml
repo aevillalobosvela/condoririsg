@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   app:
     build:
@@ -8,13 +7,18 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - .:/app
-    command: php -S 0.0.0.0:80 -t /app/public
-   
+      - .:/var/www/html
+      - ./writable:/var/www/html/writable
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+    command: >
+      bash -c "chown -R www-data:www-data /var/www/html/writable &&
+               chmod -R 755 /var/www/html/writable &&
+               apache2-foreground"
     networks:
-      - condoriri-network  # ← Misma red que PostgreSQL
+      - condoriri-network
 
 networks:
   condoriri-network:
-    external: true  # ← Usar la red existente
-    name: condoriri-network
+    external: true
