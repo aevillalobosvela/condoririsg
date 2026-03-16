@@ -182,21 +182,50 @@
 
           <div class="card">
             <div class="card-header border-0">
-              <div class="d-flex align-items-center flex-wrap">
+              <div class="d-flex align-items-center flex-wrap mb-3">
                 <h5 class="card-title mb-0 flex-grow-1">Lista de Inventarios</h5>
                 <div class="flex-shrink-0 d-flex flex-wrap justify-content-end">
                   <a href="<?= base_url('inventarios/register') ?>" class="btn btn-success add-btn me-1">
                     <i class="ri-add-line align-bottom me-1"></i> Nuevo
                   </a>
-                  <a href="<?= base_url('inventarios/exportarExcel?' . http_build_query($filters)) ?>" class="btn btn-soft-success me-1">
-                    <i class="ri-file-excel-2-line align-bottom me-1"></i> Excel
-                  </a>
-                  <a href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>" class="btn btn-soft-danger me-1">
-                    <i class="ri-file-pdf-line align-bottom me-1"></i> PDF
-                  </a>
-                  <a href="<?= base_url('inventarios/exportarCalidadExcel?' . http_build_query($filters)) ?>" class="btn btn-soft-info">
-                    <i class="ri-file-excel-2-line align-bottom me-1"></i> Control Calidad
-                  </a>
+                  
+                  <!-- Dropdown Reporte General -->
+                  <div class="btn-group me-1" role="group">
+                    <button type="button" class="btn btn-soft-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-file-list-3-line align-bottom me-1"></i> Reporte General
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarExcel?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Excel
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarPdf?' . http_build_query(array_merge($filters, ['per_page' => $per_page ?? 20]))) ?>">
+                          <i class="ri-file-pdf-line align-bottom me-1 text-danger"></i> PDF
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <!-- Dropdown Control de Calidad -->
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-soft-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-shield-check-line align-bottom me-1"></i> Control de Calidad
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarCalidadExcel?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Excel
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarCalidadPdf?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-pdf-line align-bottom me-1 text-danger"></i> PDF
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

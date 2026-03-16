@@ -5,9 +5,9 @@ $userRoleName = session()->get('rol_nombre');
 
 <style>
   .app-menu {
-    background-color: #f9fdfb !important;
-    border-right: 1px solid #d1f0e5;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background-color: #e8f5ee !important;
+    border-right: 1px solid #a8d9bc;
+    box-shadow: 2px 0 8px rgba(40, 167, 69, 0.08);
   }
 
   .logo-dark span img,

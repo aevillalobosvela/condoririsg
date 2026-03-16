@@ -69,7 +69,7 @@ class FacturaPdf extends FPDF
 
         // --- Título del Reporte ---
         $this->SetFont('Arial', 'B', 16);
-        $titulo = $consolidado ? 'REPORTE DE CONTROL DE ENVÍO' : 'REPORTE DE CONTROL DE ENVÍO';
+        $titulo = 'NOTA DE ENTREGA';
         $this->Cell(0, 10, utf8_decode($titulo), 0, 1, 'C');
         $this->Ln(10);
 
@@ -94,12 +94,12 @@ class FacturaPdf extends FPDF
         $this->Cell(0, 8, utf8_decode('Detalle de Productos'), 0, 1, 'L');
         $this->SetFont('Arial', 'B', 9);
         
-        $columnWidths = [55, 20, 25, 25, 55]; // Anchos de las columnas
+        $columnWidths = [65, 20, 25, 30, 30]; // Producto, Cant., P.Unit., Subtotal, Observación
         $this->Cell($columnWidths[0], 7, utf8_decode('Producto'), 1, 0, 'C');
         $this->Cell($columnWidths[1], 7, utf8_decode('Cant.'), 1, 0, 'C');
         $this->Cell($columnWidths[2], 7, utf8_decode('P. Unit.'), 1, 0, 'C');
         $this->Cell($columnWidths[3], 7, utf8_decode('Subtotal'), 1, 0, 'C');
-        $this->Cell($columnWidths[4], 7, utf8_decode('Observación'), 1, 1, 'C');
+        $this->Cell($columnWidths[4], 7, utf8_decode('Observacion'), 1, 1, 'C');
         
         $this->SetFont('Arial', '', 9);
         $totalProductos = 0;
@@ -110,42 +110,32 @@ class FacturaPdf extends FPDF
             $subtotal = $precioUnit * $producto->cantidad;
             $totalGeneral += $subtotal;
             
-            $this->Cell($columnWidths[0], 7, utf8_decode($producto->producto_nombre), 1, 0, 'L');
-            $this->Cell($columnWidths[1], 7, $producto->cantidad, 1, 0, 'C');
-            $this->Cell($columnWidths[2], 7, number_format($precioUnit, 2), 1, 0, 'R');
-            $this->Cell($columnWidths[3], 7, number_format($subtotal, 2), 1, 0, 'R');
-            $this->Cell($columnWidths[4], 7, utf8_decode($producto->observacion_origen ?: 'N/A'), 1, 1, 'L');
+            $this->Cell($columnWidths[0], 7, utf8_decode($producto->producto_nombre), 'LR', 0, 'L');
+            $this->Cell($columnWidths[1], 7, $producto->cantidad, 'LR', 0, 'C');
+            $this->Cell($columnWidths[2], 7, number_format($precioUnit, 2), 'LR', 0, 'R');
+            $this->Cell($columnWidths[3], 7, number_format($subtotal, 2), 'LR', 0, 'R');
+            $this->Cell($columnWidths[4], 7, utf8_decode($producto->observacion_origen ?: '-'), 'LR', 1, 'L');
         }
-        $this->Ln(5);
 
-        // --- Totales ---
-        $this->SetFont('Arial', 'B', 10);
-        $this->Cell($columnWidths[0] + $columnWidths[1], 7, utf8_decode('Total de Productos:'), 1, 0, 'R');
-        $this->Cell($columnWidths[2], 7, $totalProductos, 1, 0, 'C');
-        $this->Cell($columnWidths[3], 7, utf8_decode('Total Bs:'), 1, 0, 'R');
-        $this->Cell($columnWidths[4], 7, number_format($totalGeneral, 2), 1, 1, 'R');
-        $this->Ln(15);
+        // --- Totales alineados con sus columnas ---
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell($columnWidths[0], 7, utf8_decode('TOTAL'), 1, 0, 'R');
+        $this->Cell($columnWidths[1], 7, $totalProductos, 1, 0, 'C');
+        $this->Cell($columnWidths[2], 7, utf8_decode('Total Bs:'), 1, 0, 'R');
+        $this->Cell($columnWidths[3], 7, number_format($totalGeneral, 2), 1, 0, 'R');
+        $this->Cell($columnWidths[4], 7, '', 1, 1, 'L');
+        $this->Ln(10);
         
 
-        // --- Sección de Firmas ---
-        $this->SetFont('Arial', '', 10);
-        $y = $this->GetY();
-        $this->SetXY(20, $y);
-        $this->Cell(40, 5, utf8_decode('_________________________'), 0, 0, 'C');
-        $this->SetXY(85, $y);
-        $this->Cell(40, 5, utf8_decode('_________________________'), 0, 0, 'C');
-        $this->SetXY(150, $y);
-        $this->Cell(40, 5, utf8_decode('_________________________'), 0, 0, 'C');
-        $this->SetXY(20, $y + 5);
-        $this->Cell(40, 5, utf8_decode('Firma del Transportista'), 0, 0, 'C');
-        $this->SetXY(85, $y + 5);
-        $this->Cell(40, 5, utf8_decode('Firma del Técnico'), 0, 0, 'C');
-        $this->SetXY(150, $y + 5);
-        $this->Cell(40, 5, utf8_decode('Firma del Supervisor'), 0, 0, 'C');
-        $this->Ln(15);
-        
-        $this->Cell(0, 5, utf8_decode('_________________________'), 0, 1, 'C');
-        $this->Cell(0, 5, utf8_decode('Firma del Creador del Envío'), 0, 1, 'C');
+        // --- Celdas de conformidad ---
+        $this->SetFont('Arial', 'B', 9);
+        $mitad = ($columnWidths[0] + $columnWidths[1] + $columnWidths[2] + $columnWidths[3] + $columnWidths[4]) / 2;
+        $this->Cell($mitad, 7, utf8_decode('RECIBI CONFORME'), 1, 0, 'C');
+        $this->Cell($mitad, 7, utf8_decode('ENTREGUE CONFORME'), 1, 1, 'C');
+
+        $this->SetFont('Arial', '', 9);
+        $this->Cell($mitad, 14, '', 1, 0, 'L');
+        $this->Cell($mitad, 14, '', 1, 1, 'L');
 
         // Salida del PDF. La opción 'D' fuerza la descarga del archivo.
         $nombreArchivo = $consolidado ? 'reporte_envio_consolidado_' . $envio['id'] . '.pdf' : 'reporte_envio_' . $envio['id'] . '.pdf';

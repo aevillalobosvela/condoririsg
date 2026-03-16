@@ -257,75 +257,7 @@
           </div>
         </div>
 
-        <div class="row g-3" id="productsGrid">
-          <?php foreach ($productos as $p): ?>
-            <?php
-              // Detectar tipo de producto para asignar colores
-              // IMPORTANTE: Verificar REQUESÓN antes que QUESO (contiene la palabra QUESO)
-              $nombre_upper = strtoupper($p['producto']);
-              if (strpos($nombre_upper, 'REQUESON') !== false || strpos($nombre_upper, 'REQUESÓN') !== false) {
-                $bg = '#E8F5E9'; $border = '#4CAF50'; $text = '#2E7D32'; $badge = '#388E3C';
-              } elseif (strpos($nombre_upper, 'LECHE') !== false) {
-                $bg = '#E3F2FD'; $border = '#2196F3'; $text = '#1565C0'; $badge = '#1976D2';
-              } elseif (strpos($nombre_upper, 'QUESO') !== false) {
-                $bg = '#FFF3E0'; $border = '#FF9800'; $text = '#E65100'; $badge = '#F57C00';
-              } elseif (strpos($nombre_upper, 'YOGURT') !== false || strpos($nombre_upper, 'YOGUR') !== false) {
-                $bg = '#FCE4EC'; $border = '#E91E63'; $text = '#C2185B'; $badge = '#D81B60';
-              } else {
-                $bg = '#F5F5F5'; $border = '#9E9E9E'; $text = '#424242'; $badge = '#757575';
-              }
-            ?>
-            <div class="col-6 col-md-4 product-card" 
-                 data-id="<?= $p['id'] ?>"
-                 data-name="<?= esc($p['producto']) ?>"
-                 data-price="<?= $p['precio_contado'] ?>"
-                 data-stock="<?= $p['stock'] ?>"
-                 data-unidad="<?= esc($p['unidad'] ?? 'und') ?>"
-                 data-created="<?= isset($p['created_at']) ? date('d/m/Y', strtotime($p['created_at'])) : '' ?>">
-              <div class="card h-100 shadow-sm border-0" style="border-left: 4px solid <?= $border ?> !important;">
-                <div class="card-body text-center p-3" style="background: linear-gradient(135deg, <?= $bg ?> 0%, #ffffff 100%);">
-                  <!-- Icono circular o Imagen -->
-                  <?php 
-                    $imagenPorNombre = 'assets/images/productos/' . $p['producto'] . '.png';
-                    $imagenExiste = file_exists(FCPATH . $imagenPorNombre);
-                  ?>
-                  <?php if ($imagenExiste): ?>
-                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
-                         style="width: 90px; height: 90px; background-color: <?= $border ?>;">
-                      <img src="<?= base_url($imagenPorNombre) ?>" alt="<?= esc($p['producto']) ?>" 
-                           style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                  <?php else: ?>
-                    <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                         style="width: 90px; height: 90px; background-color: <?= $border ?>; color: white;">
-                      <span class="fw-bold" style="font-size: 0.9rem;"><?= substr(esc($p['producto']), 0, 2) ?></span>
-                    </div>
-                  <?php endif; ?>
-                  
-                  <!-- Nombre del producto -->
-                  <h6 class="card-title mb-2" style="color: <?= $text ?>; font-size: 0.8rem; line-height: 1.2;"><?= esc($p['producto']) ?></h6>
-                  
-                  <!-- Precio -->
-                  <div class="mb-2">
-                    <span class="fw-bold" style="color: <?= $badge ?>; font-size: 0.9rem;">Bs. <?= number_format($p['precio_contado'], 2) ?></span>
-                  </div>
-                  
-                  <!-- Stock -->
-                  <div class="mb-2">
-                    <span class="badge" style="background-color: <?= $border ?>; font-size: 0.65rem;"><?= $p['stock'] ?> <?= esc($p['unidad'] ?? 'und') ?></span>
-                  </div>
-                  
-                  <!-- Fecha de creación -->
-                  <?php if (isset($p['created_at'])): ?>
-                  <div class="text-muted" style="font-size: 0.65rem;">
-                    <i class="ri-calendar-line"></i> <?= date('d/m/Y', strtotime($p['created_at'])) ?>
-                  </div>
-                  <?php endif; ?>
-                </div>
-              </div>
-            </div>
-          <?php endforeach; ?>
-        </div>
+        <div class="row g-3" id="productsGrid"></div>
 
         <nav class="mt-3">
           <ul class="pagination justify-content-center mb-0" id="pagination"></ul>
@@ -537,8 +469,44 @@
 
     // --- FUNCIONES DE RENDERIZADO Y LÓGICA ---
 
-    function getProductImage(p) {
-      return '<?= base_url() ?>/assets/images/productos/' + p.producto + '.png';
+    const IMAGE_MAP = {
+      'LECHE': 1,
+      'QUESO 900 GRAMOS': 2,
+      'QUESO SIN SAL 500 GRAMOS': 3,
+      'REQUESON 250 GRAMOS': 4,
+      'YOGURT 1 LITRO': 5,
+      'YOGURT 120 ML': 6,
+      'YOGURT GRIEGO 250 GRAMOS': 7,
+      'LACTOFRUT 120 ML': 8,
+    };
+    const BASE_IMAGE_URL = 'https://www.uto.edu.bo/wp-content/uploads/2026/03/';
+
+    // Cache: num -> url resuelta (png, jpg, o null)
+    const resolvedImages = {};
+
+    function probeImage(url) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => resolve(url);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    async function resolveAllImages() {
+      const nums = [...new Set(Object.values(IMAGE_MAP))];
+      await Promise.all(nums.map(async num => {
+        const png = BASE_IMAGE_URL + num + '.png';
+        const jpg = BASE_IMAGE_URL + num + '.jpg';
+        const result = await probeImage(png) ?? await probeImage(jpg);
+        resolvedImages[num] = result; // null si ninguno existe
+      }));
+    }
+
+    function getProductImage(nombre) {
+      const num = IMAGE_MAP[nombre.toUpperCase().trim()];
+      if (!num) return null;
+      return resolvedImages[num] ?? null; // ya resuelta o null
     }
 
     // Función para detectar tipo de producto y asignar colores
@@ -598,14 +566,23 @@
           <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${colors.border} !important;">
             <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%);">
               <!-- Icono circular o Imagen -->
-              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
-                   style="width: 90px; height: 90px; background-color: ${colors.border}; position: relative;">
-                <img src="${getProductImage(p)}" 
-                     alt="${p.producto}" 
-                     style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <span class="fw-bold" style="font-size: 0.9rem; color: white; display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${p.producto.substring(0,2)}</span>
-              </div>
+              ${
+                (() => {
+                  const imgUrl = getProductImage(p.producto);
+                  if (imgUrl) {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
+                       style="width: 90px; height: 90px; background-color: ${colors.border};">
+                      <img src="${imgUrl}" alt="${p.producto}"
+                           style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>`;
+                  } else {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                       style="width: 90px; height: 90px; background-color: ${colors.border}; color: white;">
+                      <span class="fw-bold" style="font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
+                    </div>`;
+                  }
+                })()
+              }
               
               <!-- Nombre del producto -->
               <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.producto}</h6>
@@ -1013,12 +990,11 @@
     montoRecibidoInput.addEventListener('input', updateChange);
 
     // Inicializar
-    renderProducts();
-    // Asegurar que la visibilidad de los campos de pago sea correcta al inicio
-    tipoPagoSelect.dispatchEvent(new Event('change'));
-    
-    // Inicializar el color del select de categorías
-    document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
+    resolveAllImages().then(() => {
+      renderProducts();
+      tipoPagoSelect.dispatchEvent(new Event('change'));
+      document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
+    });
   });
 </script>
 <?= $this->endSection() ?>
