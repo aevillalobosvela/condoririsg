@@ -179,14 +179,14 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
             vd.subtotal AS subtotal_item,
             ss.producto AS producto_nombre,
             -- Datos del personal UTO (solo relevante para créditos, pero lo dejamos)
-            COALESCE(p.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
             p.dip AS personal_dip,
             COALESCE(se.seccion, 'Sin sección') AS personal_seccion
         FROM
@@ -402,7 +402,7 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
@@ -413,7 +413,7 @@ class VentaModel extends Model
             p2.id AS producto_agro_id, 
             
             -- Datos del personal UTO
-            COALESCE(p.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
             p.dip AS personal_dip,
             COALESCE(se.seccion, 'Sin sección') AS personal_seccion
         FROM

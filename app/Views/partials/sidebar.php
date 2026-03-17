@@ -5,9 +5,9 @@ $userRoleName = session()->get('rol_nombre');
 
 <style>
   .app-menu {
-    background-color: #f9fdfb !important;
-    border-right: 1px solid #d1f0e5;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background-color: #e8f5ee !important;
+    border-right: 1px solid #a8d9bc;
+    box-shadow: 2px 0 8px rgba(40, 167, 69, 0.08);
   }
 
   .logo-dark span img,
@@ -221,6 +221,13 @@ $userRoleName = session()->get('rol_nombre');
 
         <?php if ($userRoleName === 'almacen'): ?>
           <li class="menu-title"><span>Inventario</span></li>
+          
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('usuarios') ?>">
+              <i class="ri-group-line"></i> <span>Gestión de Usuarios</span>
+            </a>
+          </li>
+
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarInventario" data-bs-toggle="collapse">
               <i class="ri-fridge-line"></i> <span>Inventario Lácteo</span>
@@ -236,11 +243,11 @@ $userRoleName = session()->get('rol_nombre');
             </div>
           </li>
 
-          <li class="nav-item">
+         <!--  <li class="nav-item">
             <a class="nav-link menu-link" href="<?= base_url('productos') ?>">
               <i class="ri-store-3-line"></i> <span>Productos</span>
             </a>
-          </li>
+          </li> -->
 
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarEnvios" data-bs-toggle="collapse">

@@ -219,6 +219,7 @@ class transferenciasController extends BaseController
     public function generarFactura($envioId)
     {
         $db = \Config\Database::connect();
+        $consolidado = $this->request->getGet('consolidado') == 1;
 
         // Obtener los datos del envío con JOINs
         $query = $db->query("
@@ -259,7 +260,25 @@ class transferenciasController extends BaseController
             return $this->response->setStatusCode(404)->setBody('Envío no encontrado.');
         }
 
+        // Si es consolidado, agrupar productos por nombre
+        if ($consolidado) {
+            $productosConsolidados = [];
+            foreach ($productos as $producto) {
+                $nombre = $producto->producto_nombre;
+                if (!isset($productosConsolidados[$nombre])) {
+                    $productosConsolidados[$nombre] = (object) [
+                        'producto_nombre' => $nombre,
+                        'cantidad' => 0,
+                        'precio_unitario' => $producto->precio_unitario,
+                        'observacion_origen' => $producto->observacion_origen ?? ''
+                    ];
+                }
+                $productosConsolidados[$nombre]->cantidad += $producto->cantidad;
+            }
+            $productos = array_values($productosConsolidados);
+        }
+
         $pdf = new FacturaPdf();
-        $pdf->generarReporteEnvio($envio, $productos);
+        $pdf->generarReporteEnvio($envio, $productos, $consolidado);
     }
 }

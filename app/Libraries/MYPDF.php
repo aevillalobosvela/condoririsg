@@ -42,7 +42,7 @@ class MYPDF extends \FPDF
         $this->SetFont('Arial', 'B', 12);
         $this->Cell(0, 5, "CONDORIRI - AGRONOMIA", 0, 1, 'C');
         $this->SetFont('Arial', '', 10);
-        $this->Cell(0, 5, "Telf.: 5281745 – Interno: 120;  FAX  5242215;  Casilla 49", 0, 1, 'C');
+        $this->Cell(0, 5, "Telf.: 5281745 | Interno: 120;  FAX  5242215;  Casilla 49", 0, 1, 'C');
         $this->Cell(0, 5, "Email: dpdi@uto.edu.bo; Internet: www.uto.edu.bo", 0, 1, 'C');
         $this->Ln(10);
     }

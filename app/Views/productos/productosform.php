@@ -154,20 +154,58 @@
                   <h5 class="card-title text-primary"><i class="ri-information-fill me-2"></i> Información Básica</h5>
                   <hr>
 
-                  <!-- Nombre (Producto) -->
-                  <div class="mb-3">
-                    <label for="nombre" class="form-label">Producto *</label>
-                    <input
-                      type="text"
-                      class="form-control <?= validation_show_error('nombre') ? 'is-invalid' : '' ?>"
-                      id="nombre"
-                      name="nombre"
-                      value="<?= old('nombre', $producto->nombre ?? '') ?>"
-                      required
-                      placeholder="Ingrese el nombre del producto">
-                    <div class="invalid-feedback">
-                      <?= validation_show_error('nombre') ?: 'El nombre del producto es obligatorio.' ?>
+                  <!-- Nombre y Unidad -->
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="nombre" class="form-label">Producto *</label>
+                        <input
+                          type="text"
+                          class="form-control <?= validation_show_error('nombre') ? 'is-invalid' : '' ?>"
+                          id="nombre"
+                          name="nombre"
+                          value="<?= old('nombre', $producto->nombre ?? '') ?>"
+                          required
+                          placeholder="Ingrese el nombre del producto">
+                        <div class="invalid-feedback">
+                          <?= validation_show_error('nombre') ?: 'El nombre del producto es obligatorio.' ?>
+                        </div>
+                      </div>
                     </div>
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="unidad_id" class="form-label">Unidad *</label>
+                        <select class="form-select <?= (session('validation') && session('validation')->hasError('unidad_id')) ? 'is-invalid' : '' ?>"
+                          id="unidad_id" name="unidad_id" required>
+                          <option value="">Seleccione</option>
+                          <?php foreach ($unidades as $unidad): ?>
+                            <option value="<?= esc($unidad['id']) ?>" <?= (old('unidad_id', $producto->unidad_id ?? '') == $unidad['id']) ? 'selected' : '' ?>>
+                              <?= esc($unidad['nombre']) ?>
+                            </option>
+                          <?php endforeach; ?>
+                        </select>
+                        <?php if (session('validation') && session('validation')->hasError('unidad_id')): ?>
+                          <div class="invalid-feedback"><?= session('validation')->getError('unidad_id') ?></div>
+                        <?php endif; ?>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Categoría -->
+                  <div class="mb-3">
+                    <label for="categoria_id" class="form-label">Categoría *</label>
+                    <select class="form-select <?= (session('validation') && session('validation')->hasError('categoria_id')) ? 'is-invalid' : '' ?>"
+                      id="categoria_id" name="categoria_id" required>
+                      <option value="">Seleccione</option>
+                      <?php foreach ($categorias as $categoria): ?>
+                        <option value="<?= esc($categoria['id']) ?>" <?= (old('categoria_id', $producto->categoria_id ?? '') == $categoria['id']) ? 'selected' : '' ?>>
+                          <?= esc($categoria['nombre']) ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                    <?php if (session('validation') && session('validation')->hasError('categoria_id')): ?>
+                      <div class="invalid-feedback"><?= session('validation')->getError('categoria_id') ?></div>
+                    <?php endif; ?>
                   </div>
 
                   <!-- Descripción -->
@@ -214,8 +252,14 @@
 
                   <!-- Inventario - Solo en modo creación -->
                   <?php if (!isset($producto->id)): ?>
+                  <?php 
+                    $materiaPrimaNombre = 'Leche'; // Valor por defecto
+                    if ($inventario_seleccionado && !empty($inventario_seleccionado->nombre)) {
+                      $materiaPrimaNombre = $inventario_seleccionado->nombre;
+                    }
+                  ?>
                   <div class="mb-3">
-                    <label class="form-label">Inventario de Leche *</label>
+                    <label class="form-label">Inventario de <?= esc($materiaPrimaNombre) ?> *</label>
                     <?php if ($inventario_seleccionado): ?>
                       <?php
                       $stockTotal = $inventario_seleccionado->reserva ?? 0;
@@ -268,7 +312,7 @@
                   <div class="row">
                     <div class="col-md-6">
                       <div class="mb-3">
-                        <label for="cantidad_produccion" class="form-label">Litros de Leche a Utilizar *</label>
+                        <label for="cantidad_produccion" class="form-label">Litros de <?= esc($materiaPrimaNombre) ?> a Utilizar *</label>
                         <input type="number" step="0.01" class="form-control <?= (session('validation') && session('validation')->hasError('cantidad_produccion')) ? 'is-invalid' : '' ?>"
                           id="cantidad_produccion" name="cantidad_produccion" value="<?= old('cantidad_produccion', $producto->cantidad_produccion ?? '') ?>" required min="0.01">
                         <?php if (session('validation') && session('validation')->hasError('cantidad_produccion')): ?>
@@ -324,7 +368,7 @@
                   </div>
 
                   <div class="mb-3">
-                    <label for="reserva" class="form-label">Reserva Final de Leche (L)</label>
+                    <label for="reserva" class="form-label">Reserva Final de <?= esc($materiaPrimaNombre) ?> (L)</label>
                     <input type="number" step="0.01" class="form-control <?= (session('validation') && session('validation')->hasError('reserva')) ? 'is-invalid' : '' ?>"
                       id="reserva" name="reserva" value="<?= old('reserva', $producto->reserva ?? '') ?>" readonly>
                     <?php if (session('validation') && session('validation')->hasError('reserva')): ?>
@@ -366,43 +410,6 @@
                       </div>
                     </div>
                   </div> -->
-                  <!-- Categoría y Unidad -->
-                  <div class="row">
-                    <div class="col-md-6">
-                      <div class="mb-3">
-                        <label for="categoria_id" class="form-label">Categoría *</label>
-                        <select class="form-select <?= (session('validation') && session('validation')->hasError('categoria_id')) ? 'is-invalid' : '' ?>"
-                          id="categoria_id" name="categoria_id" required>
-                          <option value="">Seleccione</option>
-                          <?php foreach ($categorias as $categoria): ?>
-                            <option value="<?= esc($categoria['id']) ?>" <?= (old('categoria_id', $producto->categoria_id ?? '') == $categoria['id']) ? 'selected' : '' ?>>
-                              <?= esc($categoria['nombre']) ?>
-                            </option>
-                          <?php endforeach; ?>
-                        </select>
-                        <?php if (session('validation') && session('validation')->hasError('categoria_id')): ?>
-                          <div class="invalid-feedback"><?= session('validation')->getError('categoria_id') ?></div>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="mb-3">
-                        <label for="unidad_id" class="form-label">Unidad *</label>
-                        <select class="form-select <?= (session('validation') && session('validation')->hasError('unidad_id')) ? 'is-invalid' : '' ?>"
-                          id="unidad_id" name="unidad_id" required>
-                          <option value="">Seleccione</option>
-                          <?php foreach ($unidades as $unidad): ?>
-                            <option value="<?= esc($unidad['id']) ?>" <?= (old('unidad_id', $producto->unidad_id ?? '') == $unidad['id']) ? 'selected' : '' ?>>
-                              <?= esc($unidad['nombre']) ?>
-                            </option>
-                          <?php endforeach; ?>
-                        </select>
-                        <?php if (session('validation') && session('validation')->hasError('unidad_id')): ?>
-                          <div class="invalid-feedback"><?= session('validation')->getError('unidad_id') ?></div>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                  </div>
 
                   <input type="hidden" name="estado" value="1">
 

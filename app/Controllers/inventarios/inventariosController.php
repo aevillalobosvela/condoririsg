@@ -9,6 +9,7 @@ use App\Libraries\CierreVentaPdf;
 use App\Libraries\ReporteLacteos;
 use App\Libraries\ReporteInventario;
 use App\Libraries\ReporteCalidad;
+use App\Libraries\ReporteControlCalidad;
 use App\Models\Inventario\InventarioModel;
 use App\Models\UsuarioModel;
 use App\Models\Producto\ProductoModel;
@@ -18,6 +19,7 @@ use App\Models\StockSucursal\StockSucursalModel;
 use App\Models\Unidad\UnidadModel;
 use App\Models\Venta\DetalleModel;
 use App\Models\Venta\VentaModel;
+use App\Models\MateriaPrima\MateriaPrimaModel;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -31,6 +33,7 @@ class InventariosController extends BaseController
     protected $ventaModel;
     protected $detalleModel;
     protected $stockSucursalModel;
+    protected $materiaPrimaModel;
 
 
     public function __construct()
@@ -42,6 +45,7 @@ class InventariosController extends BaseController
         $this->clienteModel = new ClienteModel();
         $this->ventaModel = new VentaModel();
         $this->detalleModel = new DetalleModel();
+        $this->materiaPrimaModel = new MateriaPrimaModel();
         helper(['form', 'url']);
     }
 
@@ -159,7 +163,8 @@ class InventariosController extends BaseController
                 'sucursal_id' => $sucursalId,
                 'user_id' => $userId
             ],
-            'auto_generate_code' => true
+            'auto_generate_code' => true,
+            'materiasPrimas' => $this->materiaPrimaModel->findAll()
         ];
 
         return view('inventarios/inventariosForm', $data);
@@ -285,7 +290,8 @@ class InventariosController extends BaseController
         $data = [
             'inventario' => $inventario,
             'title' => 'Editar Inventario',
-            'auto_generate_code' => false
+            'auto_generate_code' => false,
+            'materiasPrimas' => $this->materiaPrimaModel->findAll()
         ];
 
         return view('inventarios/inventariosForm', $data);
@@ -835,12 +841,13 @@ class InventariosController extends BaseController
     public function buscarPersonalUto()
     {
         $db = db_connect();
-        $dipPattern = $this->request->getGet('dip') . '%';
+        $searchTerm = $this->request->getGet('dip');
+        $searchPattern = '%' . $searchTerm . '%';
 
         $sql = "
             SELECT 
                 p.id_persona, 
-                p.nombre, 
+                p.nombre_completo AS nombre, 
                 p.dip, 
                 p.telefono, 
                 p.celular, 
@@ -854,10 +861,10 @@ class InventariosController extends BaseController
             WHERE 
                 p.\"id_estado\" = true
                 AND e.\"id_estado\" = true  
-                AND p.dip ILIKE ?              
+                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
 
-        $query = $db->query($sql, [$dipPattern]);
+        $query = $db->query($sql, [$searchPattern, $searchPattern]);
         $results = $query->getResult();
 
 
@@ -1252,7 +1259,7 @@ class InventariosController extends BaseController
         // Si tiene personal_uto_id, cargar datos del personal UTO
         elseif (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
@@ -1360,6 +1367,18 @@ class InventariosController extends BaseController
 
     public function exportarExcel()
     {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        // Usar el servicio de exportación
+        $exportService = new \App\Services\Inventarios\ExportacionExcelService();
+        $exportService->exportarReporteGeneral($nombre, $fecha_inicio, $fecha_fin);
+    }
+
+    public function exportarExcelAntiguo()
+    {
+        // Método antiguo mantenido como respaldo
         $nombre = $this->request->getGet('nombre') ?? '';
         $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
         $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
@@ -1512,7 +1531,7 @@ class InventariosController extends BaseController
         echo '</Row>' . "\n";
         
         echo '<Row ss:Height="14">';
-        echo '<Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell>';
+        echo '<Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 | Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell>';
         echo '</Row>' . "\n";
         
         echo '<Row ss:Height="14">';
@@ -1864,6 +1883,29 @@ class InventariosController extends BaseController
             ]
         );
     }
+
+    public function updateMateriaPrima()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Solicitud inválida']);
+        }
+
+        $id = $this->request->getPost('id');
+        $nombre = trim($this->request->getPost('nombre'));
+
+        if (empty($id) || empty($nombre)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Datos incompletos']);
+        }
+
+        try {
+            if ($this->materiaPrimaModel->update($id, ['nombre' => $nombre])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Materia prima actualizada']);
+            }
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al actualizar']);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
     public function reporteInventario()
     {
         $nombre = $this->request->getGet('nombre') ?? '';
@@ -1992,6 +2034,238 @@ class InventariosController extends BaseController
         exit;
     }
 
+    public function exportarCalidadExcel()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+
+        // Agrupar inventarios por mes
+        $inventariosPorMes = [];
+        foreach ($inventarios as $inv) {
+            $mes = date('Y-m', strtotime($inv->created_at)); // Formato: 2023-11 para ordenar
+            // Nombres de meses en español
+            $meses_es = [
+                'January' => 'Enero', 'February' => 'Febrero', 'March' => 'Marzo',
+                'April' => 'Abril', 'May' => 'Mayo', 'June' => 'Junio',
+                'July' => 'Julio', 'August' => 'Agosto', 'September' => 'Septiembre',
+                'October' => 'Octubre', 'November' => 'Noviembre', 'December' => 'Diciembre'
+            ];
+            $mesIngles = date('F Y', strtotime($inv->created_at));
+            $mesTexto = str_replace(array_keys($meses_es), array_values($meses_es), $mesIngles);
+            
+            if (!isset($inventariosPorMes[$mes])) {
+                $inventariosPorMes[$mes] = [
+                    'texto' => $mesTexto,
+                    'registros' => []
+                ];
+            }
+            $inventariosPorMes[$mes]['registros'][] = $inv;
+        }
+
+        // Ordenar por mes descendente (más reciente primero)
+        krsort($inventariosPorMes);
+
+        $filename = 'control_calidad_' . date('Ymd_His') . '.xls';
+        
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+        
+        echo '<Styles>';
+        // Título principal
+        echo '<Style ss:ID="titulo"><Font ss:Bold="1" ss:Size="16" ss:Color="#FFFFFF" ss:FontName="Arial"/><Interior ss:Color="#DC143C" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        
+        // Título de mes
+        echo '<Style ss:ID="titulo_mes"><Font ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF" ss:FontName="Arial"/><Interior ss:Color="#8B0000" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        
+        // Encabezados con fondo rojo
+        echo '<Style ss:ID="header"><Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF" ss:FontName="Arial"/><Interior ss:Color="#DC143C" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Celdas de datos con bordes rojos - TURNO AM (fondo amarillo suave)
+        echo '<Style ss:ID="celda_am"><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Celdas de datos con bordes rojos - TURNO PM (fondo azul suave)
+        echo '<Style ss:ID="celda_pm"><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números con 2 decimales - TURNO AM
+        echo '<Style ss:ID="numero_am"><NumberFormat ss:Format="0.00"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números con 2 decimales - TURNO PM
+        echo '<Style ss:ID="numero_pm"><NumberFormat ss:Format="0.00"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números con 2 decimales - TURNO AM (borde superior más grueso para separación de día)
+        echo '<Style ss:ID="numero_am_dia"><NumberFormat ss:Format="0.00"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Celdas de datos - TURNO AM (borde superior más grueso para separación de día)
+        echo '<Style ss:ID="celda_am_dia"><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números negativos - TURNO AM (borde superior más grueso para separación de día)
+        echo '<Style ss:ID="numero_neg_am_dia"><NumberFormat ss:Format="-0.000"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números negativos (punto de congelación) - TURNO AM
+        echo '<Style ss:ID="numero_neg_am"><NumberFormat ss:Format="-0.000"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        // Números negativos (punto de congelación) - TURNO PM
+        echo '<Style ss:ID="numero_neg_pm"><NumberFormat ss:Format="-0.000"/><Font ss:Size="10" ss:FontName="Arial"/><Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/></Borders></Style>';
+        
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="Control de Calidad">';
+        echo '<Table>';
+        
+        // Anchos de columna
+        echo '<Column ss:Width="80"/>';  // FECHA
+        echo '<Column ss:Width="120"/>'; // NOMBRE (nueva columna)
+        echo '<Column ss:Width="50"/>';  // TURNO
+        echo '<Column ss:Width="50"/>';  // GRASA
+        echo '<Column ss:Width="50"/>';  // SNG
+        echo '<Column ss:Width="60"/>';  // DENSIDAD
+        echo '<Column ss:Width="60"/>';  // LACTOSA
+        echo '<Column ss:Width="60"/>';  // SOLIDOS
+        echo '<Column ss:Width="60"/>';  // PROTEINA
+        echo '<Column ss:Width="50"/>';  // AGUA
+        echo '<Column ss:Width="60"/>';  // TEMP
+        echo '<Column ss:Width="70"/>';  // PUNTO CON
+        echo '<Column ss:Width="40"/>';  // pH
+        echo '<Column ss:Width="100"/>'; // OBSERVACION
+        
+        // Título principal
+        echo '<Row ss:Height="25">';
+        echo '<Cell ss:MergeAcross="13" ss:StyleID="titulo"><Data ss:Type="String">CONTROL DE CALIDAD</Data></Cell>';
+        echo '</Row>';
+        echo '<Row></Row>'; // Fila vacía
+        
+        // Iterar por cada mes
+        $primerMes = true;
+        foreach ($inventariosPorMes as $mes => $datos) {
+            // Agregar fila vacía entre meses (excepto antes del primero)
+            if (!$primerMes) {
+                echo '<Row></Row>';
+            }
+            $primerMes = false;
+            
+            // Título del mes
+            echo '<Row ss:Height="22">';
+            echo '<Cell ss:MergeAcross="13" ss:StyleID="titulo_mes"><Data ss:Type="String">' . strtoupper($datos['texto']) . '</Data></Cell>';
+            echo '</Row>';
+            
+            // Encabezados de columnas para este mes
+            echo '<Row ss:Height="30">';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">NOMBRE</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">TURNO</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">GRASA (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">SNG (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">DENSIDAD</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">LACTOSA (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">SOLIDOS (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">PROTEINA (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">AGUA (%)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">TEMP (°C)</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">PUNTO CON</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">pH</Data></Cell>';
+            echo '<Cell ss:StyleID="header"><Data ss:Type="String">OBSERVACION</Data></Cell>';
+            echo '</Row>';
+            
+            // Datos del mes
+            $registrosPorDia = [];
+            
+            // Agrupar registros por día
+            foreach ($datos['registros'] as $inv) {
+                $dia = date('d-M-y', strtotime($inv->created_at));
+                if (!isset($registrosPorDia[$dia])) {
+                    $registrosPorDia[$dia] = [];
+                }
+                $registrosPorDia[$dia][] = $inv;
+            }
+            
+            // Procesar cada día con colores alternados
+            $esPrimerDia = true;
+            $indiceDia = 0;
+            foreach ($registrosPorDia as $fecha => $registrosDelDia) {
+                // Alternar color por día (no por turno)
+                $esDiaAmarillo = ($indiceDia % 2 === 0);
+                
+                foreach ($registrosDelDia as $index => $inv) {
+                    $turno = strtoupper($inv->turno ?? 'AM');
+                    $esPrimeraFilaDelDia = ($index === 0);
+                    
+                    // Determinar estilos según el día (no el turno)
+                    if ($esPrimeraFilaDelDia && !$esPrimerDia) {
+                        // Aplicar borde superior grueso para separar días (excepto el primer día)
+                        $estiloCelda = $esDiaAmarillo ? 'celda_am_dia' : 'celda_pm';
+                        $estiloNumero = $esDiaAmarillo ? 'numero_am_dia' : 'numero_pm';
+                        $estiloNumeroNeg = $esDiaAmarillo ? 'numero_neg_am_dia' : 'numero_neg_pm';
+                    } else {
+                        $estiloCelda = $esDiaAmarillo ? 'celda_am' : 'celda_pm';
+                        $estiloNumero = $esDiaAmarillo ? 'numero_am' : 'numero_pm';
+                        $estiloNumeroNeg = $esDiaAmarillo ? 'numero_neg_am' : 'numero_neg_pm';
+                    }
+                    
+                    echo '<Row ss:Height="20">';
+                    
+                    // Celda de FECHA: solo mostrar en la primera fila del día
+                    if ($esPrimeraFilaDelDia) {
+                        echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($fecha, ENT_XML1) . '</Data></Cell>';
+                    } else {
+                        // Celda vacía para las siguientes filas del mismo día
+                        echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String"></Data></Cell>';
+                    }
+                    
+                    // Nueva columna NOMBRE
+                    echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
+                    
+                    echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($turno, ENT_XML1) . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->grasa ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->sng ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->densidad ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->lactosa ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->solidos ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->proteina ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->agua ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->temperatura ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumeroNeg . '"><Data ss:Type="Number">' . number_format($inv->congelacion ?? 0, 3, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->ph ?? 0, 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String"></Data></Cell>'; // OBSERVACION vacía
+                    echo '</Row>' . "\n";
+                }
+                
+                $esPrimerDia = false;
+                $indiceDia++;
+            }
+        }
+        
+        echo '</Table></Worksheet>';
+        echo '</Workbook>';
+        exit;
+    }
+
+    public function exportarCalidadPdf()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+
+        $pdfGenerator = new ReporteControlCalidad([
+            'nombre' => $nombre,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin
+        ]);
+
+        $pdfGenerator->generarReporte($inventarios);
+    }
+
     public function exportarExcelVentas()
     {
         $fecha_inicio = $this->request->getGet('fecha_inicio') ?? date('Y-m-d');
@@ -2003,7 +2277,7 @@ class InventariosController extends BaseController
         $inicio = $fecha_inicio . ' 00:00:00';
         $fin = $fecha_fin . ' 23:59:59';
 
-        $sql = "SELECT v.*, COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre, p.nombre AS nombre_personal, p.dip
+        $sql = "SELECT v.*, COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre, p.nombre_completo AS nombre_personal, p.dip
                 FROM condoriri.ventas v
                 LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
                 LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
@@ -2068,7 +2342,7 @@ class InventariosController extends BaseController
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="1" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
         echo '<Row ss:Height="18"><Cell ss:MergeAcross="1" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
         echo '<Row ss:Height="16"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
-        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 | Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="1" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
         echo '<Row></Row>';
         echo '<Row ss:Height="22"><Cell ss:MergeAcross="1" ss:StyleID="header"><Data ss:Type="String">REPORTE DE VENTAS - ' . strtoupper($tipo) . '</Data></Cell></Row>';

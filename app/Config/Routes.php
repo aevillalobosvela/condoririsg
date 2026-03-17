@@ -44,13 +44,13 @@ $routes->group('/', ['filter' => 'auth'], function ($routes) {
 // Roles: admin (gestión) | todos (perfil propio)
 // ============================================================================
 $routes->group('usuarios', ['filter' => 'auth'], function ($routes) {
-    $routes->get('/', 'usuarios\usuariosController::all', ['filter' => 'role:admin']);
-    $routes->get('register', 'usuarios\usuariosController::register', ['filter' => 'role:admin']);
-    $routes->post('create', 'usuarios\usuariosController::create', ['filter' => 'role:admin']);
-    $routes->get('edit/(:num)', 'usuarios\usuariosController::edit/$1', ['filter' => 'role:admin']);
-    $routes->post('update', 'usuarios\usuariosController::update', ['filter' => 'role:admin']);
-    $routes->get('delete/(:num)', 'usuarios\usuariosController::delete/$1', ['filter' => 'role:admin']);
-    $routes->get('activate/(:num)', 'usuarios\usuariosController::activate/$1', ['filter' => 'role:admin']);
+    $routes->get('/', 'usuarios\usuariosController::all', ['filter' => 'role:admin,almacen']);
+    $routes->get('register', 'usuarios\usuariosController::register', ['filter' => 'role:admin,almacen']);
+    $routes->post('create', 'usuarios\usuariosController::create', ['filter' => 'role:admin,almacen']);
+    $routes->get('edit/(:num)', 'usuarios\usuariosController::edit/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('update', 'usuarios\usuariosController::update', ['filter' => 'role:admin,almacen']);
+    $routes->get('delete/(:num)', 'usuarios\usuariosController::delete/$1', ['filter' => 'role:admin,almacen']);
+    $routes->get('activate/(:num)', 'usuarios\usuariosController::activate/$1', ['filter' => 'role:admin,almacen']);
 });
 
 // Perfil de Usuario (Accesible para todos los usuarios autenticados)
@@ -116,9 +116,12 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('filtered', 'inventarios\inventariosController::filtered', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarPdf', 'inventarios\inventariosController::exportarPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarExcel', 'inventarios\inventariosController::exportarExcel', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarCalidadExcel', 'inventarios\inventariosController::exportarCalidadExcel', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarCalidadPdf', 'inventarios\inventariosController::exportarCalidadPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('resumen', 'inventarios\inventariosController::getResumen', ['filter' => 'role:admin,almacen']);
     $routes->get('resumenNombre', 'inventarios\inventariosController::getResumenPorNombre', ['filter' => 'role:admin,almacen']);
     $routes->get('reporteInventario', 'inventarios\inventariosController::reporteInventario', ['filter' => 'role:admin,almacen']);
+    $routes->post('updateMateriaPrima', 'inventarios\inventariosController::updateMateriaPrima', ['filter' => 'role:admin,almacen']);
     
     // Sistema de ventas integrado (legacy)
     $routes->get('ventas', 'inventarios\inventariosController::indexVenta', ['filter' => 'role:admin,almacen,contabilidad']);

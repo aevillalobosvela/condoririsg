@@ -493,12 +493,13 @@ class ventasController extends BaseController
     public function buscarPersonalUto()
     {
         $db = db_connect();
-        $dipPattern = $this->request->getGet('dip') . '%';
+        $searchTerm = $this->request->getGet('dip');
+        $searchPattern = '%' . $searchTerm . '%';
 
         $sql = "
             SELECT 
                 p.id_persona, 
-                p.nombre, 
+                p.nombre_completo AS nombre, 
                 p.dip, 
                 p.telefono, 
                 p.celular, 
@@ -512,10 +513,10 @@ class ventasController extends BaseController
             WHERE 
                 p.\"id_estado\" = true
                 AND e.\"id_estado\" = true  
-                AND p.dip ILIKE ?              
+                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
 
-        $query = $db->query($sql, [$dipPattern]);
+        $query = $db->query($sql, [$searchPattern, $searchPattern]);
         $results = $query->getResult();
 
 
@@ -987,7 +988,7 @@ class ventasController extends BaseController
         // Si tiene personal_uto_id, cargar datos del personal UTO
         elseif (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
@@ -1204,7 +1205,7 @@ class ventasController extends BaseController
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
         echo '<Row ss:Height="18"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="subtitulo_uto"><Data ss:Type="String">FACULTAD DE CIENCIAS AGRARIAS Y NATURALES</Data></Cell></Row>';
         echo '<Row ss:Height="16"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">CONDORIRI - LABORATORIO DE INNOVACIÓN</Data></Cell></Row>';
-        echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 – Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
+        echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Telf.: 5281745 | Interno: 120 | FAX: 5242215 | Casilla 49</Data></Cell></Row>';
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
         echo '<Row></Row>';
         echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="header"><Data ss:Type="String">VENTAS ' . strtoupper($tipo === 'contado' ? 'AL CONTADO' : ($tipo === 'credito' ? 'A CRÉDITO' : 'GENERALES')) . ' - TIENDA CEAC</Data></Cell></Row>';
