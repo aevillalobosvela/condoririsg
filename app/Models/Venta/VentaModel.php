@@ -38,6 +38,24 @@ class VentaModel extends Model
     protected $skipValidation = true;
 
     /**
+     * Genera código de venta según sucursal y tipo de pago
+     * @param int $sucursal_id ID de la sucursal (2=Tienda, 4=Planta)
+     * @param string $tipo_pago Tipo de pago ('contado' o 'credito')
+     * @return string Código generado
+     */
+    public function generarCodigoVenta(int $sucursal_id, string $tipo_pago): string
+    {
+        $prefijo_sucursal = ($sucursal_id == 2) ? 'SC' : 'PP';
+        $prefijo_tipo = (strtolower($tipo_pago) == 'contado') ? 'CO' : 'CR';
+        $seq_name = 'seq_venta_' . strtolower($prefijo_sucursal . '_' . $prefijo_tipo);
+
+        $query = $this->db->query("SELECT nextval('condoriri.{$seq_name}') as numero");
+        $numero = $query->getRow()->numero;
+
+        return "{$prefijo_sucursal}-{$prefijo_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Recupera todas las ventas no eliminadas con el nombre completo del cliente.
      * Utiliza el constructor explícito para evitar conflictos de Soft Delete en CodeIgniter.
      *

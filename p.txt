@@ -1,4 +1,8 @@
+<<<<<<< feature/numeracion
+V 04/03/2026
+=======
 next 16/03
+>>>>>>> dev-numeracion
 CREATE TABLE productos_agro (
     id SERIAL PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
