@@ -41,18 +41,18 @@ class VentaModel extends Model
      * Genera código de venta según sucursal y tipo de pago
      * @param int $sucursal_id ID de la sucursal (2=Tienda, 4=Planta)
      * @param string $tipo_pago Tipo de pago ('contado' o 'credito')
-     * @return string Código generado (ej: VENTATCO-000001)
+     * @return string Código generado
      */
     public function generarCodigoVenta(int $sucursal_id, string $tipo_pago): string
     {
-        $letra_sucursal = ($sucursal_id == 2) ? 'T' : 'P';
-        $letra_tipo = (strtolower($tipo_pago) == 'contado') ? 'CO' : 'CR';
-        $seq_name = 'seq_venta_' . strtolower($letra_sucursal . substr($letra_tipo, 0, 2));
-        
+        $prefijo_sucursal = ($sucursal_id == 2) ? 'SC' : 'PP';
+        $prefijo_tipo = (strtolower($tipo_pago) == 'contado') ? 'CO' : 'CR';
+        $seq_name = 'seq_venta_' . strtolower($prefijo_sucursal . '_' . $prefijo_tipo);
+
         $query = $this->db->query("SELECT nextval('condoriri.{$seq_name}') as numero");
         $numero = $query->getRow()->numero;
-        
-        return "VENTA{$letra_sucursal}{$letra_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
+
+        return "{$prefijo_sucursal}-{$prefijo_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
     }
 
     /**
