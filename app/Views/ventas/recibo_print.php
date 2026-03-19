@@ -12,6 +12,7 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
             color: #000;
+            font-weight: bold;
         }
 
         #print-modal {
@@ -61,56 +62,57 @@
 
         .header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .header .recibo {
             font-size: 16px;
-            margin: 0 0 4px 0;
+            margin: 0 0 2px 0;
             font-weight: bold;
         }
         .header .universidad {
             font-size: 12px;
-            margin: 3px 0;
+            margin: 2px 0;
             font-weight: bold;
         }
         .header .centro {
             font-size: 11px;
-            margin: 2px 0;
+            margin: 1px 0;
         }
-        .header .direccion {
+        .header .direccion-telefono {
             font-size: 10px;
-            margin: 2px 0;
-        }
-        .header .telefono {
-            font-size: 10px;
-            margin: 2px 0;
+            margin: 1px 0;
         }
         .header .ciudad {
             font-size: 10px;
-            margin: 2px 0;
+            margin: 1px 0;
         }
         .separator {
             border-top: 1px dashed #000;
-            margin: 8px 0;
+            margin: 5px 0;
         }
         .info-line {
-            margin: 3px 0;
+            margin: 2px 0;
             font-size: 12px;
         }
+        .info-line-tipo-pago {
+            margin: 2px 0;
+            font-size: 14px;
+            text-align: right;
+        }
         .cliente-section {
-            margin: 10px 0;
+            margin: 6px 0;
         }
         .productos-header {
             display: flex;
             justify-content: space-between;
             font-weight: bold;
-            margin: 10px 0 5px 0;
+            margin: 5px 0 3px 0;
             font-size: 11px;
         }
         .producto-item {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
+            margin: 3px 0;
             font-size: 12px;
         }
         .producto-nombre {
@@ -122,21 +124,21 @@
         }
         .total-section {
             text-align: center;
-            margin-top: 15px;
-            padding-top: 10px;
+            margin-top: 8px;
+            padding-top: 6px;
             border-top: 1px solid #000;
         }
         .total-section p {
             font-size: 14px;
             font-weight: bold;
-            margin: 5px 0;
+            margin: 3px 0;
         }
         .footer {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 8px;
         }
         .footer p {
-            margin: 5px 0;
+            margin: 3px 0;
             font-size: 12px;
         }
 
@@ -214,8 +216,7 @@ $userSucursalName = session()->get('sucursal_nombre');
                 <div class="recibo">RECIBO</div>
                 <div class="universidad">UNIVERSIDAD TECNICA DE ORURO</div>
                 <div class="centro">CENTRO EXP. AGROPECUARIO CONDORIRI</div>
-                <div class="direccion">6 de Octubre y Aroma</div>
-                <div class="telefono">Tel: 55693</div>
+                <div class="direccion-telefono">6 de Octubre y Aroma - Tel: 55693</div>
                 <div class="ciudad">Oruro - Bolivia</div>
             </div>
 
@@ -225,7 +226,7 @@ $userSucursalName = session()->get('sucursal_nombre');
             <div class="info-line">Fecha: <?= date('d/m/Y H:i', strtotime($venta->created_at)) ?></div>
             <div class="info-line">Nro: <?= esc($venta->id) ?></div>
             <div class="info-line">Código: <?= esc($venta->code) ?></div>
-            <div class="info-line">Tipo Pago: <?= esc(ucfirst($venta->tipo_pago)) ?></div>
+            <div class="info-line-tipo-pago">Tipo Pago: <?= esc(ucfirst($venta->tipo_pago)) ?></div>
 
             <div class="separator"></div>
             
@@ -267,8 +268,7 @@ $userSucursalName = session()->get('sucursal_nombre');
             <div class="separator"></div>
 
             <div class="footer">
-                <p>¡Gracias por su compra!</p>
-                <p>Atendido por: <?= esc($nombreUsuario) ?></p>
+                <p>Atendido por: <?= esc(ucwords(strtolower($nombreUsuario))) ?></p>
                 <p style="margin-top: 30px;">&nbsp;</p>
                 <p style="border-top: 1px solid #000; width: 60%; margin: 0 auto;">&nbsp;</p>
             </div>
