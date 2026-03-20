@@ -25,6 +25,17 @@ class CierreVentaInve extends CierreVentaBasePdf
         $this->SetMargins(10, 10, 10);
         $this->AliasNbPages();
 
+        $unidadesMedida = [
+            'LACTOFRUIT 120 ML'        => 'BOLSA',
+            'LECHE'                    => 'LITRO',
+            'QUESO 900 GRAMOS'         => 'PIEZA',
+            'QUESO SIN SAL 500 GRAMOS' => 'PIEZA',
+            'REQUESON 250 GRAMOS'      => 'BOLSA',
+            'YOGURT 1 LITRO'           => 'BOLSA',
+            'YOGURT 120 ML'            => 'BOLSA',
+            'YOGURT GRIEGO 250 GRAMOS' => 'PIEZA',
+        ];
+
         $productosUnicos  = [];
         $ventasAgrupadas  = [];
         $totalGeneralBs   = 0;
@@ -40,9 +51,9 @@ class CierreVentaInve extends CierreVentaBasePdf
             };
             if (!$esValida) continue;
 
-            $prodNombre = utf8_decode($item->producto_nombre);
+            $prodNombre = utf8_decode(trim(preg_replace('/\s+/', ' ', str_replace(['(', ')'], '', $item->producto_nombre))));
             if (!isset($productosUnicos[$prodNombre])) {
-                $productosUnicos[$prodNombre] = ['precio' => $item->precio_unitario, 'unidad' => 'UNIDAD', 'total_cantidad' => 0];
+                $productosUnicos[$prodNombre] = ['precio' => $item->precio_unitario, 'total_cantidad' => 0];
             }
             $productosUnicos[$prodNombre]['total_cantidad'] += $item->cantidad;
 
@@ -74,82 +85,109 @@ class CierreVentaInve extends CierreVentaBasePdf
             ? "Del: $d de {$meses[$m]} de $y Al: $d de {$meses[$m]} de $y"
             : "Del: $d de {$meses[$m]} de $y Al: " . date('d', strtotime($fecha_fin)) . " de {$meses[date('m', strtotime($fecha_fin))]} de " . date('Y', strtotime($fecha_fin));
 
+        $ventaIds    = array_keys($ventasAgrupadas);
+        $nroVentaMin = !empty($ventaIds) ? min($ventaIds) : 0;
+        $nroVentaMax = !empty($ventaIds) ? max($ventaIds) : 0;
+
         $this->SetFont('Arial', 'B', 9);
+        $this->SetTextColor(0, 70, 180);
+        $this->Cell(0, 5, 'N Venta: ' . $nroVentaMin . ' al ' . $nroVentaMax, 0, 1, 'C');
+        $this->SetTextColor(0, 0, 0);
         $this->Cell(0, 5, utf8_decode($fechaTexto), 0, 1, 'L');
         $this->SetX($this->GetPageWidth() - 60);
         $this->Cell(50, 5, 'TOTAL: ' . number_format($totalGeneralBs, 2, ',', '.') . ' Bs.', 0, 1, 'R');
         $this->Ln(2);
 
+        $wNro       = 8;
         $labelWidth = 50;
         $numProds   = count($productosUnicos);
-        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $labelWidth - 30) / $numProds) : 25;
+        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $wNro - $labelWidth - 30) / $numProds) : 25;
 
         $this->SetFillColor(220, 220, 220);
         $this->SetFont('Arial', 'B', 7);
 
+        $this->Cell($wNro, 5, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'TOTAL BOLIVIANOS:', 1, 0, 'R', true);
         foreach ($productosUnicos as $prod => $info) {
             $this->Cell($colWidth, 5, round($info['precio'] * $info['total_cantidad']), 1, 0, 'C');
         }
         $this->Cell(0, 5, number_format($totalGeneralBs, 2, ',', '.'), 1, 1, 'R', true);
 
+        $this->Cell($wNro, 5, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'TOTAL CANTIDADES:', 1, 0, 'R', true);
         foreach ($productosUnicos as $prod => $info) {
             $this->Cell($colWidth, 5, $info['total_cantidad'], 1, 0, 'C');
         }
         $this->Cell(0, 5, $totalGeneralCant, 1, 1, 'R', true);
 
-        $this->Cell($labelWidth, 8, 'PRODUCTOS:', 1, 0, 'R', true);
+        $this->SetFont('Arial', '', 6);
+        $maxLines = 1;
+        foreach ($productosUnicos as $prod => $info) {
+            $lines = $this->NbLines($colWidth, $prod);
+            if ($lines > $maxLines) $maxLines = $lines;
+        }
+        $rowH = $maxLines * 5;
+        $this->SetFont('Arial', 'B', 7);
+        $this->Cell($wNro, $rowH, '', 1, 0, 'C', true);
+        $this->Cell($labelWidth, $rowH, 'PRODUCTOS:', 1, 0, 'R', true);
         $currentX = $this->GetX(); $currentY = $this->GetY();
         foreach ($productosUnicos as $prod => $info) {
             $this->SetXY($currentX, $currentY);
             $this->SetFont('Arial', '', 6);
-            $this->Cell($colWidth, 8, substr($prod, 0, 15), 1, 0, 'C');
+            $this->Rect($currentX, $currentY, $colWidth, $rowH);
+            $this->MultiCell($colWidth, 5, $prod, 0, 'C');
             $currentX += $colWidth;
         }
-        $this->SetXY($currentX, $currentY);
         $this->SetFont('Arial', 'B', 7);
-        $this->Cell(0, 8, 'TOTAL', 1, 1, 'C', true);
+        $this->SetXY($currentX, $currentY);
+        $this->Cell(0, $rowH, 'TOTAL', 1, 1, 'C', true);
 
+        $this->Cell($wNro, 5, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'UNIDADES DE MEDIDA:', 1, 0, 'R', true);
         foreach ($productosUnicos as $prod => $info) {
-            $this->Cell($colWidth, 5, 'PIEZA', 1, 0, 'C');
+            $unidad = $unidadesMedida[$prod] ?? 'PIEZA';
+            $this->Cell($colWidth, 5, $unidad, 1, 0, 'C');
         }
         $this->Cell(0, 5, number_format($totalGeneralBs, 2, ',', '.'), 1, 1, 'R', true);
 
+        $this->Cell($wNro, 5, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'PRECIOS:', 1, 0, 'R', true);
         foreach ($productosUnicos as $prod => $info) {
-            $this->Cell($colWidth, 5, number_format($info['precio'], 0), 1, 0, 'C');
+            $this->Cell($colWidth, 5, number_format($info['precio'], 2, ',', '.'), 1, 0, 'C');
         }
         $this->Cell(0, 5, number_format($totalGeneralBs, 2, ',', '.'), 1, 1, 'R', true);
 
         $this->Ln(5);
 
-        $wNombre = 50; $wNota = 25; $subColW = $colWidth / 2;
+        $wNota = 18; $wTotal = 13; $subColW = $colWidth / 2;
         $this->SetFillColor(200, 200, 200);
-        $this->Cell($wNombre, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
+        $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
+        $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
         foreach ($productosUnicos as $prod => $info) {
             $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
             $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
         }
         $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-        $this->Cell(0, 5, 'TOTAL', 1, 1, 'C', true);
+        $this->Cell($wTotal, 5, 'TOTAL', 1, 1, 'C', true);
 
         $this->SetFont('Arial', '', 7);
+        $nro = 1;
         foreach ($ventasAgrupadas as $venta) {
             if ($this->GetY() > $this->GetPageHeight() - 20) {
                 $this->AddPage();
                 $this->SetFillColor(200, 200, 200);
-                $this->Cell($wNombre, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
+                $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
+                $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
                 foreach ($productosUnicos as $prod => $info) {
                     $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
                     $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
                 }
                 $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-                $this->Cell(0, 5, 'TOTAL', 1, 1, 'C', true);
+                $this->Cell($wTotal, 5, 'TOTAL', 1, 1, 'C', true);
             }
 
-            $this->Cell($wNombre, 5, substr($venta['cliente'], 0, 28), 1, 0, 'L');
+            $this->Cell($wNro, 5, $nro++, 1, 0, 'C');
+            $this->Cell($labelWidth, 5, $venta['cliente'], 1, 0, 'L');
             foreach ($productosUnicos as $prod => $info) {
                 if (isset($venta['items'][$prod])) {
                     $q  = $venta['items'][$prod]['q'];
@@ -162,12 +200,25 @@ class CierreVentaInve extends CierreVentaBasePdf
                 }
             }
             $this->Cell($wNota, 5, $venta['notas'], 1, 0, 'C');
-            $this->Cell(0, 5, number_format($venta['total_venta'], 2), 1, 1, 'R');
+            $this->Cell($wTotal, 5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R');
         }
 
         $this->Ln(5);
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(0, 6, 'TOTAL ' . $tituloTipo . ': ' . $this->numeroALiteral($totalGeneralBs) . ' BOLIVIANOS', 0, 1, 'L');
+
+        $nombreUsuario = utf8_decode($filters['nombre_usuario'] ?? 'Usuario');
+        $this->Ln(15);
+        $pageW = $this->GetPageWidth();
+        $firmaW = 70;
+        $firmaX = ($pageW - $firmaW) / 2;
+        $this->SetDrawColor(0, 0, 0);
+        $this->Line($firmaX, $this->GetY(), $firmaX + $firmaW, $this->GetY());
+        $this->Ln(2);
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell(0, 5, $nombreUsuario, 0, 1, 'C');
+        $this->SetFont('Arial', '', 8);
+        $this->Cell(0, 5, utf8_decode('Responsable - Derivados Lacteos'), 0, 1, 'C');
 
         $this->Output('D', 'reporte_' . $tipo . '_matrix_' . $fecha_inicio . '.pdf');
     }

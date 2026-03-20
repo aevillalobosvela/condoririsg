@@ -1057,13 +1057,22 @@ class ventasController extends BaseController
 
         $reportData = $this->ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipoConsulta);
 
-        
+        $db = \Config\Database::connect();
+        $usuarioGenerador = $db->table('condoriri.usuarios')
+            ->select('nombre, apellidos')
+            ->where('id', session()->get('id'))
+            ->get()->getRowArray();
+        $nombreUsuario = $usuarioGenerador
+            ? ucwords(strtolower(trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? ''))))
+            : 'Usuario';
+
         $pdfGenerator = new CierreVentaPdf();
 
         $pdfGenerator->generarReporteVentas($reportData, [
-            'fecha_inicio' => $fecha_inicio,
-            'fecha_fin'    => $fecha_fin,
-            'tipo'         => $tipo,
+            'fecha_inicio'  => $fecha_inicio,
+            'fecha_fin'     => $fecha_fin,
+            'tipo'          => $tipo,
+            'nombre_usuario'=> $nombreUsuario,
         ]);
     }
 

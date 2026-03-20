@@ -32,12 +32,22 @@ class ReportesVentasController extends BaseController
         $tipoModelo = ($tipo === 'deposito_contado') ? 'contado' : $tipo;
         $reportData = $this->ventaModel->getDailySalesReportDataInve($fecha_inicio, $fecha_fin, $tipoModelo);
 
+        $db = \Config\Database::connect();
+        $usuarioGenerador = $db->table('condoriri.usuarios')
+            ->select('nombre, apellidos')
+            ->where('id', session()->get('id'))
+            ->get()->getRowArray();
+        $nombreUsuario = $usuarioGenerador
+            ? ucwords(strtolower(trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? ''))))
+            : 'Usuario';
+
         $pdfGenerator = new CierreVentaInve();
 
         $pdfGenerator->generarReporteVentas($reportData, [
-            'fecha_inicio' => $fecha_inicio,
-            'fecha_fin'    => $fecha_fin,
-            'tipo'         => $tipo,
+            'fecha_inicio'   => $fecha_inicio,
+            'fecha_fin'      => $fecha_fin,
+            'tipo'           => $tipo,
+            'nombre_usuario' => $nombreUsuario,
         ]);
     }
 
