@@ -175,9 +175,20 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
 
         // Fila: UNIDADES DE MEDIDA
+        $unidadesMedida = [
+            'LACTOFRUIT 120 ML'        => 'BOLSA',
+            'LECHE'                    => 'LITRO',
+            'QUESO 900 GRAMOS'         => 'PIEZA',
+            'QUESO SIN SAL 500 GRAMOS' => 'PIEZA',
+            'REQUESON 250 GRAMOS'      => 'BOLSA',
+            'YOGURT 1 LITRO'           => 'BOLSA',
+            'YOGURT 120 ML'            => 'BOLSA',
+            'YOGURT GRIEGO 250 GRAMOS' => 'PIEZA',
+        ];
         echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">UNIDADES DE MEDIDA:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
-            echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">PIEZA</Data></Cell>';
+            $unidad = $unidadesMedida[$prod] ?? 'PIEZA';
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">' . $unidad . '</Data></Cell>';
         }
         echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
         echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
@@ -185,7 +196,7 @@ class ExcelVentasMatrizService
         // Fila: PRECIOS
         echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRECIOS:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
-            echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . number_format($info['precio'], 0) . '</Data></Cell>';
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="number"><Data ss:Type="Number">' . number_format($info['precio'], 2, '.', '') . '</Data></Cell>';
         }
         echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
         echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
