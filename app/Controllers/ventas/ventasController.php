@@ -5,7 +5,6 @@ namespace App\Controllers\ventas;
 use App\Controllers\BaseController;
 
 use App\Libraries\CierreVentaPdf;
-use App\Libraries\CierreVentaPdf1;
 
 
 use App\Models\Categoria\CategoriaModel;
@@ -1059,11 +1058,7 @@ class ventasController extends BaseController
         $reportData = $this->ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipoConsulta);
 
         
-        if ($tipo === 'deposito_contado') {
-            $pdfGenerator = new CierreVentaPdf1();
-        } else {
-            $pdfGenerator = new CierreVentaPdf();
-        }
+        $pdfGenerator = new CierreVentaPdf();
 
         $pdfGenerator->generarReporteVentas($reportData, [
             'fecha_inicio' => $fecha_inicio,

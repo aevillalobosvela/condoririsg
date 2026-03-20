@@ -4,7 +4,6 @@ namespace App\Controllers\Inventarios;
 
 use App\Controllers\BaseController;
 use App\Libraries\CierreVentaInve;
-use App\Libraries\CierreVentaInve1;
 use App\Models\Venta\VentaModel;
 
 class ReportesVentasController extends BaseController
@@ -33,11 +32,7 @@ class ReportesVentasController extends BaseController
         $tipoModelo = ($tipo === 'deposito_contado') ? 'contado' : $tipo;
         $reportData = $this->ventaModel->getDailySalesReportDataInve($fecha_inicio, $fecha_fin, $tipoModelo);
 
-        if ($tipo === 'deposito_contado') {
-            $pdfGenerator = new CierreVentaInve1();
-        } else {
-            $pdfGenerator = new CierreVentaInve();
-        }
+        $pdfGenerator = new CierreVentaInve();
 
         $pdfGenerator->generarReporteVentas($reportData, [
             'fecha_inicio' => $fecha_inicio,
