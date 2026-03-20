@@ -46,7 +46,7 @@ class ExcelVentasMatrizService
             if ($tipo === 'contado' && $tipoPago !== 'contado' && $tipoPago !== 'deposito_contado') continue;
             if ($tipo === 'credito' && $tipoPago !== 'credito') continue;
 
-            $prodNombre = $item->producto_nombre;
+            $prodNombre = trim(preg_replace('/\s+/', ' ', str_replace(['(', ')'], '', $item->producto_nombre)));
 
             if (!isset($productosUnicos[$prodNombre])) {
                 $productosUnicos[$prodNombre] = ['precio' => $item->precio_unitario, 'total_cantidad' => 0];
@@ -116,6 +116,7 @@ class ExcelVentasMatrizService
         echo '<Style ss:ID="number"><NumberFormat ss:Format="#,##0.00"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
         echo '<Style ss:ID="integer"><NumberFormat ss:Format="#,##0"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
         echo '<Style ss:ID="center"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
+        echo '<Style ss:ID="center_wrap"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
         echo '<Style ss:ID="left"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
         echo '<Style ss:ID="row_even"><Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/><Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>';
         echo '</Styles>';
@@ -166,9 +167,9 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . $totalGeneralCant . '</Data></Cell></Row>';
 
         // Fila: PRODUCTOS
-        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRODUCTOS:</Data></Cell>';
+        echo '<Row ss:Height="30"><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRODUCTOS:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
-            echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars(substr($prod, 0, 15), ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:MergeAcross="1" ss:StyleID="center_wrap"><Data ss:Type="String">' . htmlspecialchars($prod, ENT_XML1) . '</Data></Cell>';
         }
         echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell>';
         echo '<Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
@@ -192,7 +193,7 @@ class ExcelVentasMatrizService
         echo '<Row></Row>';
 
         // Encabezado de tabla
-        echo '<Row><Cell ss:StyleID="header_prod"><Data ss:Type="String">APELLIDOS Y NOMBRES:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_prod"><Data ss:Type="String"> Y NOMBRES:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Q</Data></Cell>';
             echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Bs</Data></Cell>';
