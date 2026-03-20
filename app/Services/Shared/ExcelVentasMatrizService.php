@@ -91,6 +91,10 @@ class ExcelVentasMatrizService
             $fechaTexto = "Del: $d de {$meses[$m]} de $y Al: $d2 de {$meses[$m2]} de $y2";
         }
 
+        $ventaIds    = array_keys($ventasAgrupadas);
+        $nroVentaMin = !empty($ventaIds) ? min($ventaIds) : 0;
+        $nroVentaMax = !empty($ventaIds) ? max($ventaIds) : 0;
+
         $tipoLabel = $tipo === 'contado' ? 'AL CONTADO' : ($tipo === 'credito' ? 'A CRÉDITO' : 'GENERALES');
         $tipoNota  = $tipo === 'contado' ? 'al contado' : ($tipo === 'credito' ? 'a crédito' : 'generales');
 
@@ -123,11 +127,12 @@ class ExcelVentasMatrizService
 
         // ── Hoja ───────────────────────────────────────────────────────────────
         $numProds  = count($productosUnicos);
-        $totalCols = 1 + ($numProds * 2) + 2 - 1;
+        $totalCols = 1 + ($numProds * 2) + 2 - 1 + 1; // +1 por columna N°
 
         echo '<Worksheet ss:Name="VENTAS">';
         echo '<Table>';
 
+        echo '<Column ss:Width="25"/>';
         echo '<Column ss:Width="150"/>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Column ss:Width="40"/>';
@@ -144,6 +149,7 @@ class ExcelVentasMatrizService
         echo '<Row ss:Height="14"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="info_uto"><Data ss:Type="String">Email: dpdi@uto.edu.bo | www.uto.edu.bo</Data></Cell></Row>';
         echo '<Row></Row>';
         echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="header"><Data ss:Type="String">VENTAS ' . $tipoLabel . ' - ' . $nombreTienda . '</Data></Cell></Row>';
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="subtitulo_uto"><Data ss:Type="String">N° Venta: ' . $nroVentaMin . ' al ' . $nroVentaMax . '</Data></Cell></Row>';
         echo '<Row></Row>';
 
         // Fecha y total general
@@ -151,7 +157,7 @@ class ExcelVentasMatrizService
         echo '<Row></Row>';
 
         // Fila: TOTAL BOLIVIANOS
-        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL BOLIVIANOS:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL BOLIVIANOS:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . round($info['precio'] * $info['total_cantidad']) . '</Data></Cell>';
         }
@@ -159,7 +165,7 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
 
         // Fila: TOTAL CANTIDADES
-        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL CANTIDADES:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell><Cell ss:StyleID="header_gray"><Data ss:Type="String">TOTAL CANTIDADES:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:MergeAcross="1" ss:StyleID="integer"><Data ss:Type="Number">' . $info['total_cantidad'] . '</Data></Cell>';
         }
@@ -167,7 +173,7 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="integer"><Data ss:Type="Number">' . $totalGeneralCant . '</Data></Cell></Row>';
 
         // Fila: PRODUCTOS
-        echo '<Row ss:Height="30"><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRODUCTOS:</Data></Cell>';
+        echo '<Row ss:Height="30"><Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRODUCTOS:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:MergeAcross="1" ss:StyleID="center_wrap"><Data ss:Type="String">' . htmlspecialchars($prod, ENT_XML1) . '</Data></Cell>';
         }
@@ -185,7 +191,7 @@ class ExcelVentasMatrizService
             'YOGURT 120 ML'            => 'BOLSA',
             'YOGURT GRIEGO 250 GRAMOS' => 'PIEZA',
         ];
-        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">UNIDADES DE MEDIDA:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell><Cell ss:StyleID="header_gray"><Data ss:Type="String">UNIDADES DE MEDIDA:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             $unidad = $unidadesMedida[$prod] ?? 'PIEZA';
             echo '<Cell ss:MergeAcross="1" ss:StyleID="center"><Data ss:Type="String">' . $unidad . '</Data></Cell>';
@@ -194,7 +200,7 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($totalGeneralBs, 2, '.', '') . '</Data></Cell></Row>';
 
         // Fila: PRECIOS
-        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRECIOS:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_gray"><Data ss:Type="String"></Data></Cell><Cell ss:StyleID="header_gray"><Data ss:Type="String">PRECIOS:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:MergeAcross="1" ss:StyleID="number"><Data ss:Type="Number">' . number_format($info['precio'], 2, '.', '') . '</Data></Cell>';
         }
@@ -204,7 +210,8 @@ class ExcelVentasMatrizService
         echo '<Row></Row>';
 
         // Encabezado de tabla
-        echo '<Row><Cell ss:StyleID="header_prod"><Data ss:Type="String"> Y NOMBRES:</Data></Cell>';
+        echo '<Row><Cell ss:StyleID="header_prod"><Data ss:Type="String">N°</Data></Cell>';
+        echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">APELLIDOS Y NOMBRES:</Data></Cell>';
         foreach ($productosUnicos as $prod => $info) {
             echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Q</Data></Cell>';
             echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Bs</Data></Cell>';
@@ -214,9 +221,11 @@ class ExcelVentasMatrizService
 
         // Filas de ventas
         $fill = false;
+        $nro  = 1;
         foreach ($ventasAgrupadas as $venta) {
             $rowStyle = $fill ? 'row_even' : 'left';
-            echo '<Row><Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars(substr($venta['cliente'], 0, 30), ENT_XML1) . '</Data></Cell>';
+            echo '<Row><Cell ss:StyleID="center"><Data ss:Type="Number">' . $nro++ . '</Data></Cell>';
+            echo '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars(substr($venta['cliente'], 0, 30), ENT_XML1) . '</Data></Cell>';
             foreach ($productosUnicos as $prod => $info) {
                 if (isset($venta['items'][$prod])) {
                     $q  = $venta['items'][$prod]['q'];
