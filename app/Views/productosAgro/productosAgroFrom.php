@@ -48,9 +48,7 @@
 
                 <form action="<?= $action ?>" method="post" id="formProductoAgro">
                     <?= csrf_field() ?>
-                    <?php if (isset($producto)): ?>
-                        <input type="hidden" name="_method" value="PUT">
-                    <?php endif; ?>
+
 
                     <!-- Grupo: Identificación -->
                     <div class="row mb-4">

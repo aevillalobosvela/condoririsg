@@ -300,9 +300,7 @@ $userRoleName = session()->get('rol_nombre');
             </a>
             <div class="collapse menu-dropdown" id="sidebarAgro">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro') ?>" class="nav-link">Registro Productos</a>
-                </li>
-                <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro') ?>" class="nav-link">Registro Productos</a></li>
               </ul>
             </div>
           </li>
@@ -314,6 +312,7 @@ $userRoleName = session()->get('rol_nombre');
             <div class="collapse menu-dropdown" id="sidebarEnviosAgro">
               <ul class="nav nav-sm flex-column">
                 <li class="nav-item"><a href="<?= base_url('envios') ?>" class="nav-link">Gestionar Envíos</a></li>
+                <li class="nav-item"><a href="<?= base_url('envios/devoluciones') ?>" class="nav-link">Devoluciones</a></li>
               </ul>
             </div>
           </li>
@@ -325,12 +324,9 @@ $userRoleName = session()->get('rol_nombre');
             </a>
             <div class="collapse menu-dropdown" id="sidebarVentasAgro">
               <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
-                    Ventas</a></li>
-              </ul>
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
-                    Ventas</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar Ventas</a></li>
+                <li class="nav-item"><a href="<?= base_url('productosagro/registerVentas') ?>" class="nav-link">Realizar Venta</a></li>
+                <li class="nav-item"><a href="<?= base_url('cliente/lista') ?>" class="nav-link">Clientes</a></li>
               </ul>
             </div>
           </li>

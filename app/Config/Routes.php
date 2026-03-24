@@ -287,7 +287,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->post('store', 'productosAgro\productosAgroController::store', ['filter' => 'role:admin,agropecuario,ganaderia']);
     $routes->get('edit/(:num)', 'productosAgro\productosAgroController::edit/$1', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->post('update/(:num)', 'productosAgro\productosAgroController::update/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia']);
-    $routes->get('delete/(:num)', 'productosAgro\productosAgroController::delete/$1', ['filter' => 'role:admin,almacen']);
+    $routes->get('delete/(:num)', 'productosAgro\productosAgroController::delete/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia']);
     
     // Gestión de clientes
     $routes->post('registerCliente', 'cliente\clienteController::registerCliente', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia']);

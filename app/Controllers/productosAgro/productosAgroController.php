@@ -173,47 +173,26 @@ class ProductosAgroController extends BaseController
             return redirect()->to('/productosagro')->with('error', 'Producto no encontrado.');
         }
 
-        // ✅ Validar datos (excluir 'code', 'sucursal_id', 'user_id' de validación)
-        $rules = $this->productoModel->validationRules;
-        unset($rules['code'], $rules['sucursal_id'], $rules['user_id']);
-
-        // ✅ Permitir descripción vacía
-        $rules['descripcion'] = 'permit_empty|string|max_length[65535]';
-
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-
-        // ✅ Preparar datos: preservar code, sucursal_id, user_id
         $data = [
-            'id' => $id, // necesario para update con save()
-            'code' => $producto['code'], // ✅ no se cambia
-            'producto' => strtoupper(trim($this->request->getPost('producto'))),
-            'descripcion' => trim($this->request->getPost('descripcion')),
-            'categoria' => strtoupper(trim($this->request->getPost('categoria'))),
-            'unidad_id' => (int) $this->request->getPost('unidad_id'),
+            'producto'       => strtoupper(trim($this->request->getPost('producto'))),
+            'descripcion'    => trim($this->request->getPost('descripcion')),
+            'categoria'      => strtoupper(trim($this->request->getPost('categoria'))),
+            'unidad_id'      => (int) $this->request->getPost('unidad_id'),
             'precio_contado' => (float) $this->request->getPost('precio_contado'),
             'precio_credito' => (float) $this->request->getPost('precio_credito'),
-            'cantidad' => (int) ($this->request->getPost('cantidad') ?? $producto['cantidad']),
-            'cantidad_inve' => (int) ($this->request->getPost('cantidad_inve') ?? $producto['cantidad_inve']),
-            'sucursal_id' => (int) $producto['sucursal_id'], // ✅ preservar
-            'user_id' => (int) $producto['user_id'],         // ✅ preservar
-            'estado' =>  true,
+            'cantidad'       => (int) $this->request->getPost('cantidad'),
+            'cantidad_inve'  => (int) $producto->cantidad_inve,
+            'sucursal_id'    => (int) $producto->sucursal_id,
+            'user_id'        => (int) $producto->user_id,
+            'estado'         => true,
         ];
 
-        // ✅ Actualizar con ORM
-        if ($this->productoModel->save($data)) {
-            return redirect()->to('/productosagro')->with('success', "✅ Producto actualizado: {$producto['code']}");
+        if ($this->productoModel->skipValidation(true)->update($id, $data)) {
+            return redirect()->to('/productosagro')->with('success', "✅ Producto actualizado: {$producto->code}");
         }
 
-        // ✅ Errores
-        $errors = $this->productoModel->errors();
-        $errorMsg = $errors
-            ? implode(', ', $errors)
-            : ($this->productoModel->getError() ?? 'Error desconocido');
-
-        log_message('error', "[update] ID={$id} → {$errorMsg}");
-        return redirect()->back()->withInput()->with('error', '❌ ' . $errorMsg);
+        log_message('error', "[update] ID={$id} → " . json_encode($this->productoModel->errors()));
+        return redirect()->back()->withInput()->with('error', '❌ Error al actualizar el producto.');
     }
 
 
