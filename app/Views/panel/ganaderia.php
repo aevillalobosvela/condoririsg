@@ -155,19 +155,19 @@
 
     <div class="quick-grid">
 
-      <a href="<?= base_url('resepciones') ?>" class="quick-link" aria-label="Aceptación de Envíos">
+      <a href="<?= base_url('productosagro') ?>" class="quick-link" aria-label="Registro de Productos">
         <div class="quick-item orange">
-          <div class="qi-icon"><i class="mdi mdi-clipboard-check"></i></div>
-          <div class="qi-title">Aceptación de Envíos</div>
-          <div class="qi-sub">Recibe y verifica mercancía</div>
+          <div class="qi-icon"><i class="mdi mdi-leaf"></i></div>
+          <div class="qi-title">Registro de Productos</div>
+          <div class="qi-sub">Gestiona el catálogo agropecuario</div>
         </div>
       </a>
 
-      <a href="<?= base_url('ventas') ?>" class="quick-link" aria-label="Punto de Venta">
+      <a href="<?= base_url('productosagro/registerVentas') ?>" class="quick-link" aria-label="Punto de Venta">
         <div class="quick-item green">
           <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
           <div class="qi-title">Punto de Venta</div>
-          <div class="qi-sub">Registra ventas y pagos</div>
+          <div class="qi-sub">Registra ventas agropecuarias</div>
         </div>
       </a>
 

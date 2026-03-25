@@ -164,17 +164,6 @@
       <strong>Punto de Venta</strong> <br>
       Sucursal Central - <?= date('d \d\e F, Y') ?>
     </div>
-    <div class="nav-buttons">
-      <a href="<?= base_url('/') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-dashboard-line align-bottom me-1"></i> Panel
-      </a>
-      <a href="<?= base_url('resepciones') ?>" class="btn btn-success btn-sm">
-        <i class="ri-truck-line align-bottom me-1"></i> Aceptar envíos
-      </a>
-      <a href="<?= base_url('ventas/reportes') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-file-chart-line align-bottom me-1"></i> Reportes
-      </a>
-    </div>
   </div>
 
   <!-- POS Container -->
@@ -215,32 +204,7 @@
           <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
         </div>
 
-        <div class="row g-3" id="productsGrid">
-          <?php foreach ($productos as $p): ?>
-            <div class="col-6 col-md-4 product-card" 
-                 data-id="<?= $p->id ?>"
-                 data-name="<?= esc($p->producto) ?>"
-                 data-price="<?= $p->precio_contado ?>"
-                 data-stock="<?= $p->cantidad_inve ?>"
-                 data-unidad="<?= esc($p->unidad_id ?? 'und') ?>">
-              <div class="card h-100 shadow-sm border-0">
-                <div class="card-body text-center p-3">
-                  <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                       style="width: 60px; height: 60px;">
-                    <span class="fw-bold text-success"><?= substr(esc($p->producto), 0, 2) ?></span>
-                  </div>
-                  <h6 class="card-title fs-6 mb-1"><?= esc($p->producto) ?></h6>
-                  <p class="card-text mb-1">
-                    <span class="text-success fw-bold">Bs. <?= number_format($p->precio_contado, 2) ?></span>
-                  </p>
-                  <p class="card-text mb-0">
-                    <small class="text-muted"><?= $p->cantidad_inve ?> <?= esc($p->unidad_id?? 'und') ?></small>
-                  </p>
-                </div>
-              </div>
-            </div>
-          <?php endforeach; ?>
-        </div>
+        <div class="row g-3" id="productsGrid"></div>
 
         <nav class="mt-3">
           <ul class="pagination justify-content-center mb-0" id="pagination"></ul>
@@ -367,23 +331,36 @@
   </div>
 </div>
 
-<!-- MODAL DE CONFIRMACIÓN DE VENTA (NUEVO) -->
+<!-- MODAL DE CONFIRMACIÓN DE VENTA -->
 <div class="modal fade" id="confirmSaleModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title text-success"><i class="ri-shopping-cart-line me-1"></i> Confirmar Venta</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-3">¿Desea finalizar la transacción con los siguientes detalles?</p>
-        <ul class="list-unstyled">
-          <li><strong>Cliente:</strong> <span id="modalClientName">N/A</span></li>
-          <li><strong>Total a pagar:</strong> <span class="text-success fw-bold" id="modalTotalAmount">Bs. 0.00</span></li>
-          <li><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></li>
-          <li><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></li>
-          <li><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></li>
-        </ul>
+        <p class="mb-3 fw-bold">¿Desea finalizar la transacción con los siguientes detalles?</p>
+
+        <div class="mb-3">
+          <strong>Cliente:</strong> <span id="modalClientName">N/A</span>
+        </div>
+
+        <div class="mb-3">
+          <strong>Productos:</strong>
+          <div id="modalProductsList" class="mt-2"></div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-6"><strong>Método de Pago:</strong> <span id="modalPaymentType">Contado</span></div>
+          <div class="col-6"><strong>Monto Recibido:</strong> <span id="modalMontoRecibido">Bs. 0.00</span></div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-6"><strong>Cambio:</strong> <span class="text-danger fw-bold" id="modalCambio">Bs. 0.00</span></div>
+          <div class="col-6"><strong>Total a pagar:</strong> <span class="text-success fw-bold fs-5" id="modalTotalAmount">Bs. 0.00</span></div>
+        </div>
+
         <div class="alert alert-info py-2 mt-3" role="alert">
           Esta acción no se puede deshacer y el stock será actualizado.
         </div>
@@ -435,6 +412,26 @@
 
     // --- FUNCIONES DE RENDERIZADO Y LÓGICA ---
 
+    // Paleta de 7 colores asignada por nombre de producto (hash determinista)
+    const COLOR_PALETTE = [
+      { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
+      { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
+      { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
+      { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' },
+      { bg: '#F3E5F5', border: '#9C27B0', text: '#6A1B9A' },
+      { bg: '#E0F7FA', border: '#00BCD4', text: '#00838F' },
+      { bg: '#FFFDE7', border: '#FFC107', text: '#F57F17' },
+    ];
+    const productColorMap = {};
+    let colorIndex = 0;
+    function getProductColor(nombre) {
+      if (!productColorMap[nombre]) {
+        productColorMap[nombre] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+        colorIndex++;
+      }
+      return productColorMap[nombre];
+    }
+
     function renderProducts(filter = '') {
       const filtered = allProducts.filter(p => 
         p.producto.toLowerCase().includes(filter.toLowerCase())
@@ -444,30 +441,34 @@
       const start = (currentPage - 1) * itemsPerPage;
       const paginated = filtered.slice(start, start + itemsPerPage);
 
-      productsGrid.innerHTML = paginated.map(p => `
+      productsGrid.innerHTML = paginated.map(p => {
+        const c = getProductColor(p.producto);
+        return `
         <div class="col-6 col-md-4 product-card" 
              data-id="${p.id}" 
              data-name="${p.producto}" 
              data-price="${p.precio_contado}" 
              data-stock="${p.cantidad_inve}"
              data-unidad="${p.unidad_id || 'und'}">
-          <div class="card h-100 shadow-sm border-0 cursor-pointer">
-            <div class="card-body text-center p-3">
-              <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                   style="width: 60px; height: 60px;">
-                <span class="fw-bold text-success">${p.producto.substring(0,2)}</span>
+          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${c.border} !important;">
+            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${c.bg} 0%, #ffffff 100%);">
+              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                   style="width: 60px; height: 60px; background-color: ${c.border};">
+                <span class="fw-bold" style="color: #fff; font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
               </div>
-              <h6 class="card-title fs-6 mb-1">${p.producto}</h6>
+              <h6 class="card-title fs-6 mb-1" style="color: ${c.text};">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="text-success fw-bold">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color: ${c.border};">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
               <p class="card-text mb-0">
-                <small class="text-muted">${p.cantidad_inve} ${p.unidad_id || 'und'}</small>
+                <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
               </p>
+              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
             </div>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       renderPagination(totalPages);
       
@@ -547,7 +548,7 @@
         <tr>
           <td>
             <div>${item.name}</div>
-            <small class="text-muted">Stock: ${item.stock} ${item.unidad || 'und'}</small>
+            <small class="text-muted">Stock: ${item.stock} und</small>
           </td>
           <td>
             <div class="input-group input-group-sm" style="width: 120px;">
@@ -600,7 +601,7 @@
       const clientes = <?= json_encode($clientes) ?>;
       const filtered = clientes.filter(c => 
         c.nombre_completo.toLowerCase().includes(termino.toLowerCase()) || 
-        c.ci_nit.includes(termino)
+        (c.ci_nit && c.ci_nit.toString().includes(termino))
       );
 
       if (filtered.length === 0) {
@@ -674,7 +675,22 @@
         document.getElementById('modalMontoRecibido').textContent = (tipoPago === 'contado' ? `Bs. ${recibido.toFixed(2)}` : 'N/A');
         document.getElementById('modalCambio').textContent = (tipoPago === 'contado' ? `Bs. ${cambio.toFixed(2)}` : 'N/A');
 
-        // Mostrar el modal
+        // Renderizar lista de productos
+        document.getElementById('modalProductsList').innerHTML = cart.map(item => {
+          const subtotal = item.price * item.quantity * (1 - item.discount / 100);
+          return `
+            <div class="d-flex align-items-center mb-2 p-2 rounded border">
+              <div class="flex-grow-1">
+                <div class="fw-semibold" style="font-size: 0.9rem;">${item.name}</div>
+                <small class="text-muted">Cantidad: ${item.quantity} und × Bs. ${item.price.toFixed(2)}</small>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-success">Bs. ${subtotal.toFixed(2)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
         confirmSaleModalInstance.show();
     });
 

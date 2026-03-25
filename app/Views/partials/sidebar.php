@@ -294,45 +294,15 @@ $userRoleName = session()->get('rol_nombre');
           <li class="menu-title"><span><?= $userRoleName === 'agropecuario' ? 'Agropecuario' : 'Ganadería' ?></span></li>
 
           <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarAgro" data-bs-toggle="collapse">
-              <i class="ri-leaf-line"></i>
-              <span><?= $userRoleName === 'agropecuario' ? 'Agropecuario' : 'Ganadería' ?></span>
+            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
+              <i class="ri-leaf-line"></i> <span>Registro de Productos</span>
             </a>
-            <div class="collapse menu-dropdown" id="sidebarAgro">
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro') ?>" class="nav-link">Registro Productos</a>
-                </li>
-                <li class="nav-item"><a href="<?= base_url('unidades') ?>" class="nav-link">Unidades</a></li>
-              </ul>
-            </div>
           </li>
 
           <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarEnviosAgro" data-bs-toggle="collapse">
-              <i class="ri-truck-line"></i> <span>Envíos</span>
+            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
+              <i class="ri-file-list-3-line"></i> <span>Gestionar Ventas</span>
             </a>
-            <div class="collapse menu-dropdown" id="sidebarEnviosAgro">
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('envios') ?>" class="nav-link">Gestionar Envíos</a></li>
-              </ul>
-            </div>
-          </li>
-
-          <li class="menu-title"><span>Ventas</span></li>
-          <li class="nav-item">
-            <a class="nav-link menu-link" href="#sidebarVentasAgro" data-bs-toggle="collapse">
-              <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
-            </a>
-            <div class="collapse menu-dropdown" id="sidebarVentasAgro">
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
-                    Ventas</a></li>
-              </ul>
-              <ul class="nav nav-sm flex-column">
-                <li class="nav-item"><a href="<?= base_url('productosagro/ventas') ?>" class="nav-link">Gestionar
-                    Ventas</a></li>
-              </ul>
-            </div>
           </li>
         <?php endif; ?>
 

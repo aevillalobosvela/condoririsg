@@ -194,7 +194,7 @@
   <?php endif; ?>
 
   <!-- Header Top -->
-  <div class="header-top mb-4">
+  <div class="header-top mbs-4">
     <div class="left-info">
       <strong>Punto de Venta</strong> <br>
       Sucursal Central - <?= date('d \d\e F, Y') ?>
