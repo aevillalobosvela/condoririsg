@@ -263,6 +263,7 @@ class ventasAgroController extends BaseController
         $productos = $this->productoAgroModel
             ->where('sucursal_id', $sucursal)
             ->where('estado', true)
+            ->where('cantidad_inve >', 0)
             ->findAll();
         
 
@@ -331,6 +332,7 @@ class ventasAgroController extends BaseController
         $productos = $this->productoAgroModel
             ->where('sucursal_id', $sucursal)
             ->where('estado', true)
+            ->where('cantidad_inve >', 0)
             ->findAll();
         $clientes = $this->clienteModel->findAll();
 

@@ -447,6 +447,7 @@
               <p class="card-text mb-0">
                 <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
               </p>
+              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
             </div>
           </div>
         </div>

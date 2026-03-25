@@ -164,17 +164,6 @@
       <strong>Punto de Venta</strong> <br>
       Sucursal Central - <?= date('d \d\e F, Y') ?>
     </div>
-    <div class="nav-buttons">
-      <a href="<?= base_url('/') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-dashboard-line align-bottom me-1"></i> Panel
-      </a>
-      <a href="<?= base_url('resepciones') ?>" class="btn btn-success btn-sm">
-        <i class="ri-truck-line align-bottom me-1"></i> Aceptar envíos
-      </a>
-      <a href="<?= base_url('ventas/reportes') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-file-chart-line align-bottom me-1"></i> Reportes
-      </a>
-    </div>
   </div>
 
   <!-- POS Container -->
@@ -474,6 +463,7 @@
               <p class="card-text mb-0">
                 <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
               </p>
+              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
             </div>
           </div>
         </div>
