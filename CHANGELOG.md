@@ -9,6 +9,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-03-25
+
+### Added
+- **Agro — Excel report (matricial)**: created `app/Services/Agro/ExcelVentasAgroService.php` with the same matrix format as the lacteos module (products as columns, sales as rows). Replaces the previous flat list export. Title reads "CONDORIRI AGROPECUARIO" and units default to "UND".
+- **Agro — PDF report**: created `app/Libraries/Agro/CierreVentaAgroPdf.php` extending `CierreVentaBasePdf`. Same matrix layout as lacteos PDF. Title and signature line updated to "Responsable - Productos Agropecuarios". Includes generating user name.
+- **Agro — PDF route**: registered missing `productosagro/exportarPdfVentas` route in `Routes.php`.
+- **Agro — product list redesign** (`productosAgroIndex.php`): added 4 stat cards (total, with stock, low stock ≤5, no stock); filter bar with text search, stock filter, category filter, and sort dropdown; column-header click sorting; color dot per product name (palette of 10); semantic stock badges (green/amber/red); `fecha_creacion` column; redesigned action buttons matching agro color scheme; JS-driven filtering and ordering without page reload.
+- **Agro — product form redesign** (`productosAgroFrom.php`): two-column layout (identification left in blue / prices+inventory right in green) eliminating vertical scroll; `tabindex` order with Enter-key navigation between fields; automatic uppercase on name and category fields.
+- **Agro — quick-register templates**: `create()` now passes the last 5 products registered by the user's branch. A yellow chip bar appears above the form; clicking a chip pre-fills all fields except quantity and moves focus to the quantity input. Includes two explanatory helper texts for non-technical users.
+- **Agro — Duplicate button**: added "Duplicar" button per row in the product list. Links to `productosagro/create?from=ID`; controller loads that product as `$base` and pre-fills the form, leaving quantity blank.
+- **Agro — sales register view** (`ventasIndex.php`): eliminated static PHP grid in favor of JS-only rendering; added `getProductColor()` with 7-color deterministic palette per product name; cards now have colored left border, gradient background, colored circle with initials, colored price, and stock badge `Stock: X und`; `fecha_creacion` shown below stock badge; null-check on `ci_nit` in `buscarClientes()`.
+- **Agro — credit sales view** (`ventasCredito.php`): same card improvements as contado view; personal UTO search now accepts name or CI (minimum 3 characters).
+- **Agro — confirm sale modal**: upgraded to `modal-lg` with product list rows (name + quantity × price on left, subtotal on right), `row/col-6` layout for payment details, `fw-bold` intro text.
+- **Agro — receipt** (`recibo_print.php`): unified with lacteos receipt format — `font-weight:bold` globally, watermark, `info-line` CSS classes, dashed separators, flex product rows, institutional header (UNIVERSIDAD TECNICA DE ORURO / CENTRO EXP. AGROPECUARIO CONDORIRI), "Atendido por" footer with signature line.
+- **Agro — stock filter on sale views**: `register()` and `credito()` in `ventasAgroController` now filter `cantidad_inve > 0`, hiding out-of-stock products from the POS grid.
+- **Agro — product creation date on sale cards**: `fecha_creacion` displayed below stock badge in both `ventasIndex.php` and `ventasCredito.php`.
+
+### Changed
+- **Agro — `buscarPersonalUto()`**: query updated from `p.dip ILIKE ?%` to `(p.dip ILIKE %?% OR p.nombre ILIKE %?%)` enabling partial search by name or CI.
+- **Agro — `exportarExcelVentas()`**: replaced inline flat-list XLS generation with delegation to `ExcelVentasAgroService`.
+- **Agro — `exportarPdfVentas()`**: replaced `CierreVentaPdf` with `CierreVentaAgroPdf`; now resolves generating user name from `condoriri.usuarios`.
+- **Agro — `create()` controller**: now queries last 5 products for the session branch and reads optional `?from=` parameter for duplication.
+
+### Fixed
+- **Agro — PDF 404**: dropdown PDF links in `productosAgro/index.php` pointed to non-existent route `productosagro/cierre/rango`; corrected to `productosagro/exportarPdfVentas`.
+- **Agro — confirm modal not opening**: `confirmSaleModalInstance.show()` was accidentally left outside the `finalizeSaleBtn` click handler after a prior edit; restored to correct position.
+
+---
+
 ## 2026-03-24
 
 ### Added
