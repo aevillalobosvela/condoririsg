@@ -142,17 +142,6 @@
       <strong>Punto de Venta</strong> <br>
       Sucursal Central - <?= date('d \d\e F, Y') ?>
     </div>
-    <div class="nav-buttons">
-      <a href="<?= base_url('/') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-dashboard-line align-bottom me-1"></i> Panel
-      </a>
-      <a href="<?= base_url('resepciones') ?>" class="btn btn-success btn-sm">
-        <i class="ri-truck-line align-bottom me-1"></i> Aceptar envíos
-      </a>
-      <a href="<?= base_url('ventas/reportes') ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="ri-file-chart-line align-bottom me-1"></i> Reportes
-      </a>
-    </div>
   </div>
 
   <!-- POS Container -->
@@ -163,8 +152,8 @@
 
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
-        <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI:</label>
-        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI: (ej. 745687)" autocomplete="off">
+        <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
+        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
         <div id="personalInfo" class="mt-3"></div>
       </div>
 
@@ -371,7 +360,7 @@
       clienteIdInput.value = '';
       selectedPersonal = null;
 
-      if (dip.length < 5) return;
+      if (dip.length < 3) return;
 
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)

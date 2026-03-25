@@ -163,7 +163,7 @@
         </div>
       </a>
 
-      <a href="<?= base_url('productosagro/registerVentas') ?>" class="quick-link" aria-label="Punto de Venta">
+      <a href="<?= base_url('productosagro/ventas') ?>" class="quick-link" aria-label="Punto de Venta">
         <div class="quick-item green">
           <div class="qi-icon"><i class="mdi mdi-cash-register"></i></div>
           <div class="qi-title">Punto de Venta</div>

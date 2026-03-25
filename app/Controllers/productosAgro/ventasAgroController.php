@@ -283,7 +283,8 @@ class ventasAgroController extends BaseController
     public function buscarPersonalUto()
     {
         $db = db_connect();
-        $dipPattern = $this->request->getGet('dip') . '%';
+        $termino = $this->request->getGet('dip');
+        $pattern = '%' . $termino . '%';
 
         $sql = "
             SELECT 
@@ -301,11 +302,11 @@ class ventasAgroController extends BaseController
             LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion) 
             WHERE 
                 p.\"id_estado\" = true
-                AND e.\"id_estado\" = true  
-                AND p.dip ILIKE ?              
+                AND e.\"id_estado\" = true
+                AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
         ";
 
-        $query = $db->query($sql, [$dipPattern]);
+        $query = $db->query($sql, [$pattern, $pattern]);
         $results = $query->getResult();
 
 

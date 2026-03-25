@@ -304,12 +304,6 @@ $userRoleName = session()->get('rol_nombre');
               <i class="ri-file-list-3-line"></i> <span>Gestionar Ventas</span>
             </a>
           </li>
-
-          <li class="nav-item">
-            <a class="nav-link menu-link" href="<?= base_url('productosagro/registerVentas') ?>">
-              <i class="ri-shopping-cart-line"></i> <span>Realizar Venta</span>
-            </a>
-          </li>
         <?php endif; ?>
 
 
