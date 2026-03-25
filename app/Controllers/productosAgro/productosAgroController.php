@@ -45,12 +45,25 @@ class ProductosAgroController extends BaseController
 
     public function create()
     {
+        $sucursal_id = (int) session()->get('sucursal_id');
 
+        // Últimos 5 productos registrados en esta sucursal para plantillas rápidas
+        $recientes = $this->productoModel
+            ->where('sucursal_id', $sucursal_id)
+            ->where('estado', true)
+            ->orderBy('id', 'DESC')
+            ->limit(5)
+            ->findAll();
 
+        // Si viene del botón Duplicar, pre-cargar ese producto como base
+        $desde = (int) $this->request->getGet('from');
+        $base  = $desde ? $this->productoModel->find($desde) : null;
 
         $data = [
-            'title' => 'Nuevo Producto Agropecuario',
-            'unidades' => $this->unidadModel->findAll(),
+            'title'     => 'Nuevo Producto Agropecuario',
+            'unidades'  => $this->unidadModel->findAll(),
+            'recientes' => $recientes,
+            'base'      => $base,   // producto a duplicar (null si no aplica)
         ];
 
         return view('productosAgro/productosAgroFrom', $data);

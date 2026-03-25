@@ -296,6 +296,9 @@
                         <a href="<?= base_url('productosagro/edit/' . $p->id) ?>" class="btn-accion btn-accion-edit">
                           <i class="ri-pencil-line"></i> Editar
                         </a>
+                        <a href="<?= base_url('productosagro/create?from=' . $p->id) ?>" class="btn-accion" style="background:#fffbeb; color:#d97706; border-color:#fde68a;" title="Crear un nuevo producto con los mismos datos">
+                          <i class="ri-file-copy-line"></i> Duplicar
+                        </a>
                         <a href="<?= base_url('productosagro/delete/' . $p->id) ?>"
                            class="btn-accion btn-accion-del"
                            onclick="return confirm('¿Eliminar <?= esc($p->producto) ?>?')">

@@ -1,202 +1,431 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('title') ?>
-<?= esc($title) ?>
-<?= $this->endSection() ?>
+<?= $this->section('title') ?><?= esc($title) ?><?= $this->endSection() ?>
 
 <?= $this->section('styles') ?>
+<style>
+  :root {
+    --agro-green:        #16a34a;
+    --agro-green-light:  #f0fdf4;
+    --agro-green-border: #bbf7d0;
+    --agro-blue:         #1d4ed8;
+    --agro-blue-light:   #eff6ff;
+    --agro-blue-border:  #bfdbfe;
+  }
+
+  .section-id {
+    background: var(--agro-blue-light);
+    border: 1px solid var(--agro-blue-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .section-id .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--agro-blue);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .section-num {
+    background: var(--agro-green-light);
+    border: 1px solid var(--agro-green-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .section-num .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--agro-green);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #374151;
+  }
+  .form-control, .form-select {
+    font-size: 0.88rem;
+    border-radius: 7px;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: var(--agro-green);
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+  }
+  .input-group-text {
+    font-size: 0.82rem;
+    background: #f8fafc;
+    border-color: #d1d5db;
+    color: #6b7280;
+  }
+
+  .btn-guardar {
+    background: var(--agro-green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 28px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .btn-guardar:hover { background: #15803d; color: #fff; }
+
+  .btn-cancelar {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .btn-cancelar:hover { background: #e2e8f0; color: #1e293b; }
+
+  /* Indicador de campo requerido */
+  .req { color: #dc2626; margin-left: 2px; }
+
+  /* Plantillas rápidas */
+  .plantillas-box {
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .plantillas-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #92400e;
+  }
+  .plantillas-hint {
+    font-weight: 400;
+    color: #78350f;
+    font-size: 0.75rem;
+    margin-left: 4px;
+  }
+  .btn-plantilla {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #fff;
+    border: 1px solid #fcd34d;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #92400e;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-plantilla:hover {
+    background: #fef08a;
+    border-color: #f59e0b;
+    color: #78350f;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(245,158,11,0.2);
+  }
+  .btn-plantilla.activo {
+    background: #f59e0b;
+    border-color: #d97706;
+    color: #fff;
+  }
+  .plantilla-cat {
+    font-size: 0.68rem;
+    font-weight: 400;
+    opacity: 0.75;
+    margin-left: 2px;
+  }
+  .plantillas-nota {
+    margin-top: 8px;
+    font-size: 0.72rem;
+    color: #92400e;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
+<!-- Breadcrumb -->
 <div class="row">
-    <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <div>
-                <h4 class="mb-sm-0"><?= esc($title) ?></h4>
-                <ol class="breadcrumb m-0 mt-2">
-                    <li class="breadcrumb-item"><a href="<?= base_url('/') ?>">Inicio</a></li>
-                    <li class="breadcrumb-item"><a href="<?= base_url('productosagro') ?>">Productos Agro</a></li>
-                    <li class="breadcrumb-item active"><?= esc($title) ?></li>
-                </ol>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="<?= base_url('productosagro') ?>" class="btn btn-outline-secondary">
-                    <i class="ri-arrow-left-line"></i> Volver
-                </a>
-            </div>
-        </div>
+  <div class="col-12">
+    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+      <div>
+        <h4 class="mb-sm-0"><?= esc($title) ?></h4>
+        <ol class="breadcrumb m-0 mt-1">
+          <li class="breadcrumb-item"><a href="<?= base_url('/') ?>">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="<?= base_url('productosagro') ?>">Productos Agro</a></li>
+          <li class="breadcrumb-item active"><?= isset($producto) ? 'Editar' : 'Nuevo' ?></li>
+        </ol>
+      </div>
+      <a href="<?= base_url('productosagro') ?>" class="btn btn-cancelar">
+        <i class="ri-arrow-left-line me-1"></i> Volver
+      </a>
     </div>
+  </div>
 </div>
 
-<div class="row">
-    <div class="col-xl-8 col-lg-10 mx-auto">
-        <div class="card shadow-sm">
-            <div class="card-header bg-gradient-primary text-white">
-                <h5 class="card-title mb-0">
-                    <i class="ri-seedling-line me-2"></i>
-                    <?= isset($producto) ? 'Editar Producto' : 'Registrar Nuevo Producto' ?>
-                </h5>
-            </div>
-            <div class="card-body">
-                <?php
-                
-                $action = isset($producto)
-                    ? base_url("productosagro/update/{$producto->id}")
-                    : base_url('productosagro/store');
-                ?>
+<div class="row justify-content-center">
+  <div class="col-xl-9 col-lg-11">
 
-                <form action="<?= $action ?>" method="post" id="formProductoAgro">
-                    <?= csrf_field() ?>
+    <?php if (session()->getFlashdata('error')): ?>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <?= session()->getFlashdata('error') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <?php endif; ?>
 
-
-                    <!-- Grupo: Identificación -->
-                    <div class="row mb-4">
-                      
-                        <div class="col-md-12">
-                            <label for="categoria" class="form-label fw-bold">Categoría <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="ri-folder-3-line"></i></span>
-                                <input type="text" class="form-control" id="categoria" name="categoria"
-                                       value="<?= old('categoria', $producto->categoria ?? '') ?>"
-                                       placeholder="Semillas, Fertilizantes, etc." required maxlength="255">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Nombre -->
-                    <div class="mb-4">
-                        <label for="producto" class="form-label fw-bold">Nombre del Producto <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="ri-leaf-line"></i></span>
-                            <input type="text" class="form-control form-control-lg" id="producto" name="producto"
-                                   value="<?= old('producto', $producto->producto ?? '') ?>"
-                                   placeholder="Ej: Fertilizante NPK 15-15-15" required maxlength="255">
-                        </div>
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="mb-4">
-                        <label for="descripcion" class="form-label">Descripción</label>
-                        <textarea class="form-control" id="descripcion" name="descripcion" rows="3"
-                                  placeholder="Detalles adicionales (opcional)"><?= old('descripcion', $producto->descripcion ?? '') ?></textarea>
-                    </div>
-
-                    <!-- Precios -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="precio_contado" class="form-label fw-bold">Precio Contado (Bs) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">Bs</span>
-                                <input type="number" 
-                                       class="form-control text-end" 
-                                       id="precio_contado" 
-                                       name="precio_contado"
-                                       step="0.01"
-                                       min="0"
-                                       value="<?= old('precio_contado', $producto->precio_contado ?? '0.00') ?>"
-                                       placeholder="0.00" 
-                                       required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="precio_credito" class="form-label fw-bold">Precio Crédito (Bs) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">Bs</span>
-                                <input type="number" 
-                                       class="form-control text-end" 
-                                       id="precio_credito" 
-                                       name="precio_credito"
-                                       step="0.01"
-                                       min="0"
-                                       value="<?= old('precio_credito', $producto->precio_credito ?? '0.00') ?>"
-                                       placeholder="0.00" 
-                                       required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Unidad, Inventario -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="unidad_id" class="form-label fw-bold">Unidad <span class="text-danger">*</span></label>
-                            <select class="form-select" id="unidad_id" name="unidad_id" required>
-                                <option value="">Seleccione...</option>
-                                <?php // La variable $unidades debe ser inyectada desde el método create del controlador ?>
-                                <?php foreach ($unidades as $u): ?>
-                                    <option value="<?= $u['id'] ?>" <?= old('unidad_id', $producto->unidad_id ?? '') == $u['id'] ? 'selected' : '' ?>>
-                                        <?= esc($u['nombre']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="cantidad" class="form-label">Cantidad en Inventario <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="cantidad" name="cantidad"
-                                   value="<?= old('cantidad', $producto->cantidad ?? 0) ?>"
-                                   min="0" step="1" required>
-                        </div>
-                    </div>
-
-                    
-                   
-
-                    <!-- Botones -->
-                    <div class="d-flex justify-content-between flex-wrap gap-2">
-                        <a href="<?= base_url('productosagro') ?>" class="btn btn-secondary px-4">
-                            <i class="ri-close-line me-1"></i> Cancelar
-                        </a>
-                        <button type="submit" class="btn btn-success px-4">
-                            <i class="ri-save-3-line me-1"></i>
-                            <?= isset($producto) ? 'Actualizar' : 'Registrar' ?>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+    <?php if (!isset($producto) && !empty($recientes)): ?>
+    <!-- PLANTILLAS RÁPIDAS -->
+    <div class="plantillas-box mb-3">
+      <div class="plantillas-header">
+        <i class="ri-flashlight-line"></i>
+        <span>Registro rápido</span>
+        <span class="plantillas-hint">Haga clic en un producto para pre-llenar el formulario con sus datos anteriores. Solo deberá ajustar la cantidad.</span>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <?php foreach ($recientes as $r): ?>
+          <button type="button" class="btn-plantilla"
+            data-categoria="<?= esc($r->categoria) ?>"
+            data-producto="<?= esc($r->producto) ?>"
+            data-descripcion="<?= esc($r->descripcion) ?>"
+            data-precio-contado="<?= $r->precio_contado ?>"
+            data-precio-credito="<?= $r->precio_credito ?>"
+            data-unidad="<?= $r->unidad_id ?>">
+            <i class="ri-file-copy-line"></i>
+            <?= esc($r->producto) ?>
+            <span class="plantilla-cat"><?= esc($r->categoria) ?></span>
+          </button>
+        <?php endforeach; ?>
+      </div>
+      <div class="plantillas-nota">
+        <i class="ri-information-line"></i>
+        Estos son los últimos <?= count($recientes) ?> productos que registró. Al seleccionar uno, los campos se llenan solos — usted solo cambia lo que sea diferente.
+      </div>
     </div>
+    <?php endif; ?>
+
+    <?php
+      $action = isset($producto)
+        ? base_url("productosagro/update/{$producto->id}")
+        : base_url('productosagro/store');
+    ?>
+
+    <form action="<?= $action ?>" method="post" id="formProductoAgro" autocomplete="off">
+      <?= csrf_field() ?>
+
+      <!-- Layout 2 columnas -->
+      <div class="row g-3">
+
+        <!-- COLUMNA IZQUIERDA: Identificación -->
+        <div class="col-md-5">
+          <div class="section-id h-100">
+            <div class="section-label">
+              <i class="ri-price-tag-3-line"></i> Identificación
+            </div>
+
+            <div class="mb-3">
+              <label for="categoria" class="form-label">Categoría <span class="req">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="ri-folder-3-line"></i></span>
+                <input type="text" class="form-control" id="categoria" name="categoria"
+                       value="<?= old('categoria', $base->categoria ?? $producto->categoria ?? '') ?>"
+                       placeholder="Ej: SEMILLAS" required maxlength="255" tabindex="1">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="producto" class="form-label">Nombre del Producto <span class="req">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="ri-leaf-line"></i></span>
+                <input type="text" class="form-control" id="producto" name="producto"
+                       value="<?= old('producto', $base->producto ?? $producto->producto ?? '') ?>"
+                       placeholder="Ej: FERTILIZANTE NPK" required maxlength="255" tabindex="2">
+              </div>
+            </div>
+
+            <div class="mb-0">
+              <label for="descripcion" class="form-label">Descripción <span style="color:#9ca3af; font-weight:400;">(opcional)</span></label>
+              <textarea class="form-control" id="descripcion" name="descripcion"
+                        rows="3" placeholder="Detalles adicionales..."
+                        tabindex="3"><?= old('descripcion', $base->descripcion ?? $producto->descripcion ?? '') ?></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Precios e inventario -->
+        <div class="col-md-7">
+          <div class="section-num h-100">
+            <div class="section-label">
+              <i class="ri-coins-line"></i> Precios e Inventario
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="precio_contado" class="form-label">Precio Contado (Bs) <span class="req">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">Bs</span>
+                  <input type="number" class="form-control text-end" id="precio_contado" name="precio_contado"
+                         step="0.01" min="0"
+                         value="<?= old('precio_contado', $base->precio_contado ?? $producto->precio_contado ?? '0.00') ?>"
+                         placeholder="0.00" required tabindex="4">
+                </div>
+              </div>
+              <div class="col-6">
+                <label for="precio_credito" class="form-label">Precio Crédito (Bs) <span class="req">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">Bs</span>
+                  <input type="number" class="form-control text-end" id="precio_credito" name="precio_credito"
+                         step="0.01" min="0"
+                         value="<?= old('precio_credito', $base->precio_credito ?? $producto->precio_credito ?? '0.00') ?>"
+                         placeholder="0.00" required tabindex="5">
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label for="unidad_id" class="form-label">Unidad <span class="req">*</span></label>
+                <select class="form-select" id="unidad_id" name="unidad_id" required tabindex="6">
+                  <option value="">Seleccione...</option>
+                  <?php foreach ($unidades as $u): ?>
+                    <option value="<?= $u['id'] ?>"
+                      <?= old('unidad_id', $base->unidad_id ?? $producto->unidad_id ?? '') == $u['id'] ? 'selected' : '' ?>>
+                      <?= esc($u['nombre']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-6">
+                <label for="cantidad" class="form-label">Cantidad Inicial <span class="req">*</span></label>
+                <input type="number" class="form-control text-end" id="cantidad" name="cantidad"
+                       value="<?= old('cantidad', $producto->cantidad ?? 0) ?>"
+                       min="0" step="1" required tabindex="7">
+              </div>
+            </div>
+
+            <?php if (isset($producto)): ?>
+            <div class="row g-3 mb-3">
+              <div class="col-12">
+                <label class="form-label">Stock en Inventario</label>
+                <div class="form-control text-end fw-bold"
+                     style="background:#f0fdf4; color:var(--agro-green); border-color:var(--agro-green-border);">
+                  <?= (int)$producto->cantidad_inve ?> und
+                </div>
+                <div class="form-text" style="font-size:0.72rem;">
+                  El stock real no se modifica desde aquí — se actualiza con las ventas.
+                </div>
+              </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Botones al fondo de la sección -->
+            <div class="d-flex justify-content-end gap-2 mt-auto pt-3" style="border-top:1px solid var(--agro-green-border);">
+              <a href="<?= base_url('productosagro') ?>" class="btn btn-cancelar" tabindex="9">
+                <i class="ri-close-line me-1"></i> Cancelar
+              </a>
+              <button type="submit" class="btn btn-guardar" tabindex="8">
+                <i class="ri-save-3-line me-1"></i>
+                <?= isset($producto) ? 'Actualizar' : 'Registrar' ?>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /row -->
+    </form>
+  </div>
 </div>
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ✅ Mayúsculas automáticas
-    ['producto', 'categoria'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', () => {
-                el.value = el.value.toUpperCase();
-            });
-        }
+document.addEventListener('DOMContentLoaded', function () {
+
+  // Mayúsculas automáticas
+  ['producto', 'categoria'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { el.value = el.value.toUpperCase(); });
+  });
+
+  // Foco inicial
+  document.getElementById('categoria')?.focus();
+
+  // Validación visual en submit
+  document.getElementById('formProductoAgro').addEventListener('submit', function (e) {
+    let valid = true;
+    this.querySelectorAll('[required]').forEach(f => {
+      if (!f.value.trim()) { f.classList.add('is-invalid'); valid = false; }
+      else f.classList.remove('is-invalid');
     });
+    if (!valid) e.preventDefault();
+  });
 
-    // ✅ Validación visual
-    const form = document.getElementById('formProductoAgro');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            let isValid = true;
-            const requiredFields = form.querySelectorAll('[required]');
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    field.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    field.classList.remove('is-invalid');
-                }
-            });
-            // Si falla la validación del navegador, prevenimos el envío.
-            if (!isValid) {
-                e.preventDefault();
-                // Opcional: mostrar un mensaje de error más profesional
-                // alert('Por favor complete todos los campos obligatorios.');
-            }
-        });
-    }
+  // Limpiar is-invalid al escribir
+  document.getElementById('formProductoAgro').querySelectorAll('[required]').forEach(f => {
+    f.addEventListener('input', () => f.classList.remove('is-invalid'));
+  });
 
-    // ✅ Foco inicial
-    document.getElementById('producto')?.focus();
+  // --- PLANTILLAS RÁPIDAS ---
+  document.querySelectorAll('.btn-plantilla').forEach(btn => {
+    btn.addEventListener('click', function () {
+      // Rellenar campos
+      document.getElementById('categoria').value    = this.dataset.categoria;
+      document.getElementById('producto').value     = this.dataset.producto;
+      document.getElementById('descripcion').value  = this.dataset.descripcion;
+      document.getElementById('precio_contado').value = parseFloat(this.dataset.precioContado).toFixed(2);
+      document.getElementById('precio_credito').value = parseFloat(this.dataset.precioCredito).toFixed(2);
+
+      const unidadSelect = document.getElementById('unidad_id');
+      if (unidadSelect) unidadSelect.value = this.dataset.unidad;
+
+      // Limpiar cantidad para que el usuario la ingrese manualmente
+      const cantidadInput = document.getElementById('cantidad');
+      cantidadInput.value = '';
+      cantidadInput.focus();
+
+      // Marcar botón activo
+      document.querySelectorAll('.btn-plantilla').forEach(b => b.classList.remove('activo'));
+      this.classList.add('activo');
+
+      // Limpiar is-invalid de campos recién rellenados
+      ['categoria','producto','precio_contado','precio_credito','unidad_id'].forEach(id => {
+        document.getElementById(id)?.classList.remove('is-invalid');
+      });
+    });
+  });
+
+  // Tab order: al presionar Enter en un campo avanza al siguiente tabindex
+  document.getElementById('formProductoAgro').querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && el.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        const next = document.querySelector(`[tabindex="${parseInt(el.tabIndex) + 1}"]`);
+        if (next) next.focus();
+      }
+    });
+  });
+
 });
 </script>
 <?= $this->endSection() ?>
