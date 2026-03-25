@@ -46,6 +46,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+*.sql
 
 # NetBeans
 nbproject/private/

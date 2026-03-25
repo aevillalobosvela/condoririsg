@@ -1,0 +1,187 @@
+# CHANGELOG
+
+All notable changes to **Condoriri SG** are documented in this file.  
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions.
+
+---
+
+## [Unreleased]
+
+---
+
+## 2026-03-25
+
+### Added
+- **Agro — Excel report (matricial)**: created `app/Services/Agro/ExcelVentasAgroService.php` with the same matrix format as the lacteos module (products as columns, sales as rows). Replaces the previous flat list export. Title reads "CONDORIRI AGROPECUARIO" and units default to "UND".
+- **Agro — PDF report**: created `app/Libraries/Agro/CierreVentaAgroPdf.php` extending `CierreVentaBasePdf`. Same matrix layout as lacteos PDF. Title and signature line updated to "Responsable - Productos Agropecuarios". Includes generating user name.
+- **Agro — PDF route**: registered missing `productosagro/exportarPdfVentas` route in `Routes.php`.
+- **Agro — product list redesign** (`productosAgroIndex.php`): added 4 stat cards (total, with stock, low stock ≤5, no stock); filter bar with text search, stock filter, category filter, and sort dropdown; column-header click sorting; color dot per product name (palette of 10); semantic stock badges (green/amber/red); `fecha_creacion` column; redesigned action buttons matching agro color scheme; JS-driven filtering and ordering without page reload.
+- **Agro — product form redesign** (`productosAgroFrom.php`): two-column layout (identification left in blue / prices+inventory right in green) eliminating vertical scroll; `tabindex` order with Enter-key navigation between fields; automatic uppercase on name and category fields.
+- **Agro — quick-register templates**: `create()` now passes the last 5 products registered by the user's branch. A yellow chip bar appears above the form; clicking a chip pre-fills all fields except quantity and moves focus to the quantity input. Includes two explanatory helper texts for non-technical users.
+- **Agro — Duplicate button**: added "Duplicar" button per row in the product list. Links to `productosagro/create?from=ID`; controller loads that product as `$base` and pre-fills the form, leaving quantity blank.
+- **Agro — sales register view** (`ventasIndex.php`): eliminated static PHP grid in favor of JS-only rendering; added `getProductColor()` with 7-color deterministic palette per product name; cards now have colored left border, gradient background, colored circle with initials, colored price, and stock badge `Stock: X und`; `fecha_creacion` shown below stock badge; null-check on `ci_nit` in `buscarClientes()`.
+- **Agro — credit sales view** (`ventasCredito.php`): same card improvements as contado view; personal UTO search now accepts name or CI (minimum 3 characters).
+- **Agro — confirm sale modal**: upgraded to `modal-lg` with product list rows (name + quantity × price on left, subtotal on right), `row/col-6` layout for payment details, `fw-bold` intro text.
+- **Agro — receipt** (`recibo_print.php`): unified with lacteos receipt format — `font-weight:bold` globally, watermark, `info-line` CSS classes, dashed separators, flex product rows, institutional header (UNIVERSIDAD TECNICA DE ORURO / CENTRO EXP. AGROPECUARIO CONDORIRI), "Atendido por" footer with signature line.
+- **Agro — stock filter on sale views**: `register()` and `credito()` in `ventasAgroController` now filter `cantidad_inve > 0`, hiding out-of-stock products from the POS grid.
+- **Agro — product creation date on sale cards**: `fecha_creacion` displayed below stock badge in both `ventasIndex.php` and `ventasCredito.php`.
+
+### Changed
+- **Agro — `buscarPersonalUto()`**: query updated from `p.dip ILIKE ?%` to `(p.dip ILIKE %?% OR p.nombre ILIKE %?%)` enabling partial search by name or CI.
+- **Agro — `exportarExcelVentas()`**: replaced inline flat-list XLS generation with delegation to `ExcelVentasAgroService`.
+- **Agro — `exportarPdfVentas()`**: replaced `CierreVentaPdf` with `CierreVentaAgroPdf`; now resolves generating user name from `condoriri.usuarios`.
+- **Agro — `create()` controller**: now queries last 5 products for the session branch and reads optional `?from=` parameter for duplication.
+
+### Fixed
+- **Agro — PDF 404**: dropdown PDF links in `productosAgro/index.php` pointed to non-existent route `productosagro/cierre/rango`; corrected to `productosagro/exportarPdfVentas`.
+- **Agro — confirm modal not opening**: `confirmSaleModalInstance.show()` was accidentally left outside the `finalizeSaleBtn` click handler after a prior edit; restored to correct position.
+
+---
+
+## 2026-03-24
+
+### Added
+- `CLAUDE.md`: documentation file describing project architecture, directory structure, roles, domain areas, and available development commands for onboarding new developers.
+
+### Changed
+- `.gitignore`: updated to exclude an additional file/directory from version control.
+
+---
+
+## 2026-03-20
+
+### Added
+- **PDF standardization**: unified all PDF reports under a single shared base template (`app/Libraries/`), ensuring consistent layout, typography, and branding across all generated documents (invoices, closing reports, lacteos reports, etc.).
+
+### Fixed
+- **Excel reports — sale numbers**: sale identifiers were missing from exported Excel files; now included in all relevant report columns.
+- **Excel reports — pricing and units of measure**: corrected data mapping that caused incorrect prices and unit labels to appear in exported spreadsheets.
+- **Excel reports — row height and product names**: normalized row height for readability and standardized product name formatting across all Excel exports.
+- **Excel reports — general formatting**: multiple formatting improvements applied globally to Excel reports (column widths, header styles, cell alignment).
+- **PDF reports — final adjustments**: resolved remaining layout and data rendering issues across PDF documents after the template standardization.
+
+---
+
+## 2026-03-19
+
+### Fixed
+- **Receipts**: improved print quality and visual fidelity of sale receipts, including better font rendering and layout consistency.
+
+---
+
+## 2026-03-16
+
+### Changed
+- **Delivery note (envío)**: updated the content and structure of the delivery note document to reflect revised business requirements.
+- **Dashboard — quick access buttons**: updated color scheme of quick-access buttons on the home screen to improve visual hierarchy.
+
+### Added
+- **Dashboard — UI colors**: applied color coding to key elements on the initial screen to improve navigation and visual differentiation.
+
+### Fixed
+- **Sales view — product images**: changed the method used to resolve and display product images in the sales interface, improving reliability across environments.
+
+### Removed
+- **Product images**: removed static product image assets from the repository to reduce repository size; images are now expected to be managed externally or via uploads.
+
+### Fixed
+- **Inventory reports (PDF & Excel)**: comprehensive overhaul of generic inventory report generation. Corrected data queries, improved column structure, and standardized output format for both PDF and Excel exports.
+
+---
+
+## 2026-03-13
+
+### Added
+- **Quality control PDF report**: implemented a new `app/Libraries/` PDF class to generate quality control reports. Routes registered and accessible via the corresponding controller action.
+- **Quality control Excel report**: improved formatting of the existing quality control Excel export (column widths, header styles, data alignment).
+
+### Changed
+- **Inventory UI — report buttons**: grouped report generation buttons in the inventory views to reduce visual clutter and improve usability.
+
+---
+
+## 2026-03-11
+
+### Added
+- **Shipments (envíos) — grouped PDF report**: added a new PDF report that groups products by category within shipment documents.
+- **Inventory reports — initial implementation**: first version of new inventory-specific report generation logic.
+
+### Changed
+- **Shipments — stock limit enforcement**: product selection in the shipment form is now disabled once the available stock limit is reached, preventing over-allocation.
+- **Shipments — table color scheme**: applied a dynamic color scheme to shipment tables to improve readability and status differentiation.
+
+### Fixed
+- **PDF encoding**: resolved character encoding issues causing accented characters (á, é, í, ó, ú, ñ) to render incorrectly in generated PDFs.
+- **Products — temporary visibility**: temporarily hidden certain products from the catalog view pending data review.
+
+### Visual
+- **Sales cards**: applied color coding to sale cards for quick status identification.
+- **Stock view**: added color indicators to the product stock screen to differentiate stock levels.
+- **Inventory list**: applied color differentiation to inventory entries to distinguish between branches or categories.
+- **Sales list**: applied color coding to the sales list view for improved visual scanning.
+
+---
+
+## 2026-03-10
+
+### Added
+- **Raw materials (materias primas)**: implemented a dedicated database table, migration, seeder, and `MateriaPrimaModel` for managing raw materials. Integrated into the product form via a dynamic select input.
+- **Edit raw material**: added the ability to edit raw material entries directly from the product form select, with corresponding route and controller updates.
+- **Client search by name**: improved credit sale client lookup to support search by customer name in addition to existing identifiers.
+- **Sidebar — almacén role**: added navigation access for the `almacen` role in the sidebar.
+- **Routes — almacén role**: granted the `almacen` role access to user management routes.
+
+### Fixed
+- **Sale receipts (almacén)**: corrected receipt generation for warehouse sales; added customer name field to all existing receipt templates.
+- **Sale model — client name variable**: fixed incorrect variable reference causing customer name to not display on receipts.
+
+### Changed
+- **Inventory layout**: restructured the inventory view to prioritize the most frequently used actions.
+- **Sales (almacén) — color styles**: applied the existing color scheme from the standard sales view to the warehouse sales screen.
+- **Sales (contado) — color styles**: applied color corrections to the cash sales view for visual consistency.
+- **Product form**: minor field reordering to improve form flow; product form now displays the selected raw material label inline.
+
+---
+
+## 2026-03-05
+
+### Fixed
+- **Receipts**: corrected receipt layout issues and added a watermark to printed sale receipts.
+
+---
+
+## 2026-02-26
+
+### Added
+- **Inventory sales — PDF controller**: created a dedicated controller for generating PDFs from inventory-based sales, separating concerns from the main sales controller.
+
+### Changed
+- **Inventory sales — Excel export**: updated product detail columns in the Excel export to include additional product information.
+- **Inventory sales — report buttons**: restyled report generation buttons in the inventory/sales view to match the design of the main sales module.
+
+---
+
+## 2026-02-25
+
+### Added
+- **Shipment PDF — user and product detail**: enriched shipment PDF reports with sender/receiver user data and full product line detail.
+- **Shipment model — extended query**: updated the shipment database query to retrieve user information and sale detail required for the enhanced PDF.
+
+### Fixed
+- **Shipment receptions — variable names**: corrected variable naming inconsistencies that prevented user names from displaying correctly in reception views.
+
+---
+
+## 2026-02-24
+
+### Fixed
+- **Duplicate submission prevention**: added client-side submit button state management to prevent duplicate records caused by accidental double-clicks on form submission buttons.
+
+---
+
+## 2026-02-23
+
+### Fixed
+- **Sales — time restriction removed**: removed the business-hours time restriction from the main sales module, allowing sales to be registered at any time.
+- **Inventory sales — time restriction removed**: removed the same time restriction from the inventory/sales module.
+- **Shipments — Excel report**: temporarily disabled the Excel report export in the shipments module pending a fix.

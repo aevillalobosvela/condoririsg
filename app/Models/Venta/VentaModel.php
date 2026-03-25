@@ -184,8 +184,7 @@ class VentaModel extends Model
             vd.cantidad,
             vd.precio_unitario,
             vd.subtotal AS subtotal_item,
-            ss.producto AS producto_nombre,
-            -- Datos del personal UTO (solo relevante para créditos, pero lo dejamos)
+            COALESCE(pa.producto, ss.producto) AS producto_nombre,
             COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
             p.dip AS personal_dip,
             COALESCE(se.seccion, 'Sin sección') AS personal_seccion
@@ -199,7 +198,8 @@ class VentaModel extends Model
             condoriri.detalle_venta vd ON vd.venta_id = v.id
         LEFT JOIN
             condoriri.stock_sucursales ss ON ss.id = vd.stock_id
-        -- JOIN con personal UTO (solo si hay personal_uto_id)
+        LEFT JOIN
+            condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN

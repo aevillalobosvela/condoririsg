@@ -1,52 +1,47 @@
 <?php
 
-namespace App\Libraries;
+namespace App\Libraries\Agro;
 
-class CierreVentaPdf extends CierreVentaBasePdf
+use App\Libraries\CierreVentaBasePdf;
+
+class CierreVentaAgroPdf extends CierreVentaBasePdf
 {
     public function generarReporteVentas(array $reportData, array $filters): void
     {
         $fecha_inicio = $filters['fecha_inicio'];
         $fecha_fin    = $filters['fecha_fin'];
+        $tipo         = $filters['tipo'] ?? 'general';
+        $nombreUsuario = $filters['nombre_usuario'] ?? 'Usuario';
 
-        $tipo = $filters['tipo'] ?? 'general';
         $tituloTipo = match($tipo) {
-            'contado', 'deposito_contado' => 'VENTAS AL CONTADO',
-            'credito'                     => 'VENTAS A CREDITO',
-            default                       => 'VENTAS GENERALES',
+            'contado' => 'VENTAS AL CONTADO',
+            'credito' => 'VENTAS A CREDITO',
+            default   => 'VENTAS GENERALES',
         };
-        $this->setReporteTitle($tituloTipo . ' - TIENDA CEAC');
+
+        $this->setReporteTitle($tituloTipo . ' - CONDORIRI AGROPECUARIO');
         $this->AddPage('P', 'A4');
         $this->SetMargins(10, 10, 10);
         $this->AliasNbPages();
 
-        $productosUnicos = [];
-        $ventasAgrupadas = [];
+        $productosUnicos  = [];
+        $ventasAgrupadas  = [];
         $totalGeneralBs   = 0;
         $totalGeneralCant = 0;
-
-        $unidadesMedida = [
-            'LACTOFRUIT 120 ML'        => 'BOLSA',
-            'LECHE'                    => 'LITRO',
-            'QUESO 900 GRAMOS'         => 'PIEZA',
-            'QUESO SIN SAL 500 GRAMOS' => 'PIEZA',
-            'REQUESON 250 GRAMOS'      => 'BOLSA',
-            'YOGURT 1 LITRO'           => 'BOLSA',
-            'YOGURT 120 ML'            => 'BOLSA',
-            'YOGURT GRIEGO 250 GRAMOS' => 'PIEZA',
-        ];
 
         foreach ($reportData as $item) {
             if ($item->estado_venta != 1) continue;
             $tipoPago = strtolower($item->tipo_pago);
             $esValida = match($tipo) {
-                'contado', 'deposito_contado' => $tipoPago === 'contado' || $tipoPago === 'deposito_contado',
-                'credito'                     => $tipoPago === 'credito',
-                default                       => true,
+                'contado' => $tipoPago === 'contado',
+                'credito' => $tipoPago === 'credito',
+                default   => true,
             };
             if (!$esValida) continue;
 
-            $prodNombre = utf8_decode(trim(preg_replace('/\s+/', ' ', str_replace(['(', ')'], '', $item->producto_nombre))));
+            $prodNombre = utf8_decode(trim(preg_replace('/\s+/', ' ', str_replace(['(', ')'], '', $item->producto_nombre ?? ''))));
+            if (empty($prodNombre)) continue;
+
             if (!isset($productosUnicos[$prodNombre])) {
                 $productosUnicos[$prodNombre] = ['precio' => $item->precio_unitario, 'total_cantidad' => 0];
             }
@@ -71,12 +66,13 @@ class CierreVentaPdf extends CierreVentaBasePdf
 
         ksort($productosUnicos);
 
-        $meses = ['01'=>'Enero','02'=>'Febrero','03'=>'Marzo','04'=>'Abril','05'=>'Mayo','06'=>'Junio','07'=>'Julio','08'=>'Agosto','09'=>'Septiembre','10'=>'Octubre','11'=>'Noviembre','12'=>'Diciembre'];
-        $d = date('d', strtotime($fecha_inicio));
-        $m = date('m', strtotime($fecha_inicio));
-        $y = date('Y', strtotime($fecha_inicio));
+        $meses = ['01'=>'Enero','02'=>'Febrero','03'=>'Marzo','04'=>'Abril','05'=>'Mayo','06'=>'Junio',
+                  '07'=>'Julio','08'=>'Agosto','09'=>'Septiembre','10'=>'Octubre','11'=>'Noviembre','12'=>'Diciembre'];
+        $d  = date('d', strtotime($fecha_inicio));
+        $m  = date('m', strtotime($fecha_inicio));
+        $y  = date('Y', strtotime($fecha_inicio));
 
-        $fechaTexto = ($fecha_inicio == $fecha_fin)
+        $fechaTexto = ($fecha_inicio === $fecha_fin)
             ? "Del: $d de {$meses[$m]} de $y Al: $d de {$meses[$m]} de $y"
             : "Del: $d de {$meses[$m]} de $y Al: " . date('d', strtotime($fecha_fin)) . " de {$meses[date('m', strtotime($fecha_fin))]} de " . date('Y', strtotime($fecha_fin));
 
@@ -125,7 +121,8 @@ class CierreVentaPdf extends CierreVentaBasePdf
         $this->SetFont('Arial', 'B', 8);
         $this->Cell($wNro, $rowH, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, $rowH, 'PRODUCTOS:', 1, 0, 'R', true);
-        $currX = $this->GetX(); $currY = $this->GetY();
+        $currX = $this->GetX();
+        $currY = $this->GetY();
         foreach ($productosUnicos as $prod => $info) {
             $this->SetXY($currX, $currY);
             $this->SetFont('Arial', '', 6);
@@ -137,11 +134,11 @@ class CierreVentaPdf extends CierreVentaBasePdf
         $this->SetXY($currX, $currY);
         $this->Cell(0, $rowH, 'TOTAL', 1, 1, 'C', true);
 
+        // Unidades genéricas para agro
         $this->Cell($wNro, 5, '', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'UNIDADES DE MEDIDA:', 1, 0, 'R', true);
         foreach ($productosUnicos as $prod => $info) {
-            $unidad = $unidadesMedida[$prod] ?? 'PIEZA';
-            $this->Cell($colWidth, 5, $unidad, 1, 0, 'C');
+            $this->Cell($colWidth, 5, 'UND', 1, 0, 'C');
         }
         $this->Cell(0, 5, number_format($totalGeneralBs, 2, ',', '.'), 1, 1, 'R', true);
 
@@ -154,7 +151,9 @@ class CierreVentaPdf extends CierreVentaBasePdf
 
         $this->Ln(5);
 
-        $wNota = 18; $wTotal = 13; $subColW = $colWidth / 2;
+        $wNota  = 18;
+        $wTotal = 13;
+        $subColW = $colWidth / 2;
         $this->SetFillColor(200, 200, 200);
         $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -206,9 +205,9 @@ class CierreVentaPdf extends CierreVentaBasePdf
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(0, 6, 'TOTAL ' . $tituloTipo . ': ' . $this->numeroALiteral($totalGeneralBs) . ' BOLIVIANOS', 0, 1, 'L');
 
-        $nombreUsuario = utf8_decode($filters['nombre_usuario'] ?? 'Usuario');
+        $nombreUsuario = utf8_decode($nombreUsuario);
         $this->Ln(15);
-        $pageW = $this->GetPageWidth();
+        $pageW  = $this->GetPageWidth();
         $firmaW = 70;
         $firmaX = ($pageW - $firmaW) / 2;
         $this->SetDrawColor(0, 0, 0);
@@ -217,8 +216,8 @@ class CierreVentaPdf extends CierreVentaBasePdf
         $this->SetFont('Arial', 'B', 9);
         $this->Cell(0, 5, $nombreUsuario, 0, 1, 'C');
         $this->SetFont('Arial', '', 8);
-        $this->Cell(0, 5, utf8_decode('Responsable - Derivados Lacteos'), 0, 1, 'C');
+        $this->Cell(0, 5, utf8_decode('Responsable - Productos Agropecuarios'), 0, 1, 'C');
 
-        $this->Output('D', 'reporte_' . $tipo . '_matrix_' . $fecha_inicio . '.pdf');
+        $this->Output('D', 'reporte_agro_' . $tipo . '_' . $fecha_inicio . '.pdf');
     }
 }
