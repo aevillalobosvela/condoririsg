@@ -460,13 +460,13 @@
                 <i class="ri-file-pdf-line"></i> PDF
               </button>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="<?= base_url('productosagro/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=contado') ?>" target="_blank">
+                <li><a class="dropdown-item" href="<?= base_url('productosagro/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=contado') ?>" target="_blank">
                   <i class="ri-hand-coin-line text-success me-2"></i>Contado
                 </a></li>
-                <li><a class="dropdown-item" href="<?= base_url('productosagro/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=credito') ?>" target="_blank">
+                <li><a class="dropdown-item" href="<?= base_url('productosagro/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=credito') ?>" target="_blank">
                   <i class="ri-wallet-3-line text-warning me-2"></i>Crédito
                 </a></li>
-                <li><a class="dropdown-item" href="<?= base_url('productosagro/cierre/rango?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=general') ?>" target="_blank">
+                <li><a class="dropdown-item" href="<?= base_url('productosagro/exportarPdfVentas?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta) . '&tipo=general') ?>" target="_blank">
                   <i class="ri-file-list-line text-info me-2"></i>General
                 </a></li>
               </ul>

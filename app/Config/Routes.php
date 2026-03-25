@@ -303,6 +303,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
     $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
+    $routes->get('exportarPdfVentas', 'productosAgro\ventasAgroController::exportarPdfVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
 });
 
 // ============================================================================
