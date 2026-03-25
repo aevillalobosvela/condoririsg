@@ -432,8 +432,8 @@ class ventasAgroController extends BaseController
 
           
             if ($producto->cantidad_inve < $cantidad) {
-                $nombreProd = $producto->nombre ?? 'Sin nombre';
-                throw new \Exception("Stock insuficiente para: {$nombreProd}. Disponible: {$producto->stock_inve}.");
+                $nombreProd = $producto->producto ?? 'Sin nombre';
+                throw new \Exception("Stock insuficiente para: {$nombreProd}. Disponible: {$producto->cantidad_inve}.");
             }
 
             $subtotalBruto = $precioUnitario * $cantidad;
@@ -473,22 +473,20 @@ class ventasAgroController extends BaseController
 
         foreach ($itemsDetalle as $item) {
             $detalleData = [
-                'venta_id' => $ventaId,
-
-                'producto_agro_id' => $item['producto_id'],
-                'cantidad' => $item['cantidad'],
-                'precio_unitario' => $item['precio_unitario'],
-                'subtotal' => $item['subtotal'],
-                'observaciones' => '',
+                'venta_id'         => $ventaId,
+                'producto_agro_id' => $item['producto_agro_id'],
+                'cantidad'         => $item['cantidad'],
+                'precio_unitario'  => $item['precio_unitario'],
+                'subtotal'         => $item['subtotal'],
+                'observaciones'    => '',
             ];
 
             if (!$this->detalleModel->insert($detalleData)) {
                 throw new \Exception('Error al registrar el detalle para: ' . $item['producto_nombre']);
             }
 
-            
             $newStock = $item['stock_actual'] - $item['cantidad'];
-            if (!$this->productoAgroModel->update($item['producto_id'], ['cantidad_inve' => $newStock])) {
+            if (!$this->productoAgroModel->update($item['producto_agro_id'], ['cantidad_inve' => $newStock])) {
                 throw new \Exception('Error al actualizar el stock del producto: ' . $item['producto_nombre']);
             }
         }
