@@ -716,8 +716,8 @@ class ventasController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            // Actualizar código con formato correlativo basado en ID
-            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            // Generar código con secuencias
+            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
             $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
 
@@ -895,8 +895,8 @@ class ventasController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            // Actualizar código con formato correlativo basado en ID
-            $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+            // Generar código con secuencias
+            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
             $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             // 10. Insertar detalles y actualizar stock
