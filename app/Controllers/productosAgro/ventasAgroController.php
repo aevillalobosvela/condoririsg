@@ -471,7 +471,8 @@ class ventasAgroController extends BaseController
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
 
-        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+        // Numeración Agro: 4 series independientes (sucursal x tipo de venta)
+        $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
         $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         foreach ($itemsDetalle as $item) {
@@ -627,7 +628,8 @@ class ventasAgroController extends BaseController
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
 
-        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+        // Numeración Agro: 4 series independientes (sucursal x tipo de venta)
+        $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
         $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         // ✅ Procesar detalles y actualizar stock

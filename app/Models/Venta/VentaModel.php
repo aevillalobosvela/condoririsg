@@ -56,6 +56,38 @@ class VentaModel extends Model
     }
 
     /**
+     * Genera código de venta para el módulo Agro.
+     *
+     * Requerimiento institucional:
+     * - 4 series independientes: (2 sucursales) x (2 tipos: contado/credito)
+     * - No se reinician
+     * - Ventas canceladas conservan el código (se consume secuencia una vez creada la venta)
+     */
+    public function generarCodigoAgroVenta(int $sucursal_id, string $tipo_pago): string
+    {
+        // Ajusta la segmentación solo para las sucursales usadas por Agro.
+        // (Si en el futuro se agregan sucursales nuevas, se deberá extender el mapeo
+        // y crear sus secuencias correspondientes).
+        if ($sucursal_id === 2) {
+            $prefijo_sucursal = 'SC';
+        } elseif ($sucursal_id === 4) {
+            $prefijo_sucursal = 'PP';
+        } else {
+            throw new \InvalidArgumentException("Sucursal Agro no soportada para numeración: {$sucursal_id}. Se esperan 2 o 4.");
+        }
+
+        $prefijo_tipo = (strtolower($tipo_pago) === 'contado') ? 'CO' : 'CR';
+
+        // Secuencias nuevas e independientes para Agro (4 series).
+        $seq_name = 'seq_agro_venta_' . strtolower($prefijo_sucursal . '_' . $prefijo_tipo);
+        $query = $this->db->query("SELECT nextval('condoriri.{$seq_name}') as numero");
+        $numero = $query->getRow()->numero;
+
+        // Prefijo "AG" para garantizar unicidad con la numeración histórica de otras ventas.
+        return "AG-{$prefijo_sucursal}-{$prefijo_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Recupera todas las ventas no eliminadas con el nombre completo del cliente.
      * Utiliza el constructor explícito para evitar conflictos de Soft Delete en CodeIgniter.
      *

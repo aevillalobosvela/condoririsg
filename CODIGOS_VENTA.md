@@ -37,6 +37,26 @@ Esquema: `condoriri`
 | `seq_venta_pp_co` | Planta Producción + Contado |
 | `seq_venta_pp_cr` | Planta Producción + Crédito |
 
+---
+## Agro (numeración independiente)
+
+Agro requiere 4 series independientes (no se reinician):
+- por sucursal: `sucursal_id = 2` => `SC`, `sucursal_id = 4` => `PP`
+- por tipo de pago: `contado` => `CO`, `credito` => `CR`
+
+Formato del código Agro:
+```
+AG-{PREFIJO_SUCURSAL}-{PREFIJO_TIPO}-{SECUENCIAL_6_DIGITOS}
+```
+
+Secuencias Agro en PostgreSQL (schema `condoriri`):
+| Secuencia | Usada para |
+|---|---|
+| `seq_agro_venta_sc_co` | Sucursal Centro + Contado |
+| `seq_agro_venta_sc_cr` | Sucursal Centro + Crédito |
+| `seq_agro_venta_pp_co` | Planta Producción + Contado |
+| `seq_agro_venta_pp_cr` | Planta Producción + Crédito |
+
 ### Script de creación
 
 ```sql
@@ -44,6 +64,14 @@ CREATE SEQUENCE IF NOT EXISTS condoriri.seq_venta_sc_co START 1 INCREMENT 1 MINV
 CREATE SEQUENCE IF NOT EXISTS condoriri.seq_venta_sc_cr START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
 CREATE SEQUENCE IF NOT EXISTS condoriri.seq_venta_pp_co START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
 CREATE SEQUENCE IF NOT EXISTS condoriri.seq_venta_pp_cr START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
+```
+
+```sql
+-- Agro (numeración independiente)
+CREATE SEQUENCE IF NOT EXISTS condoriri.seq_agro_venta_sc_co START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
+CREATE SEQUENCE IF NOT EXISTS condoriri.seq_agro_venta_sc_cr START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
+CREATE SEQUENCE IF NOT EXISTS condoriri.seq_agro_venta_pp_co START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
+CREATE SEQUENCE IF NOT EXISTS condoriri.seq_agro_venta_pp_cr START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE;
 ```
 
 ### Consultar valores actuales
