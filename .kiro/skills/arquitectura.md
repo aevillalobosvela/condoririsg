@@ -6,5 +6,5 @@ inclusion: manual
 
 Carga el contexto completo de arquitectura, convenciones de código, roles y estructura del proyecto.
 
-#[[file:ARCHITECTURE.md]]
+#[[file:docs/ARCHITECTURE.md]]
 #[[file:CLAUDE.md]]
