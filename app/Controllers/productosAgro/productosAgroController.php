@@ -61,9 +61,9 @@ class ProductosAgroController extends BaseController
 
         $data = [
             'title'     => 'Nuevo Producto Agropecuario',
-            'unidades'  => $this->unidadModel->findAll(),
+            'unidades'  => $this->unidadModel->where('tipo', 'agro')->where('estado', true)->findAll(),
             'recientes' => $recientes,
-            'base'      => $base,   // producto a duplicar (null si no aplica)
+            'base'      => $base,
         ];
 
         return view('productosAgro/productosAgroFrom', $data);
@@ -160,10 +160,10 @@ class ProductosAgroController extends BaseController
         $sucursalModel = model('App\Models\Sucursal\SucursalModel');
 
         $data = [
-            'title' => 'Editar Producto',
-            'producto' => $producto,
-            'unidades' => $unidadModel->findAll(),
-            'sucursales' => $sucursalModel->findAll(),
+            'title'     => 'Editar Producto',
+            'producto'  => $producto,
+            'unidades'  => $unidadModel->where('tipo', 'agro')->where('estado', true)->findAll(),
+            'sucursales'=> $sucursalModel->findAll(),
         ];
 
         return view('productosAgro/productosAgroFrom', $data);
