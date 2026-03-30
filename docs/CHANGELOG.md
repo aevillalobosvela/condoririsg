@@ -9,6 +9,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-03-30
+
+### Added
+- **Agro — alta rápida de unidad**: implementado `storeUnidadRapida()` en el controlador de productos agro. Ruta registrada con control de acceso por rol. Vista `productosAgroFrom` actualizada con modal de alta rápida de unidad.
+- **Unidades — vista de tabla**: agregada vista de tabla para unidades con renderizado condicional y botones de acción.
+- **Unidades — campo `tipo` en modelo**: añadido `tipo` a `allowedFields` en `UnidadModel`.
+
+### Changed
+- **`ventasAgroController` — optimización de productos**: mejorada la consulta de productos para incluir el nombre de la unidad; vistas actualizadas para mostrar la unidad de medida.
+- **Agro — filtro de categoría en ventas**: añadido filtro por categoría en el listado de productos de ventas agro con lógica de renderizado actualizada.
+- **Agro — selección de categoría con botones visuales**: reemplazado el selector de categoría por botones visuales con mecanismo de feedback mejorado.
+- **Agro — tabla de productos**: ajustado tamaño de fuente en cabecera y añadida columna `Unidad` en `productosAgro`.
+- **Unidades — índice**: `unidadesIndex` ahora muestra `Tipo` en lugar de `Descripción` con badges condicionales.
+- **Productos — filtro de unidades por tipo y estado**: `ProductosController` y `ProductosAgroController` filtran unidades por `tipo` y `estado` activo.
+- **Agro — cantidad e inventario en formulario**: actualizada lógica del input de cantidad y visualización de stock en `productosAgroFrom`.
+- **Unidades — formulario**: mejorado `unidadesform` con estilos, estructura de formulario y validación.
+- **Agro — búsqueda de personal UTO**: simplificado input de búsqueda eliminando spinner redundante y ajustando layout; mejorado feedback con spinner de carga y selección de resultado.
+
+---
+
 ## 2026-03-27
 
 ### Added quick
