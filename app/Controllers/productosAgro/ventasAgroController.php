@@ -257,27 +257,24 @@ class ventasAgroController extends BaseController
 
     public function credito()
     {
-
         $sucursal = (int) session()->get('sucursal_id');
+        $db = \Config\Database::connect();
+        $q = $db->query(
+            'SELECT pa.*, u.nombre AS unidad_nombre
+             FROM condoriri.productos_agro pa
+             LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
+             WHERE pa.fecha_delete IS NULL
+               AND pa.estado = true
+               AND pa.cantidad_inve > 0
+               AND pa.sucursal_id = ?',
+            [$sucursal]
+        );
+        $productos = $q ? $q->getResult() : [];
 
-        $productos = $this->productoAgroModel
-            ->where('sucursal_id', $sucursal)
-            ->where('estado', true)
-            ->where('cantidad_inve >', 0)
-            ->findAll();
-        
-
-
-
-
-        $data = [
+        return view('productosAgro/ventasCredito', [
             'title'     => 'Registrar Venta Crédito',
             'productos' => $productos,
-
-        ];
-
-
-        return view('productosAgro/ventasCredito', $data);
+        ]);
     }
 
 
@@ -328,22 +325,25 @@ class ventasAgroController extends BaseController
     public function register()
     {
         $sucursal = (int) session()->get('sucursal_id');
+        $db = \Config\Database::connect();
+        $q = $db->query(
+            'SELECT pa.*, u.nombre AS unidad_nombre
+             FROM condoriri.productos_agro pa
+             LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
+             WHERE pa.fecha_delete IS NULL
+               AND pa.estado = true
+               AND pa.cantidad_inve > 0
+               AND pa.sucursal_id = ?',
+            [$sucursal]
+        );
+        $productos = $q ? $q->getResult() : [];
+        $clientes  = $this->clienteModel->findAll();
 
-        $productos = $this->productoAgroModel
-            ->where('sucursal_id', $sucursal)
-            ->where('estado', true)
-            ->where('cantidad_inve >', 0)
-            ->findAll();
-        $clientes = $this->clienteModel->findAll();
-
-        $data = [
+        return view('productosAgro/ventasIndex', [
             'title'     => 'Registrar Venta',
             'productos' => $productos,
             'clientes'  => $clientes,
-        ];
-
-
-        return view('productosAgro/ventasIndex', $data);
+        ]);
     }
 
 

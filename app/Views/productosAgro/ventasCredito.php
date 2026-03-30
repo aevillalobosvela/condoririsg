@@ -440,7 +440,7 @@
               <p class="card-text mb-1">
                 <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">Stock: ${p.cantidad_inve}</span>
+              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
             </div>
           </div>
         </div>`;
