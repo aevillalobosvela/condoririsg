@@ -11,7 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## 2026-03-27
 
-### Added
+### Added quick
 - **Ventas Agro — numeración independiente**: implementadas 4 secuencias PostgreSQL independientes para ventas agro (por sucursal y tipo de pago). Nuevo método `generarCodigoAgroVenta()` en `VentaModel`. Códigos con formato `AG-{SUCURSAL}-{TIPO}-{6_DÍGITOS}` (ej. `AG-SC-CO-000001`). Migración incluida en `2026-03-26-000001_CreateAgroVentaSequences.php`.
 - **Docs — arquitectura y contexto**: agregados `ARCHITECTURE.md`, `PDF_REPORTS.md`, `VENTAS_AGRO.md` y skills de Kiro (`.kiro/skills/`) para facilitar el onboarding y compartir contexto del proyecto.
 
