@@ -9,6 +9,46 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-03-27
+
+### Added
+- **Ventas Agro — numeración independiente**: implementadas 4 secuencias PostgreSQL independientes para ventas agro (por sucursal y tipo de pago). Nuevo método `generarCodigoAgroVenta()` en `VentaModel`. Códigos con formato `AG-{SUCURSAL}-{TIPO}-{6_DÍGITOS}` (ej. `AG-SC-CO-000001`). Migración incluida en `2026-03-26-000001_CreateAgroVentaSequences.php`.
+- **Docs — arquitectura y contexto**: agregados `ARCHITECTURE.md`, `PDF_REPORTS.md`, `VENTAS_AGRO.md` y skills de Kiro (`.kiro/skills/`) para facilitar el onboarding y compartir contexto del proyecto.
+
+### Changed
+- **`ventasAgroController`**: actualizado para usar la nueva numeración agro en lugar de los códigos genéricos de venta.
+
+### Removed
+- **Assets no utilizados — imágenes de plantilla** (896 archivos): eliminadas imágenes del template que no se usan; se conservan únicamente favicon, logos, marca de agua y sidebar.
+- **Assets no utilizados — SCSS y librerías JS/CSS** (1633 archivos): eliminadas fuentes SCSS del template y 38 librerías JS/CSS no utilizadas.
+- **Reorganización de raíz**: movidos `docs/` y `docker/` a sus carpetas correspondientes; eliminados archivos sueltos innecesarios en la raíz del proyecto.
+
+---
+
+## 2026-03-25
+
+### Added
+- **Agro — acceso desde otros roles**: habilitado el acceso al módulo agro para roles adicionales. Actualizados `Routes.php` y `sidebar.php`.
+
+---
+
+## 2026-03-17
+
+### Added
+- **`CODIGOS_VENTA.md`**: documentación del esquema de numeración de ventas, secuencias y mapeo por módulo.
+
+### Changed
+- **Formato de códigos de venta**: actualizado el formato de generación de códigos en `VentaModel` para todos los módulos.
+
+---
+
+## 2026-03-05
+
+### Added
+- **Numeración por secuencias**: implementada función de numeración diferente por secuencias PostgreSQL para ventas e inventarios. Migración SQL en `database/migrations/crear_secuencias_ventas.sql`. Actualizado `ventasController` e `inventariosController` para usar las nuevas secuencias.
+
+---
+
 ## 2026-03-25
 
 ### Added
