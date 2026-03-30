@@ -153,13 +153,8 @@
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
         <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
-        <div class="position-relative">
-          <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
-          <div id="dipSearchSpinner" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display:none;">
-            <div class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Buscando...</span></div>
-          </div>
-        </div>
-        <div id="personalInfo" class="mt-2"></div>
+        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
+        <div id="personalInfo" class="mt-3"></div>
       </div>
 
       <!-- Popular Products -->
@@ -363,26 +358,18 @@
     const cambioGroup = document.getElementById('cambioGroup');
 
     let searchTimeout;
-    const dipSearchSpinner   = document.getElementById('dipSearchSpinner');
 
-    // --- BÚSQUEDA DE PERSONAL POR DIP ---
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
       const dip = this.value.trim();
-
       personalInfo.innerHTML = '';
       clienteIdInput.value = '';
       selectedPersonal = null;
-
       if (dip.length < 3) return;
-
-      dipSearchSpinner.style.display = 'block';
-
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
-          .then(response => response.json())
+          .then(r => r.json())
           .then(data => {
-            dipSearchSpinner.style.display = 'none';
             if (data && data.length > 0) {
               const p = data[0];
               selectedPersonal = p;
@@ -403,7 +390,6 @@
             }
           })
           .catch(() => {
-            dipSearchSpinner.style.display = 'none';
             personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);
