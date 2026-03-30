@@ -195,7 +195,12 @@
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
         <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
-        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o Nombre Completo (ej. 745687 o Juan Perez)" autocomplete="off">
+        <div class="position-relative">
+          <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o Nombre Completo (ej. 745687 o Juan Perez)" autocomplete="off">
+          <div id="dipSearchSpinner" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display:none;">
+            <div class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Buscando...</span></div>
+          </div>
+        </div>
         <div id="personalInfo" class="mt-3"></div>
       </div>
 
@@ -456,6 +461,7 @@
     const cambioGroup = document.getElementById('cambioGroup');
 
     let searchTimeout;
+    const dipSearchSpinner = document.getElementById('dipSearchSpinner');
 
     // --- BÚSQUEDA DE PERSONAL POR DIP ---
     dipSearch.addEventListener('input', function() {
@@ -468,15 +474,17 @@
 
       if (dip.length < 3) return;
 
+      dipSearchSpinner.style.display = 'block';
+
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('ventas/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
           .then(response => response.json())
           .then(data => {
+            dipSearchSpinner.style.display = 'none';
             if (data && data.length > 0) {
               const p = data[0];
               selectedPersonal = p;
               clienteIdInput.value = p.id_persona;
-
               personalInfo.innerHTML = `
                 <div class="card border-success">
                   <div class="card-body">
@@ -487,14 +495,13 @@
                     <p><strong>Cargo:</strong> ${p.cargo || 'Sin cargo'}</p>
                     <p><strong>Sección:</strong> ${p.seccion || 'Sin sección'}</p>
                   </div>
-                </div>
-              `;
+                </div>`;
             } else {
-              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese DIP.</div>';
+              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese dato.</div>';
             }
           })
-          .catch(error => {
-            console.error('Error al buscar personal:', error);
+          .catch(() => {
+            dipSearchSpinner.style.display = 'none';
             personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);

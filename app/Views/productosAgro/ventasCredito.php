@@ -159,7 +159,6 @@
             <div class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Buscando...</span></div>
           </div>
         </div>
-        <div id="personalResultsList" class="mt-2"></div>
         <div id="personalInfo" class="mt-2"></div>
       </div>
 
@@ -365,25 +364,6 @@
 
     let searchTimeout;
     const dipSearchSpinner   = document.getElementById('dipSearchSpinner');
-    const personalResultsList = document.getElementById('personalResultsList');
-
-    function renderPersonalCard(p) {
-      personalInfo.innerHTML = `
-        <div class="card border-success">
-          <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <i class="ri-user-check-line text-success fs-5"></i>
-              <strong>${p.nombre}</strong>
-            </div>
-            <div class="row g-1" style="font-size:0.82rem;">
-              <div class="col-6"><span class="text-muted">CI:</span> ${p.dip}</div>
-              <div class="col-6"><span class="text-muted">Tel:</span> ${p.telefono || p.celular || '—'}</div>
-              <div class="col-6"><span class="text-muted">Cargo:</span> ${p.cargo || '—'}</div>
-              <div class="col-6"><span class="text-muted">Sección:</span> ${p.seccion || '—'}</div>
-            </div>
-          </div>
-        </div>`;
-    }
 
     // --- BÚSQUEDA DE PERSONAL POR DIP ---
     dipSearch.addEventListener('input', function() {
@@ -391,7 +371,6 @@
       const dip = this.value.trim();
 
       personalInfo.innerHTML = '';
-      personalResultsList.innerHTML = '';
       clienteIdInput.value = '';
       selectedPersonal = null;
 
@@ -405,56 +384,29 @@
           .then(data => {
             dipSearchSpinner.style.display = 'none';
             if (data && data.length > 0) {
-              if (data.length === 1) {
-                // Un solo resultado: seleccionar automáticamente
-                selectedPersonal = data[0];
-                clienteIdInput.value = data[0].id_persona;
-                renderPersonalCard(data[0]);
-              } else {
-                // Múltiples resultados: mostrar lista para elegir
-                personalResultsList.innerHTML = `
-                  <div class="list-group mb-2">
-                    ${data.map(p => `
-                      <button type="button" class="list-group-item list-group-item-action personal-result-item py-2"
-                              data-id="${p.id_persona}"
-                              data-nombre="${p.nombre}"
-                              data-dip="${p.dip}"
-                              data-telefono="${p.telefono || ''}"
-                              data-celular="${p.celular || ''}"
-                              data-cargo="${p.cargo || ''}"
-                              data-seccion="${p.seccion || ''}">
-                        <div class="fw-semibold" style="font-size:0.88rem;">${p.nombre}</div>
-                        <small class="text-muted">CI: ${p.dip} · ${p.cargo || 'Sin cargo'} · ${p.seccion || 'Sin sección'}</small>
-                      </button>`).join('')}
-                  </div>`;
-              }
+              const p = data[0];
+              selectedPersonal = p;
+              clienteIdInput.value = p.id_persona;
+              personalInfo.innerHTML = `
+                <div class="card border-success">
+                  <div class="card-body">
+                    <p><strong>Nombre:</strong> ${p.nombre}</p>
+                    <p><strong>DIP:</strong> ${p.dip}</p>
+                    <p><strong>Teléfono:</strong> ${p.telefono || 'No disponible'}</p>
+                    <p><strong>Celular:</strong> ${p.celular || 'No disponible'}</p>
+                    <p><strong>Cargo:</strong> ${p.cargo || 'Sin cargo'}</p>
+                    <p><strong>Sección:</strong> ${p.seccion || 'Sin sección'}</p>
+                  </div>
+                </div>`;
             } else {
-              personalInfo.innerHTML = '<div class="alert alert-warning py-2"><i class="ri-search-line me-1"></i>No se encontró personal con ese dato.</div>';
+              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese dato.</div>';
             }
           })
           .catch(() => {
             dipSearchSpinner.style.display = 'none';
-            personalInfo.innerHTML = '<div class="alert alert-danger py-2">Error al buscar. Intente nuevamente.</div>';
+            personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);
-    });
-
-    // Selección desde la lista de múltiples resultados
-    personalResultsList.addEventListener('click', function(e) {
-      const btn = e.target.closest('.personal-result-item');
-      if (!btn) return;
-      selectedPersonal = {
-        id_persona: btn.dataset.id,
-        nombre:     btn.dataset.nombre,
-        dip:        btn.dataset.dip,
-        telefono:   btn.dataset.telefono,
-        celular:    btn.dataset.celular,
-        cargo:      btn.dataset.cargo,
-        seccion:    btn.dataset.seccion,
-      };
-      clienteIdInput.value = btn.dataset.id;
-      personalResultsList.innerHTML = '';
-      renderPersonalCard(selectedPersonal);
     });
 
     // Colores por categoría (mismo esquema que el formulario)
