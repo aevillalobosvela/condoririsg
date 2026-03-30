@@ -304,6 +304,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
     $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
     $routes->get('exportarPdfVentas', 'productosAgro\ventasAgroController::exportarPdfVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
+    $routes->post('storeUnidadRapida', 'productosAgro\productosAgroController::storeUnidadRapida', ['filter' => 'role:admin,agropecuario,ganaderia,vendedor,almacen']);
 });
 
 // ============================================================================
