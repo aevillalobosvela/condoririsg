@@ -287,7 +287,7 @@ class ventasAgroController extends BaseController
         $sql = "
             SELECT 
                 p.id_persona, 
-                p.nombre, 
+                p.nombre_completo AS nombre, 
                 p.dip, 
                 p.telefono, 
                 p.celular, 
@@ -301,7 +301,7 @@ class ventasAgroController extends BaseController
             WHERE 
                 p.\"id_estado\" = true
                 AND e.\"id_estado\" = true
-                AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
+                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
 
         $query = $db->query($sql, [$pattern, $pattern]);
