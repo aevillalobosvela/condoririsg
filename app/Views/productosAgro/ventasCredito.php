@@ -153,14 +153,8 @@
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
         <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
-        <div class="position-relative">
-          <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
-          <div id="dipSearchSpinner" class="position-absolute top-50 end-0 translate-middle-y me-3" style="display:none;">
-            <div class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Buscando...</span></div>
-          </div>
-        </div>
-        <div id="personalResultsList" class="mt-2"></div>
-        <div id="personalInfo" class="mt-2"></div>
+        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
+        <div id="personalInfo" class="mt-3"></div>
       </div>
 
       <!-- Popular Products -->
@@ -177,8 +171,16 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
+        <div class="mb-3 d-flex gap-2">
+          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
+          <select id="categoryFilter" class="form-select" style="max-width:160px;">
+            <option value="">Todas las categorías</option>
+            <option value="TUBERCULOS">Tubérculos</option>
+            <option value="HORTALIZAS">Hortalizas</option>
+            <option value="DESHIDRATADOS">Deshidratados</option>
+            <option value="CEREALES">Cereales</option>
+            <option value="LEGUMINOSAS">Leguminosas</option>
+          </select>
         </div>
    
 
@@ -356,124 +358,62 @@
     const cambioGroup = document.getElementById('cambioGroup');
 
     let searchTimeout;
-    const dipSearchSpinner   = document.getElementById('dipSearchSpinner');
-    const personalResultsList = document.getElementById('personalResultsList');
 
-    function renderPersonalCard(p) {
-      personalInfo.innerHTML = `
-        <div class="card border-success">
-          <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <i class="ri-user-check-line text-success fs-5"></i>
-              <strong>${p.nombre}</strong>
-            </div>
-            <div class="row g-1" style="font-size:0.82rem;">
-              <div class="col-6"><span class="text-muted">CI:</span> ${p.dip}</div>
-              <div class="col-6"><span class="text-muted">Tel:</span> ${p.telefono || p.celular || '—'}</div>
-              <div class="col-6"><span class="text-muted">Cargo:</span> ${p.cargo || '—'}</div>
-              <div class="col-6"><span class="text-muted">Sección:</span> ${p.seccion || '—'}</div>
-            </div>
-          </div>
-        </div>`;
-    }
-
-    // --- BÚSQUEDA DE PERSONAL POR DIP ---
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
       const dip = this.value.trim();
-
       personalInfo.innerHTML = '';
-      personalResultsList.innerHTML = '';
       clienteIdInput.value = '';
       selectedPersonal = null;
-
       if (dip.length < 3) return;
-
-      dipSearchSpinner.style.display = 'block';
-
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
-          .then(response => response.json())
+          .then(r => r.json())
           .then(data => {
-            dipSearchSpinner.style.display = 'none';
             if (data && data.length > 0) {
-              if (data.length === 1) {
-                // Un solo resultado: seleccionar automáticamente
-                selectedPersonal = data[0];
-                clienteIdInput.value = data[0].id_persona;
-                renderPersonalCard(data[0]);
-              } else {
-                // Múltiples resultados: mostrar lista para elegir
-                personalResultsList.innerHTML = `
-                  <div class="list-group mb-2">
-                    ${data.map(p => `
-                      <button type="button" class="list-group-item list-group-item-action personal-result-item py-2"
-                              data-id="${p.id_persona}"
-                              data-nombre="${p.nombre}"
-                              data-dip="${p.dip}"
-                              data-telefono="${p.telefono || ''}"
-                              data-celular="${p.celular || ''}"
-                              data-cargo="${p.cargo || ''}"
-                              data-seccion="${p.seccion || ''}">
-                        <div class="fw-semibold" style="font-size:0.88rem;">${p.nombre}</div>
-                        <small class="text-muted">CI: ${p.dip} · ${p.cargo || 'Sin cargo'} · ${p.seccion || 'Sin sección'}</small>
-                      </button>`).join('')}
-                  </div>`;
-              }
+              const p = data[0];
+              selectedPersonal = p;
+              clienteIdInput.value = p.id_persona;
+              personalInfo.innerHTML = `
+                <div class="card border-success">
+                  <div class="card-body">
+                    <p><strong>Nombre:</strong> ${p.nombre}</p>
+                    <p><strong>DIP:</strong> ${p.dip}</p>
+                    <p><strong>Teléfono:</strong> ${p.telefono || 'No disponible'}</p>
+                    <p><strong>Celular:</strong> ${p.celular || 'No disponible'}</p>
+                    <p><strong>Cargo:</strong> ${p.cargo || 'Sin cargo'}</p>
+                    <p><strong>Sección:</strong> ${p.seccion || 'Sin sección'}</p>
+                  </div>
+                </div>`;
             } else {
-              personalInfo.innerHTML = '<div class="alert alert-warning py-2"><i class="ri-search-line me-1"></i>No se encontró personal con ese dato.</div>';
+              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese dato.</div>';
             }
           })
           .catch(() => {
-            dipSearchSpinner.style.display = 'none';
-            personalInfo.innerHTML = '<div class="alert alert-danger py-2">Error al buscar. Intente nuevamente.</div>';
+            personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);
     });
 
-    // Selección desde la lista de múltiples resultados
-    personalResultsList.addEventListener('click', function(e) {
-      const btn = e.target.closest('.personal-result-item');
-      if (!btn) return;
-      selectedPersonal = {
-        id_persona: btn.dataset.id,
-        nombre:     btn.dataset.nombre,
-        dip:        btn.dataset.dip,
-        telefono:   btn.dataset.telefono,
-        celular:    btn.dataset.celular,
-        cargo:      btn.dataset.cargo,
-        seccion:    btn.dataset.seccion,
-      };
-      clienteIdInput.value = btn.dataset.id;
-      personalResultsList.innerHTML = '';
-      renderPersonalCard(selectedPersonal);
-    });
-
-    // --- PALETA DE COLORES POR PRODUCTO ---
-    const COLOR_PALETTE = [
-      { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
-      { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
-      { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
-      { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' },
-      { bg: '#F3E5F5', border: '#9C27B0', text: '#6A1B9A' },
-      { bg: '#E0F7FA', border: '#00BCD4', text: '#00838F' },
-      { bg: '#FFFDE7', border: '#FFC107', text: '#F57F17' },
-    ];
-    const productColorMap = {};
-    let colorIndex = 0;
-    function getProductColor(nombre) {
-      if (!productColorMap[nombre]) {
-        productColorMap[nombre] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-        colorIndex++;
-      }
-      return productColorMap[nombre];
+    // Colores por categoría (mismo esquema que el formulario)
+    const CAT_COLORS = {
+      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
+      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
+      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
+      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+    };
+    function getCatColor(cat) {
+      return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
     }
 
     // --- FUNCIONES DE PRODUCTOS Y CARRITO ---
 
-    function renderProducts(filter = '') {
+    function renderProducts(nameFilter = '', catFilter = '') {
       const filtered = allProducts.filter(p =>
-        p.producto.toLowerCase().includes(filter.toLowerCase())
+        p.producto.toLowerCase().includes(nameFilter.toLowerCase()) &&
+        (!catFilter || (p.categoria || '').toUpperCase() === catFilter)
       );
 
       const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -481,47 +421,41 @@
       const paginated = filtered.slice(start, start + itemsPerPage);
 
       productsGrid.innerHTML = paginated.map(p => {
-        const c = getProductColor(p.producto);
+        const c = getCatColor(p.categoria);
         return `
         <div class="col-6 col-md-4 product-card"
              data-id="${p.id}"
              data-name="${p.producto}"
              data-price="${p.precio_contado}"
              data-stock="${p.cantidad_inve}"
-             data-unidad="und">
-          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${c.border} !important;">
-            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${c.bg} 0%, #ffffff 100%);">
+             data-unidad="und"
+             data-categoria="${(p.categoria||'').toUpperCase()}">
+          <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
+            <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
               <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width: 60px; height: 60px; background-color: ${c.border};">
-                <span class="fw-bold" style="color: #fff; font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
+                   style="width:56px;height:56px;background-color:${c.border};">
+                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
               </div>
-              <h6 class="card-title fs-6 mb-1" style="color: ${c.text};">${p.producto}</h6>
+              <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color: ${c.border};">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <p class="card-text mb-0">
-                <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
-              </p>
-              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
+              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
       }).join('');
 
       renderPagination(totalPages);
 
       document.querySelectorAll('.product-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const product = {
-            id: card.dataset.id,
-            name: card.dataset.name,
-            price: parseFloat(card.dataset.price),
-            stock: parseInt(card.dataset.stock),
-            unidad: card.dataset.unidad
-          };
-          addToCart(product);
-        });
+        card.addEventListener('click', () => addToCart({
+          id: card.dataset.id,
+          name: card.dataset.name,
+          price: parseFloat(card.dataset.price),
+          stock: parseInt(card.dataset.stock),
+          unidad: card.dataset.unidad
+        }));
       });
     }
 
@@ -712,7 +646,12 @@
     // --- LISTENERS PRODUCTOS ---
     document.getElementById('productFilter').addEventListener('input', (e) => {
       currentPage = 1;
-      renderProducts(e.target.value);
+      renderProducts(e.target.value, document.getElementById('categoryFilter').value);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+      currentPage = 1;
+      renderProducts(document.getElementById('productFilter').value, e.target.value);
     });
 
     document.getElementById('itemsPerPage').addEventListener('change', (e) => {
@@ -761,7 +700,7 @@
     montoRecibidoInput.addEventListener('input', updateChange);
 
     // Inicializar
-    renderProducts();
+    renderProducts('', '');
     tipoPagoSelect.dispatchEvent(new Event('change'));
   });
 </script>

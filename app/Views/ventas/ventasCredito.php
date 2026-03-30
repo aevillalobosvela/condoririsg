@@ -461,22 +461,18 @@
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
       const dip = this.value.trim();
-
       personalInfo.innerHTML = '';
       clienteIdInput.value = '';
       selectedPersonal = null;
-
       if (dip.length < 3) return;
-
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('ventas/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
-          .then(response => response.json())
+          .then(r => r.json())
           .then(data => {
             if (data && data.length > 0) {
               const p = data[0];
               selectedPersonal = p;
               clienteIdInput.value = p.id_persona;
-
               personalInfo.innerHTML = `
                 <div class="card border-success">
                   <div class="card-body">
@@ -487,14 +483,12 @@
                     <p><strong>Cargo:</strong> ${p.cargo || 'Sin cargo'}</p>
                     <p><strong>Sección:</strong> ${p.seccion || 'Sin sección'}</p>
                   </div>
-                </div>
-              `;
+                </div>`;
             } else {
-              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese DIP.</div>';
+              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese dato.</div>';
             }
           })
-          .catch(error => {
-            console.error('Error al buscar personal:', error);
+          .catch(() => {
             personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);

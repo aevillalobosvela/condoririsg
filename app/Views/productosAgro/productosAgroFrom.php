@@ -69,7 +69,26 @@
   }
   .btn-cancelar:hover { background: #e2e8f0; color: #1e293b; }
 
-  .req { color: #dc2626; margin-left: 2px; }
+  /* Categorías con color */
+  .cat-options { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cat-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .cat-btn:hover { filter: brightness(0.92); }
+  .cat-btn.selected { border-color: #1e293b; box-shadow: 0 0 0 2px rgba(0,0,0,0.15); }
+  /* Colores por categoría — reutilizar en otros módulos */
+  .cat-TUBERCULOS   { background:#fde68a; color:#78350f; }  /* amarillo */
+  .cat-HORTALIZAS   { background:#bbf7d0; color:#14532d; }  /* verde    */
+  .cat-DESHIDRATADOS{ background:#fed7aa; color:#7c2d12; }  /* naranja  */
+  .cat-CEREALES     { background:#bfdbfe; color:#1e3a8a; }  /* azul     */
+  .cat-LEGUMINOSAS  { background:#e9d5ff; color:#4c1d95; }  /* violeta  */
 
   .btn-unidad-rapida {
     background: var(--agro-green-light);
@@ -152,16 +171,25 @@
             </div>
 
             <div class="mb-3">
-              <label for="categoria" class="form-label">Categoría <span class="req">*</span></label>
-              <select class="form-select" id="categoria" name="categoria" required tabindex="2">
-                <?php
-                  $cats = ['TUBERCULOS', 'HORTALIZAS', 'DESHIDRATADOS', 'CEREALES', 'LEGUMINOSAS'];
-                  $catActual = old('categoria', $base->categoria ?? $producto->categoria ?? '');
-                  foreach ($cats as $cat):
-                ?>
-                  <option value="<?= $cat ?>" <?= $catActual === $cat ? 'selected' : '' ?>><?= ucfirst(strtolower($cat)) ?></option>
+              <label class="form-label">Categoría <span class="req">*</span></label>
+              <?php
+                $cats = [
+                  'TUBERCULOS'    => 'Tubérculos',
+                  'HORTALIZAS'    => 'Hortalizas',
+                  'DESHIDRATADOS' => 'Deshidratados',
+                  'CEREALES'      => 'Cereales',
+                  'LEGUMINOSAS'   => 'Leguminosas',
+                ];
+                $catActual = old('categoria', $base->categoria ?? $producto->categoria ?? '');
+              ?>
+              <input type="hidden" id="categoria" name="categoria" value="<?= esc($catActual) ?>" required>
+              <div class="cat-options" id="catOptions">
+                <?php foreach ($cats as $val => $label): ?>
+                  <span class="cat-btn cat-<?= $val ?> <?= $catActual === $val ? 'selected' : '' ?>"
+                        data-value="<?= $val ?>"><?= $label ?></span>
                 <?php endforeach; ?>
-              </select>
+              </div>
+              <div class="invalid-feedback" id="catFeedback"></div>
             </div>
 
             <div class="mb-3">
@@ -285,6 +313,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
+  // Selector visual de categorías
+  const catInput = document.getElementById('categoria');
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      catInput.value = btn.dataset.value;
+      clearInvalid(catInput);
+      document.getElementById('catFeedback').textContent = '';
+    });
+  });
+
   // Mayúsculas en nombre
   const prodEl = document.getElementById('producto');
   if (prodEl) {
@@ -306,9 +346,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Categoría
     const cat = document.getElementById('categoria');
     if (!cat.value) {
-      setInvalid(cat, 'Seleccione una categoría.');
+      cat.classList.add('is-invalid');
+      document.getElementById('catFeedback').textContent = 'Seleccione una categoría.';
       valid = false;
-    } else clearInvalid(cat);
+    } else {
+      cat.classList.remove('is-invalid');
+      document.getElementById('catFeedback').textContent = '';
+    }
 
     // Unidad
     const unidad = document.getElementById('unidad_id');
