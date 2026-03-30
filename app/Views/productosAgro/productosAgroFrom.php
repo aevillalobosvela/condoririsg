@@ -314,27 +314,28 @@
                   <?php endforeach; ?>
                 </select>
               </div>
+              <?php if (!isset($producto)): ?>
               <div class="col-6">
                 <label for="cantidad" class="form-label">Cantidad Inicial <span class="req">*</span></label>
                 <input type="number" class="form-control text-end" id="cantidad" name="cantidad"
-                       value="<?= old('cantidad', $producto->cantidad ?? 0) ?>"
+                       value="<?= old('cantidad', 0) ?>"
                        min="0" step="1" required tabindex="7">
+                <div class="form-text" style="font-size:0.72rem;">Stock con el que inicia el producto.</div>
               </div>
-            </div>
-
-            <?php if (isset($producto)): ?>
-            <div class="row g-3 mb-3">
-              <div class="col-12">
-                <label class="form-label">Stock en Inventario</label>
+              <?php else: ?>
+              <div class="col-6">
+                <label class="form-label">Stock Actual</label>
                 <div class="form-control text-end fw-bold"
                      style="background:#f0fdf4; color:var(--agro-green); border-color:var(--agro-green-border);">
                   <?= (int)$producto->cantidad_inve ?> und
                 </div>
-                <div class="form-text" style="font-size:0.72rem;">
-                  El stock real no se modifica desde aquí — se actualiza con las ventas.
-                </div>
+                <div class="form-text" style="font-size:0.72rem;">Se actualiza con las ventas.</div>
               </div>
+              <?php endif; ?>
             </div>
+
+            <?php if (isset($producto)): ?>
+            <!-- bloque de stock ya integrado arriba -->
             <?php endif; ?>
 
             <!-- Botones al fondo de la sección -->
