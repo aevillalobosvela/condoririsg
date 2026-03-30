@@ -541,6 +541,15 @@
       }
       renderCart();
       updateSummary();
+
+      // Feedback visual en la card del producto
+      const card = document.querySelector(`.product-card[data-id="${product.id}"] .card`);
+      if (card) {
+        card.style.transition = 'transform 0.15s, box-shadow 0.15s';
+        card.style.transform = 'scale(1.06)';
+        card.style.boxShadow = '0 0 0 3px #28a745';
+        setTimeout(() => { card.style.transform = ''; card.style.boxShadow = ''; }, 200);
+      }
     }
 
     function renderCart() {
