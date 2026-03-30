@@ -96,69 +96,6 @@
 
   /* Indicador de campo requerido */
   .req { color: #dc2626; margin-left: 2px; }
-
-  /* Plantillas rápidas */
-  .plantillas-box {
-    background: #fefce8;
-    border: 1px solid #fde68a;
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .plantillas-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #92400e;
-  }
-  .plantillas-hint {
-    font-weight: 400;
-    color: #78350f;
-    font-size: 0.75rem;
-    margin-left: 4px;
-  }
-  .btn-plantilla {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
-    background: #fff;
-    border: 1px solid #fcd34d;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #92400e;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .btn-plantilla:hover {
-    background: #fef08a;
-    border-color: #f59e0b;
-    color: #78350f;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(245,158,11,0.2);
-  }
-  .btn-plantilla.activo {
-    background: #f59e0b;
-    border-color: #d97706;
-    color: #fff;
-  }
-  .plantilla-cat {
-    font-size: 0.68rem;
-    font-weight: 400;
-    opacity: 0.75;
-    margin-left: 2px;
-  }
-  .plantillas-nota {
-    margin-top: 8px;
-    font-size: 0.72rem;
-    color: #92400e;
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
-  }
 </style>
 <?= $this->endSection() ?>
 
@@ -193,35 +130,7 @@
       </div>
     <?php endif; ?>
 
-    <?php if (!isset($producto) && !empty($recientes)): ?>
-    <!-- PLANTILLAS RÁPIDAS -->
-    <div class="plantillas-box mb-3">
-      <div class="plantillas-header">
-        <i class="ri-flashlight-line"></i>
-        <span>Registro rápido</span>
-        <span class="plantillas-hint">Haga clic en un producto para pre-llenar el formulario con sus datos anteriores. Solo deberá ajustar la cantidad.</span>
-      </div>
-      <div class="d-flex flex-wrap gap-2 mt-2">
-        <?php foreach ($recientes as $r): ?>
-          <button type="button" class="btn-plantilla"
-            data-categoria="<?= esc($r->categoria) ?>"
-            data-producto="<?= esc($r->producto) ?>"
-            data-descripcion="<?= esc($r->descripcion) ?>"
-            data-precio-contado="<?= $r->precio_contado ?>"
-            data-precio-credito="<?= $r->precio_credito ?>"
-            data-unidad="<?= $r->unidad_id ?>">
-            <i class="ri-file-copy-line"></i>
-            <?= esc($r->producto) ?>
-            <span class="plantilla-cat"><?= esc($r->categoria) ?></span>
-          </button>
-        <?php endforeach; ?>
-      </div>
-      <div class="plantillas-nota">
-        <i class="ri-information-line"></i>
-        Estos son los últimos <?= count($recientes) ?> productos que registró. Al seleccionar uno, los campos se llenan solos — usted solo cambia lo que sea diferente.
-      </div>
-    </div>
-    <?php endif; ?>
+
 
     <?php
       $action = isset($producto)
@@ -385,35 +294,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // Limpiar is-invalid al escribir
   document.getElementById('formProductoAgro').querySelectorAll('[required]').forEach(f => {
     f.addEventListener('input', () => f.classList.remove('is-invalid'));
-  });
-
-  // --- PLANTILLAS RÁPIDAS ---
-  document.querySelectorAll('.btn-plantilla').forEach(btn => {
-    btn.addEventListener('click', function () {
-      // Rellenar campos
-      document.getElementById('categoria').value    = this.dataset.categoria;
-      document.getElementById('producto').value     = this.dataset.producto;
-      document.getElementById('descripcion').value  = this.dataset.descripcion;
-      document.getElementById('precio_contado').value = parseFloat(this.dataset.precioContado).toFixed(2);
-      document.getElementById('precio_credito').value = parseFloat(this.dataset.precioCredito).toFixed(2);
-
-      const unidadSelect = document.getElementById('unidad_id');
-      if (unidadSelect) unidadSelect.value = this.dataset.unidad;
-
-      // Limpiar cantidad para que el usuario la ingrese manualmente
-      const cantidadInput = document.getElementById('cantidad');
-      cantidadInput.value = '';
-      cantidadInput.focus();
-
-      // Marcar botón activo
-      document.querySelectorAll('.btn-plantilla').forEach(b => b.classList.remove('activo'));
-      this.classList.add('activo');
-
-      // Limpiar is-invalid de campos recién rellenados
-      ['categoria','producto','precio_contado','precio_credito','unidad_id'].forEach(id => {
-        document.getElementById(id)?.classList.remove('is-invalid');
-      });
-    });
   });
 
   // Tab order: al presionar Enter en un campo avanza al siguiente tabindex
