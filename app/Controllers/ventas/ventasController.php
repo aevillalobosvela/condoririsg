@@ -52,7 +52,15 @@ class ventasController extends BaseController
         $userId = session()->get('id');
         
         // 🔑 Modificación 1: Fijamos la sucursal_id a 2, ignorando la sesión.
-        $sucursalId = 2; 
+        $sucursalId = 2;
+
+        // Filtro que excluye ventas agro (tienen producto_agro_id en detalle)
+        $filtroNoAgro = "
+            AND NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )
+        ";
 
         if (empty($userId)) {
             return redirect()->to(base_url('login'))->with('error', 'Debe iniciar sesión para ver las ventas.');
@@ -101,6 +109,7 @@ class ventasController extends BaseController
               AND v.sucursal_id = ?  -- ✅ sucursal_id = 2
               AND v.created_at >= ?
               AND v.created_at <= ?
+              {$filtroNoAgro}
         ";
 
         $countQuery = $db->query($countSql, $baseParams);
@@ -121,6 +130,7 @@ class ventasController extends BaseController
               AND v.created_at >= ?
               AND v.created_at <= ?
               AND v.estado = '1'
+              {$filtroNoAgro}
         ";
 
         $totalVentasQuery = $db->query($totalVentasSql, $baseParams);
@@ -142,6 +152,7 @@ class ventasController extends BaseController
               AND v.created_at <= ?
               AND v.estado = '1'
               AND v.tipo_pago = 'contado' 
+              {$filtroNoAgro}
         ";
 
         $totalContadoQuery = $db->query($totalContadoSql, $baseParams);
@@ -163,6 +174,7 @@ class ventasController extends BaseController
               AND v.created_at <= ?
               AND v.estado = '1'
               AND v.tipo_pago = 'credito' 
+              {$filtroNoAgro}
         ";
 
         $totalCreditoQuery = $db->query($totalCreditoSql, $baseParams);
@@ -195,6 +207,7 @@ class ventasController extends BaseController
               AND v.sucursal_id = ?  -- ✅ sucursal_id = 2
               AND v.created_at >= ?
               AND v.created_at <= ?
+              {$filtroNoAgro}
             ORDER BY v.created_at DESC
             LIMIT ? OFFSET ?
         ";
@@ -551,6 +564,17 @@ class ventasController extends BaseController
 
         if (empty($nombre) || empty($dip) || empty($segmento)) {
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+        }
+
+        $existente = $this->clienteExternoModel
+            ->where('dip', $dip)
+            ->where('deleted_at IS NULL')
+            ->first();
+        if ($existente) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => "Ya existe un cliente externo con DIP {$dip}: {$existente->nombre} ({$existente->segmento}).",
+            ]);
         }
 
         $id = $this->clienteExternoModel->insert([
@@ -1014,23 +1038,25 @@ class ventasController extends BaseController
         $detalles = $query->getResultArray();
 
         // --- Obtener datos del cliente o personal UTO ---
-        $cliente = null;
+        $cliente  = null;
         $personal = null;
+        $clienteExterno = null;
 
-        // Si tiene cliente_id (y no es 0 o null), cargar cliente
-        if (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
-            $cliente = $this->clienteModel->find($venta->cliente_id);
-        }
-        // Si tiene personal_uto_id, cargar datos del personal UTO
-        elseif (!empty($venta->personal_uto_id)) {
+        if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
                 ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
                 ->where('p.id_persona', $venta->personal_uto_id)
-                ->get()
-                ->getRowArray();
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $clienteExterno = $db->table('condoriri.clientes_externos')
+                ->select('nombre, dip, segmento')
+                ->where('id', $venta->cliente_externo_id)
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
+            $cliente = $this->clienteModel->find($venta->cliente_id);
         }
 
         // --- Información de la sucursal ---
@@ -1054,13 +1080,14 @@ class ventasController extends BaseController
 
         // --- Pasar datos a la vista ---
         $data = [
-            'title' => 'Recibo de Venta #' . $ventaId,
-            'venta' => $venta,
-            'detalles' => $detalles,
-            'cliente' => $cliente,
-            'personal' => $personal, // 👈 NUEVO: se pasa a la vista
-            'sucursal' => $sucursalInfo,
-            'nombreUsuario' => $nombreUsuario,
+            'title'          => 'Recibo de Venta #' . $ventaId,
+            'venta'          => $venta,
+            'detalles'       => $detalles,
+            'cliente'        => $cliente,
+            'personal'       => $personal,
+            'clienteExterno' => $clienteExterno,
+            'sucursal'       => $sucursalInfo,
+            'nombreUsuario'  => $nombreUsuario,
         ];
 
         return view('ventas/recibo_print', $data);
