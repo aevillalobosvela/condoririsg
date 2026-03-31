@@ -9,7 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
-## 2026-04-02
+## 2026-03-31
 
 ### Fixed
 - **Búsqueda de receptor en crédito — límite combinado**: `buscarPersonalUto` en los 3 módulos ahora aplica `array_slice` al resultado combinado UTO + externos, garantizando máximo 3 resultados totales (antes podían ser hasta 6).
@@ -42,7 +42,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
-## 2026-04-01
+## 2026-03-30
 
 ### Added
 - **Clientes externos con crédito**: nueva tabla `condoriri.clientes_externos` para registrar personas ajenas a la UTO pero vinculadas institucionalmente (Seguro Universitario, Spectrolab, etc.). No modifica `public.personas` ni `condoriri.clientes`.
