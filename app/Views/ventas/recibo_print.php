@@ -234,6 +234,10 @@ $userSucursalName = session()->get('sucursal_nombre');
                 <?php if (!empty($venta->personal_uto_id) && !empty($personal)): ?>
                     <div class="info-line">Cliente: <?= esc($personal['nombre_completo'] ?? 'N/A') ?></div>
                     <div class="info-line">Documento: <?= esc($personal['dip'] ?? 'N/A') ?></div>
+                <?php elseif (!empty($venta->cliente_externo_id) && !empty($clienteExterno)): ?>
+                    <div class="info-line">Cliente: <?= esc($clienteExterno['nombre']) ?></div>
+                    <div class="info-line">Documento: <?= esc($clienteExterno['dip']) ?></div>
+                    <div class="info-line">Segmento: <?= esc($clienteExterno['segmento']) ?></div>
                 <?php elseif (!empty($cliente)): ?>
                     <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
                     <div class="info-line">Documento: <?= esc($cliente['ci_nit'] ?? '0') ?></div>

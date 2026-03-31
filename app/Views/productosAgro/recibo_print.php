@@ -234,6 +234,10 @@ $nombreUsuario    = session()->get('nombre') ?? session()->get('username') ?? 'U
                     <div class="info-line">DIP: <?= esc($personal['dip'] ?? 'N/A') ?></div>
                     <div class="info-line">Cargo: <?= esc($personal['cargo'] ?? 'Sin cargo') ?></div>
                     <div class="info-line">Sección: <?= esc($personal['seccion'] ?? 'Sin sección') ?></div>
+                <?php elseif (!empty($venta->cliente_externo_id) && !empty($clienteExterno)): ?>
+                    <div class="info-line">Cliente: <?= esc($clienteExterno['nombre']) ?></div>
+                    <div class="info-line">DIP: <?= esc($clienteExterno['dip']) ?></div>
+                    <div class="info-line">Segmento: <?= esc($clienteExterno['segmento']) ?></div>
                 <?php elseif (!empty($cliente)): ?>
                     <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
                     <div class="info-line">Documento: <?= esc($cliente['ci_nit'] ?? '0') ?></div>
