@@ -15,6 +15,7 @@ use App\Models\UsuarioModel;
 use App\Models\Producto\ProductoModel;
 use App\Models\Categoria\CategoriaModel;
 use App\Models\Cliente\ClienteModel;
+use App\Models\ClienteExterno\ClienteExternoModel;
 use App\Models\StockSucursal\StockSucursalModel;
 use App\Models\Unidad\UnidadModel;
 use App\Models\Venta\DetalleModel;
@@ -30,6 +31,7 @@ class InventariosController extends BaseController
     protected $categoriaModel;
     protected $unidadModel;
     protected $clienteModel;
+    protected $clienteExternoModel;
     protected $ventaModel;
     protected $detalleModel;
     protected $stockSucursalModel;
@@ -38,14 +40,15 @@ class InventariosController extends BaseController
 
     public function __construct()
     {
-        $this->inventarioModel = new InventarioModel();
-        $this->productoModel = new ProductoModel();
-        $this->categoriaModel = new CategoriaModel();
-        $this->unidadModel = new UnidadModel();
-        $this->clienteModel = new ClienteModel();
-        $this->ventaModel = new VentaModel();
-        $this->detalleModel = new DetalleModel();
-        $this->materiaPrimaModel = new MateriaPrimaModel();
+        $this->inventarioModel      = new InventarioModel();
+        $this->productoModel        = new ProductoModel();
+        $this->categoriaModel       = new CategoriaModel();
+        $this->unidadModel          = new UnidadModel();
+        $this->clienteModel         = new ClienteModel();
+        $this->clienteExternoModel  = new ClienteExternoModel();
+        $this->ventaModel           = new VentaModel();
+        $this->detalleModel         = new DetalleModel();
+        $this->materiaPrimaModel    = new MateriaPrimaModel();
         helper(['form', 'url']);
     }
 
@@ -840,39 +843,86 @@ class InventariosController extends BaseController
 
     public function buscarPersonalUto()
     {
-        $db = db_connect();
-        $searchTerm = $this->request->getGet('dip');
-        $searchPattern = '%' . $searchTerm . '%';
+        $db      = db_connect();
+        $termino = $this->request->getGet('dip');
+        $pattern = '%' . $termino . '%';
 
-        $sql = "
-            SELECT 
-                p.id_persona, 
-                p.nombre_completo AS nombre, 
-                p.dip, 
-                p.telefono, 
-                p.celular, 
-                COALESCE(e.\"id_estado\", false) AS es_empleado_uto, 
-                c.cargo, 
-                s.seccion 
-            FROM public.personas p 
-            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\") 
-            LEFT JOIN rrhh.cargos c ON (e.id_cargo = c.id_cargo) 
-            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion) 
-            WHERE 
-                p.\"id_estado\" = true
-                AND e.\"id_estado\" = true  
-                AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
+        $sqlUto = "
+            SELECT
+                p.id_persona,
+                p.nombre_completo AS nombre,
+                p.dip,
+                p.telefono,
+                p.celular,
+                c.cargo,
+                s.seccion,
+                'uto' AS tipo
+            FROM public.personas p
+            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\")
+            LEFT JOIN rrhh.cargos c    ON (e.id_cargo = c.id_cargo)
+            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
+            WHERE p.\"id_estado\" = true
+              AND e.\"id_estado\" = true
+              AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
         ";
+        $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
 
-        $query = $db->query($sql, [$searchPattern, $searchPattern]);
-        $results = $query->getResult();
+        $sqlExt = "
+            SELECT
+                id,
+                nombre,
+                dip,
+                NULL AS telefono,
+                NULL AS celular,
+                segmento AS cargo,
+                NULL AS seccion,
+                'externo' AS tipo
+            FROM condoriri.clientes_externos
+            WHERE deleted_at IS NULL
+              AND estado = true
+              AND (dip ILIKE ? OR nombre ILIKE ?)
+        ";
+        $externos = $db->query($sqlExt, [$pattern, $pattern])->getResult();
 
+        return $this->response->setJSON(array_values(array_merge($uto, $externos)));
+    }
 
-        $personal = array_filter($results, function ($person) {
-            return $person->es_empleado_uto == true;
-        });
+    public function guardarClienteExterno()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
 
-        return $this->response->setJSON(array_values($personal));
+        $nombre   = strtoupper(trim($this->request->getPost('nombre') ?? ''));
+        $dip      = trim($this->request->getPost('dip') ?? '');
+        $segmento = trim($this->request->getPost('segmento') ?? '');
+
+        if (empty($nombre) || empty($dip) || empty($segmento)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+        }
+
+        $id = $this->clienteExternoModel->insert([
+            'nombre'   => $nombre,
+            'dip'      => $dip,
+            'segmento' => $segmento,
+            'estado'   => true,
+            'user_id'  => session()->get('id'),
+        ]);
+
+        if (!$id) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Error al guardar el cliente.']);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'cliente' => [
+                'id'       => $id,
+                'nombre'   => $nombre,
+                'dip'      => $dip,
+                'segmento' => $segmento,
+                'tipo'     => 'externo',
+            ],
+        ]);
     }
 
 
@@ -1048,18 +1098,17 @@ class InventariosController extends BaseController
             return redirect()->back()->with('error', 'Método no permitido.');
         }
 
-        $personalUtoId = (int)$this->request->getPost('cliente_id');
-        $tipoPago = $this->request->getPost('tipo_pago');
+        $receptorId   = (int)$this->request->getPost('cliente_id');
+        $tipoReceptor = $this->request->getPost('tipo_receptor');
+        $tipoPago     = $this->request->getPost('tipo_pago');
         $productosJson = $this->request->getPost('productos');
 
-        if ($personalUtoId <= 0) {
-            return redirect()->back()->with('error', 'Debe seleccionar un personal UTO válido.');
+        if ($receptorId <= 0) {
+            return redirect()->back()->with('error', 'Debe seleccionar un receptor válido.');
         }
-
         if (empty($tipoPago)) {
             return redirect()->back()->with('error', 'Faltan datos obligatorios (Tipo de Pago).');
         }
-
         if (empty($productosJson)) {
             return redirect()->back()->with('error', 'Faltan datos obligatorios (Carrito vacío).');
         }
@@ -1070,39 +1119,44 @@ class InventariosController extends BaseController
         }
 
         $sucursalId = session()->get('sucursal_id') ?? 1;
-        $userId = session()->get('id') ?? 1;
+        $userId     = session()->get('id') ?? 1;
 
         $db = \Config\Database::connect();
-        $persona = $db->table('public.personas p')
-            ->select('p.id_persona, p.nombre')
-            ->join('rrhh.empleados e', 'p.id_persona = e.id_persona AND e."id_estado" = true', 'inner')
-            ->where('p.id_persona', $personalUtoId)
-            ->where('p."id_estado"', true)
-            ->get()
-            ->getRow();
 
-        if (!$persona) {
-            return redirect()->back()->with('error', 'El personal seleccionado no es un empleado UTO activo.');
+        if ($tipoReceptor === 'externo') {
+            $receptor = $this->clienteExternoModel->find($receptorId);
+            if (!$receptor || !$receptor->estado) {
+                return redirect()->back()->with('error', 'El cliente externo seleccionado no es válido.');
+            }
+        } else {
+            $receptor = $db->table('public.personas p')
+                ->select('p.id_persona, p.nombre_completo AS nombre')
+                ->join('rrhh.empleados e', 'p.id_persona = e.id_persona AND e."id_estado" = true', 'inner')
+                ->where('p.id_persona', $receptorId)
+                ->where('p."id_estado"', true)
+                ->get()->getRow();
+            if (!$receptor) {
+                return redirect()->back()->with('error', 'El personal seleccionado no es un empleado UTO activo.');
+            }
         }
 
         $db->transBegin();
 
         try {
-            $totalVenta = 0;
+            $totalVenta   = 0;
             $itemsDetalle = [];
             $productosCache = [];
 
             foreach ($productos as $item) {
-                $productoId = (int)($item['id'] ?? 0);
-                $cantidad = (int)($item['quantity'] ?? 0);
-                $precioUnitario = (float)($item['price'] ?? 0);
+                $productoId          = (int)($item['id'] ?? 0);
+                $cantidad            = (int)($item['quantity'] ?? 0);
+                $precioUnitario      = (float)($item['price'] ?? 0);
                 $descuentoPorcentaje = (float)($item['discount'] ?? 0);
 
                 if ($cantidad <= 0 || $precioUnitario <= 0 || $productoId <= 0) {
                     throw new \Exception("Datos inválidos en el carrito para el producto ID {$productoId}.");
                 }
 
-                // ✅ Usar productoModel en lugar de stockSucursalModel
                 if (!isset($productosCache[$productoId])) {
                     $producto = $this->productoModel->find($productoId);
                     if (!$producto) {
@@ -1113,83 +1167,65 @@ class InventariosController extends BaseController
 
                 $producto = $productosCache[$productoId];
 
-                // ✅ Validar estado: asumimos que estado = 1 → activo (ajusta si es distinto)
                 if ((int)$producto->estado === 1) {
-                    $nombreProd = $producto->nombre ?? 'Sin nombre';
-                    throw new \Exception("Producto '{$nombreProd}' está inactivo.");
+                    throw new \Exception("Producto '{$producto->nombre}' está inactivo.");
                 }
-
-                // ✅ Validar stock_inve (no stock)
                 if ($producto->stock_inve < $cantidad) {
-                    $nombreProd = $producto->nombre ?? 'Sin nombre';
-                    throw new \Exception("Stock insuficiente para: {$nombreProd}. Disponible: {$producto->stock_inve}.");
+                    throw new \Exception("Stock insuficiente para: {$producto->nombre}. Disponible: {$producto->stock_inve}.");
                 }
 
                 $subtotalBruto = $precioUnitario * $cantidad;
-                $descuentoMonto = $subtotalBruto * ($descuentoPorcentaje / 100);
-                $subtotalFinal = $subtotalBruto - $descuentoMonto;
-                $totalVenta += $subtotalFinal;
+                $subtotalFinal = $subtotalBruto - ($subtotalBruto * ($descuentoPorcentaje / 100));
+                $totalVenta   += $subtotalFinal;
 
                 $itemsDetalle[] = [
-                    'producto_id' => $productoId,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precioUnitario,
+                    'producto_id'         => $productoId,
+                    'cantidad'            => $cantidad,
+                    'precio_unitario'     => $precioUnitario,
                     'descuento_porcentaje' => $descuentoPorcentaje,
-                    'subtotal' => $subtotalFinal,
-                    'stock_actual' => $producto->stock_inve, // ✅ stock_inve
-                    'producto_nombre' => $producto->nombre ?? 'Sin nombre',
+                    'subtotal'            => $subtotalFinal,
+                    'stock_actual'        => $producto->stock_inve,
+                    'producto_nombre'     => $producto->nombre,
                 ];
             }
 
-            // ✅ Insertar venta
             $ventaData = [
-                'code' => 'TEMP',
-                'cliente_id' => null,
-                'sucursal_id' => $sucursalId,
-                'tipo_pago' => $tipoPago,
-                'monto_total' => $totalVenta,
-                'estado' => 1,
-                'observaciones' => 'Venta a crédito para personal UTO',
-                'user_id' => $userId,
-                'personal_uto_id' => $personalUtoId,
+                'code'               => 'TEMP',
+                'cliente_id'         => null,
+                'sucursal_id'        => $sucursalId,
+                'tipo_pago'          => $tipoPago,
+                'monto_total'        => $totalVenta,
+                'estado'             => 1,
+                'observaciones'      => 'Venta a crédito',
+                'user_id'            => $userId,
+                'personal_uto_id'    => $tipoReceptor === 'uto'     ? $receptorId : null,
+                'cliente_externo_id' => $tipoReceptor === 'externo' ? $receptorId : null,
             ];
 
-            // ✅ Corregir obtención del ID de inserción
             if (!$this->ventaModel->insert($ventaData)) {
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
             $ventaId = $this->ventaModel->getInsertID();
-            if (!$ventaId) {
-                throw new \Exception('No se pudo obtener el ID de la venta.');
-            }
 
-            // Generar código con secuencias
             $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
             $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
-            // ✅ Insertar detalles y actualizar stock_inve
             foreach ($itemsDetalle as $item) {
-                $detalleData = [
-                    'venta_id' => $ventaId,
-                    'stock_id' => null, // Ajustar si es necesario
-
-                    'cantidad' => $item['cantidad'],
+                if (!$this->detalleModel->insert([
+                    'venta_id'        => $ventaId,
+                    'stock_id'        => null,
+                    'producto_id'     => $item['producto_id'],
+                    'cantidad'        => $item['cantidad'],
                     'precio_unitario' => $item['precio_unitario'],
-                    'subtotal' => $item['subtotal'],
-                    'observaciones' => '',
-                    'producto_id' => $item['producto_id'],
-                ];
-
-                if (!$this->detalleModel->insert($detalleData)) {
-                    throw new \Exception('Error al registrar el detalle de venta para: ' . $item['producto_nombre']);
+                    'subtotal'        => $item['subtotal'],
+                    'observaciones'   => '',
+                ])) {
+                    throw new \Exception('Error al registrar el detalle para: ' . $item['producto_nombre']);
                 }
 
-                // ✅ Actualizar stock_inve en productoModel
                 $newStock = $item['stock_actual'] - $item['cantidad'];
                 if (!$this->productoModel->update($item['producto_id'], ['stock_inve' => $newStock])) {
-                    $errors = $this->productoModel->errors();
-                    $errorMsg = !empty($errors) ? 'Errores: ' . json_encode($errors) : 'Falló la actualización del stock.';
-                    throw new \Exception('Error al actualizar stock_inve del producto ' . $item['producto_nombre'] . '. ' . $errorMsg);
+                    throw new \Exception('Error al actualizar el stock de: ' . $item['producto_nombre']);
                 }
             }
 
@@ -1197,12 +1233,8 @@ class InventariosController extends BaseController
             return redirect()->to('/inventarios/recibo/' . $ventaId)->with('success', 'Venta a crédito registrada exitosamente.');
         } catch (\Exception $e) {
             $db->transRollback();
-            $error = $e->getMessage();
-            if ($db->error()['code'] ?? false) {
-                $error .= " (DB: {$db->error()['message']})";
-            }
-            log_message('error', 'Error en guardarCreditoVenta: ' . $error);
-            return redirect()->back()->withInput()->with('error', 'Error al procesar la venta: ' . $error);
+            log_message('error', 'Error en guardarCreditoVenta inventarios: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al procesar la venta: ' . $e->getMessage());
         }
     }
 
