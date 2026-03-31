@@ -409,6 +409,7 @@
             <option value="">Seleccione...</option>
             <option value="SEGURO_UNIV">Seguro Universitario</option>
             <option value="SPECTROLAB">Spectrolab</option>
+            <option value="OTROS">Otros</option>
           </select>
         </div>
       </div>
