@@ -901,6 +901,17 @@ class InventariosController extends BaseController
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
         }
 
+        $existente = $this->clienteExternoModel
+            ->where('dip', $dip)
+            ->where('deleted_at IS NULL')
+            ->first();
+        if ($existente) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => "Ya existe un cliente externo con DIP {$dip}: {$existente->nombre} ({$existente->segmento}).",
+            ]);
+        }
+
         $id = $this->clienteExternoModel->insert([
             'nombre'   => $nombre,
             'dip'      => $dip,
@@ -1281,23 +1292,25 @@ class InventariosController extends BaseController
         $detalles = $query->getResultArray();
 
         // --- Obtener datos del cliente o personal UTO ---
-        $cliente = null;
+        $cliente  = null;
         $personal = null;
+        $clienteExterno = null;
 
-        // Si tiene cliente_id (y no es 0 o null), cargar cliente
-        if (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
-            $cliente = $this->clienteModel->find($venta->cliente_id);
-        }
-        // Si tiene personal_uto_id, cargar datos del personal UTO
-        elseif (!empty($venta->personal_uto_id)) {
+        if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
                 ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
                 ->where('p.id_persona', $venta->personal_uto_id)
-                ->get()
-                ->getRowArray();
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $clienteExterno = $db->table('condoriri.clientes_externos')
+                ->select('nombre, dip, segmento')
+                ->where('id', $venta->cliente_externo_id)
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
+            $cliente = $this->clienteModel->find($venta->cliente_id);
         }
 
         // --- Información de la sucursal ---
@@ -1321,13 +1334,14 @@ class InventariosController extends BaseController
 
         // --- Pasar datos a la vista ---
         $data = [
-            'title' => 'Recibo de Venta #' . $ventaId,
-            'venta' => $venta,
-            'detalles' => $detalles,
-            'cliente' => $cliente,
-            'personal' => $personal, // 👈 NUEVO: se pasa a la vista
-            'sucursal' => $sucursalInfo,
-            'nombreUsuario' => $nombreUsuario,
+            'title'          => 'Recibo de Venta #' . $ventaId,
+            'venta'          => $venta,
+            'detalles'       => $detalles,
+            'cliente'        => $cliente,
+            'personal'       => $personal,
+            'clienteExterno' => $clienteExterno,
+            'sucursal'       => $sucursalInfo,
+            'nombreUsuario'  => $nombreUsuario,
         ];
 
         return view('inventarios/recibo_print', $data);
