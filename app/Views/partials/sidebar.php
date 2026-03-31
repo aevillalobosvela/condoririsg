@@ -174,7 +174,7 @@ $userRoleName = session()->get('rol_nombre');
 
 
         <?php if ($userRoleName === 'vendedor'): ?>
-          <li class="menu-title"><span>Ventas</span></li>
+          <li class="menu-title"><span>Venta de Lacteos</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarVentas" data-bs-toggle="collapse">
               <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
@@ -218,14 +218,14 @@ $userRoleName = session()->get('rol_nombre');
           </li>
 
           <li class="menu-title"><span>Productos Agrícolas</span></li>
-          <li class="nav-item">
-            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
-              <i class="ri-leaf-line"></i> <span>Registro de Productos</span>
+           <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
+              <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
-              <i class="ri-file-list-3-line"></i> <span>Gestionar Ventas</span>
+            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
+              <i class="ri-leaf-line"></i> <span>Registrar Productos</span>
             </a>
           </li>
         <?php endif; ?>
@@ -301,14 +301,14 @@ $userRoleName = session()->get('rol_nombre');
           </li>
 
           <li class="menu-title"><span>Productos Agrícolas</span></li>
-          <li class="nav-item">
-            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
-              <i class="ri-leaf-line"></i> <span>Registro de Productos</span>
+           <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
+              <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
-              <i class="ri-file-list-3-line"></i> <span>Gestionar Ventas</span>
+            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
+              <i class="ri-leaf-line"></i> <span>Registrar Productos</span>
             </a>
           </li>
         <?php endif; ?>

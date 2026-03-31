@@ -5,18 +5,18 @@
 <?php $this->section('styles') ?>
 <style>
   :root {
-    --color-contado: #16a34a;
+    --color-contado: #166534;
     --color-contado-light: #dcfce7;
-    --color-contado-dark: #15803d;
-    --color-credito: #ca8a04;
-    --color-credito-light: #fef9c3;
-    --color-credito-dark: #a16207;
-    --color-total: #65a30d;
-    --color-total-light: #ecfccb;
-    --color-total-dark: #4d7c0f;
-    --color-cierre: #d97706;
-    --color-cierre-light: #fef3c7;
-    --color-cierre-dark: #b45309;
+    --color-contado-dark: #14532d;
+    --color-credito: #15803d;
+    --color-credito-light: #d1fae5;
+    --color-credito-dark: #166534;
+    --color-total: #0f766e;
+    --color-total-light: #ccfbf1;
+    --color-total-dark: #134e4a;
+    --color-cierre: #047857;
+    --color-cierre-light: #d1fae5;
+    --color-cierre-dark: #064e3b;
   }
 
   .card {
@@ -97,8 +97,8 @@
   }
 
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
-    50%       { box-shadow: 0 0 0 10px rgba(217, 119, 6, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(4, 120, 87, 0.4); }
+    50%       { box-shadow: 0 0 0 10px rgba(4, 120, 87, 0); }
   }
 
   .card-cierre-caja .avatar-title {
