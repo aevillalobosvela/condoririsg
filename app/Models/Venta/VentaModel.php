@@ -22,7 +22,8 @@ class VentaModel extends Model
         'estado',
         'observaciones',
         'user_id',
-        'personal_uto_id'
+        'personal_uto_id',
+        'cliente_externo_id',
     ];
 
 
