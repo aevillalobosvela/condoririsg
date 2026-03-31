@@ -9,6 +9,62 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-04-02
+
+### Fixed
+- **Búsqueda de receptor en crédito — límite combinado**: `buscarPersonalUto` en los 3 módulos ahora aplica `array_slice` al resultado combinado UTO + externos, garantizando máximo 3 resultados totales (antes podían ser hasta 6).
+- **`ventasController::credito()` — bug de concatenación**: corregido `->where('stock' . '>' . 0)` por `->where('stock >', 0)`. Además se agrega filtro por `sucursal_id = 2` que faltaba.
+- **`ventasAgroController::guardarCreditoVenta()` — validación de estado vacía**: el bloque de validación de estado del producto estaba vacío (comentario sin código). Ahora lanza excepción si `$producto->estado` es falso.
+
+### Changed
+- **Tablas de ventas — columna Código**: las 3 vistas de gestión de ventas (`/ventas`, `/inventarios/ventas`, `/productosagro/ventas`) reemplazaron la columna `Nro` (id numérico) por el campo `code` de la venta (ej. `SC-CO-000012`).
+- **Tablas de ventas — cliente externo visible**: las queries de listado en los 3 controllers ahora incluyen `LEFT JOIN condoriri.clientes_externos` y las vistas muestran nombre, DIP y segmento del cliente externo en lugar de "Consumidor Final".
+- **Tablas de ventas — esquema de colores independiente**: filas de tabla usan cian `#cffafe`/`#06b6d4` para contado y naranja `#ffedd5`/`#f97316` para crédito, desacoplado de los colores de las cards.
+- **Reportes PDF — columna Nro. Venta**: los 3 PDFs (`CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf`) y los 2 servicios Excel (`ExcelVentasMatrizService`, `ExcelVentasAgroService`) ahora muestran el `code` completo en lugar del `id` numérico.
+- **Reportes PDF — encabezado rango de ventas**: el texto "N° Venta: X al X" extrae solo el número final del code (`substr` + `strrpos`) para mostrar el rango limpio (ej. `1 al 15`).
+- **Reportes PDF — ancho columna Nro. Venta**: `$wNota` aumentado de 18 a 22 (+22%); `$wTotal` reducido de 13 a 10 y header cambiado de `TOTAL` a `T` para compensar.
+- **Búsqueda de receptor en crédito — límite por query**: `LIMIT 3` aplicado individualmente en las queries de UTO y externos en los 3 controllers.
+- **Separación ventas agro / lácteos**: `ventasController::index()` e `inventariosController::indexVenta()` excluyen ventas agro con `NOT EXISTS (... producto_agro_id IS NOT NULL)` en conteos, totales y listado. `VentaModel::getDailySalesReportData()` acepta parámetro `$soloAgro` para filtrar en reportes. `getDailySalesReportDataInve()` también excluye ventas agro.
+- **`ventasAgroController::index()` — filtro corregido**: reemplazado filtro por `user_id` por `sucursal_id` de sesión + `EXISTS (... producto_agro_id IS NOT NULL)`. URL de paginación corregida de `ventas` a `productosagro/ventas`.
+- **Buscador de receptor unificado**: los 3 módulos de crédito muestran resultados de `public.personas` (badge azul, tipo `uto`) y `condoriri.clientes_externos` (badge amarillo, tipo `externo`) en lista clickeable.
+- **Modal alta rápida cliente externo**: disponible en las 3 rutas de crédito con campos nombre, DIP y segmento. Verifica duplicados por DIP antes de insertar.
+- **`condoriri.ventas` — campo `cliente_externo_id`**: nuevo campo para referenciar clientes externos, paralelo a `personal_uto_id`.
+- **Recibos — cliente externo**: los 3 `generarRecibo` cargan datos de `clientes_externos` cuando aplica; las 3 vistas de recibo muestran nombre, DIP y segmento.
+
+### Added
+- **`condoriri.clientes_externos`**: nueva tabla para personas ajenas a la UTO pero vinculadas institucionalmente (Seguro Universitario, Spectrolab). No modifica `public.personas` ni `condoriri.clientes`.
+- **`ClienteExternoModel`**: `app/Models/ClienteExterno/ClienteExternoModel.php` con soft delete.
+- **Rutas `guardarClienteExterno`**: registradas en los 3 grupos (`ventas`, `inventarios`, `productosagro`).
+- **Migración**: `database/migrations/crear_clientes_externos.sql`.
+
+### Removed
+- **Rutas huérfanas `buscar-clientes`, `buscar-productos`, `guardar-cliente`**: eliminadas de los grupos `ventas` e `inventarios` en `Routes.php` (métodos inexistentes en los controllers).
+
+---
+
+## 2026-04-01
+
+### Added
+- **Clientes externos con crédito**: nueva tabla `condoriri.clientes_externos` para registrar personas ajenas a la UTO pero vinculadas institucionalmente (Seguro Universitario, Spectrolab, etc.). No modifica `public.personas` ni `condoriri.clientes`.
+- **`condoriri.ventas` — campo `cliente_externo_id`**: campo nuevo paralelo a `personal_uto_id` para referenciar clientes externos en ventas a crédito.
+- **`ClienteExternoModel`**: nuevo modelo en `app/Models/ClienteExterno/ClienteExternoModel.php` con soft delete.
+- **Alta rápida de cliente externo**: los 3 módulos de venta a crédito (`/ventas/credito`, `/inventarios/credito`, `/productosagro/credito`) incluyen un botón "Nuevo externo" que abre un modal para registrar nombre, DIP y segmento sin salir de la pantalla de venta.
+- **Buscador unificado**: `buscarPersonalUto` en los 3 controllers ahora devuelve resultados de `public.personas` (tipo `uto`) y `condoriri.clientes_externos` (tipo `externo`) en un solo array, diferenciados por badge en la vista.
+- **Rutas `guardarClienteExterno`**: registradas en los 3 grupos (`ventas`, `inventarios`, `productosagro`).
+
+### Changed
+- **`guardarCreditoVenta` en los 3 controllers**: refactorizado para aceptar `tipo_receptor` (`uto` | `externo`) y poblar `personal_uto_id` o `cliente_externo_id` según corresponda.
+- **Vistas `ventasCredito.php`** (3 módulos): buscador muestra lista de resultados clickeables en lugar de seleccionar automáticamente el primero; campo hidden `tipo_receptor` añadido al formulario.
+- **`buscarPersonalUto` en `ventasAgroController`**: corregido `p.nombre` → `p.nombre_completo AS nombre` en SELECT y WHERE (bug previo que devolvía nombre truncado).
+
+### Fixed
+- **`ventasController.guardarCreditoVenta`**: eliminado `var_dump()` de depuración que quedó activo en producción.
+
+### Migration
+- `database/migrations/crear_clientes_externos.sql`
+
+---
+
 ## 2026-03-30
 
 ### Added

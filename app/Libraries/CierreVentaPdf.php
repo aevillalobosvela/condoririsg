@@ -53,10 +53,11 @@ class CierreVentaPdf extends CierreVentaBasePdf
             $productosUnicos[$prodNombre]['total_cantidad'] += $item->cantidad;
 
             $ventaId = $item->venta_id;
+            $codigoVenta = $item->codigo_venta ?? (string)$ventaId;
             if (!isset($ventasAgrupadas[$ventaId])) {
                 $cliente = $item->cliente_nombre ?? 'Consumidor Final';
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = '';
-                $ventasAgrupadas[$ventaId] = ['cliente' => utf8_decode($cliente), 'notas' => $ventaId, 'total_venta' => 0, 'items' => []];
+                $ventasAgrupadas[$ventaId] = ['cliente' => utf8_decode($cliente), 'code' => $codigoVenta, 'total_venta' => 0, 'items' => []];
             }
 
             if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
@@ -81,8 +82,10 @@ class CierreVentaPdf extends CierreVentaBasePdf
             : "Del: $d de {$meses[$m]} de $y Al: " . date('d', strtotime($fecha_fin)) . " de {$meses[date('m', strtotime($fecha_fin))]} de " . date('Y', strtotime($fecha_fin));
 
         $ventaIds    = array_keys($ventasAgrupadas);
-        $nroVentaMin = !empty($ventaIds) ? min($ventaIds) : 0;
-        $nroVentaMax = !empty($ventaIds) ? max($ventaIds) : 0;
+        $codigos     = array_column($ventasAgrupadas, 'code');
+        $numeros     = array_map(fn($c) => (int) substr($c, strrpos($c, '-') + 1), $codigos);
+        $nroVentaMin = !empty($numeros) ? min($numeros) : 0;
+        $nroVentaMax = !empty($numeros) ? max($numeros) : 0;
 
         $this->SetFont('Arial', 'B', 9);
         $this->SetTextColor(0, 70, 180);
@@ -154,7 +157,7 @@ class CierreVentaPdf extends CierreVentaBasePdf
 
         $this->Ln(5);
 
-        $wNota = 18; $wTotal = 13; $subColW = $colWidth / 2;
+        $wNota = 22; $wTotal = 10; $subColW = $colWidth / 2;
         $this->SetFillColor(200, 200, 200);
         $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -163,7 +166,7 @@ class CierreVentaPdf extends CierreVentaBasePdf
             $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
         }
         $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-        $this->Cell($wTotal, 5, 'TOTAL', 1, 1, 'C', true);
+        $this->Cell($wTotal, 5, 'T', 1, 1, 'C', true);
 
         $this->SetFont('Arial', '', 7);
         $fill = false;
@@ -197,7 +200,7 @@ class CierreVentaPdf extends CierreVentaBasePdf
                     $this->Cell($subColW, 5, '', 1, 0, 'C', $fill);
                 }
             }
-            $this->Cell($wNota, 5, $venta['notas'], 1, 0, 'C', $fill);
+            $this->Cell($wNota, 5, $venta['code'], 1, 0, 'C', $fill);
             $this->Cell($wTotal, 5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R', $fill);
             $fill = !$fill;
         }
