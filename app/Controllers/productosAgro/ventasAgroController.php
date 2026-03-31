@@ -43,6 +43,7 @@ class ventasAgroController extends BaseController
     public function index()
     {
         $userId = session()->get('id');
+        $sucursalId = (int) session()->get('sucursal_id');
 
         if (empty($userId)) {
             return redirect()->to(base_url('login'))->with('error', 'Debe iniciar sesión para ver las ventas.');
@@ -66,168 +67,122 @@ class ventasAgroController extends BaseController
         $page = max(1, $page);
 
         $inicio = $fecha_desde . ' 00:00:00';
-        $fin = $fecha_hasta . ' 23:59:59';
-
+        $fin    = $fecha_hasta . ' 23:59:59';
         $offset = ($page - 1) * $per_page;
 
         $db = \Config\Database::connect();
 
-        $baseParams = [$userId, $inicio, $fin];
+        // Filtro base: sucursal + rango de fechas + solo ventas agro
+        $baseParams = [$sucursalId, $inicio, $fin];
+        $filtroAgro = "
+            AND EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )
+        ";
 
-        //---------------------------------------------------------
+        $countQuery = $db->query("
+            SELECT COUNT(*) as total
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              {$filtroAgro}
+        ", $baseParams);
+        $total = (int)($countQuery->getRow()->total ?? 0);
 
-        $countSql = "
-        SELECT COUNT(*) as total
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-    ";
+        $totalVentasQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_monto
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalVentas = (float)($totalVentasQuery->getRow()->total_monto ?? 0);
 
-        $countQuery = $db->query($countSql, $baseParams);
-        if ($countQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Conteo de Ventas: ' . $db->error()['message']);
-        }
+        $totalContadoQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_contado
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              AND v.tipo_pago = 'contado'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalContado = (float)($totalContadoQuery->getRow()->total_contado ?? 0);
 
-        $countResult = $countQuery->getRow();
-        $total = (int)($countResult->total ?? 0);
+        $totalCreditoQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_credito
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              AND v.tipo_pago = 'credito'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalCredito = (float)($totalCreditoQuery->getRow()->total_credito ?? 0);
 
-        //---------------------------------------------------------
-
-        $totalVentasSql = "
-        SELECT SUM(v.monto_total) AS total_monto
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-    ";
-
-        $totalVentasQuery = $db->query($totalVentasSql, $baseParams);
-        if ($totalVentasQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total de Ventas: ' . $db->error()['message']);
-        }
-
-        $totalVentasResult = $totalVentasQuery->getRow();
-        $totalVentas = (float)($totalVentasResult->total_monto ?? 0);
-
-
-        $totalContadoSql = "
-        SELECT SUM(v.monto_total) AS total_contado
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-          AND v.tipo_pago = 'contado' 
-    ";
-
-        $totalContadoQuery = $db->query($totalContadoSql, $baseParams);
-        if ($totalContadoQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total Contado: ' . $db->error()['message']);
-        }
-
-        $totalContadoResult = $totalContadoQuery->getRow();
-        $totalContado = (float)($totalContadoResult->total_contado ?? 0);
-
-
-        // =========================================================
-        // 4. Monto total de ventas A CRÉDITO (NUEVO KPI)
-        // =========================================================
-        $totalCreditoSql = "
-        SELECT SUM(v.monto_total) AS total_credito
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-          AND v.tipo_pago = 'credito' 
-    ";
-
-        $totalCreditoQuery = $db->query($totalCreditoSql, $baseParams);
-        if ($totalCreditoQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total Crédito: ' . $db->error()['message']);
-        }
-
-        $totalCreditoResult = $totalCreditoQuery->getRow();
-        $totalCredito = (float)($totalCreditoResult->total_credito ?? 0);
-        // =========================================================
-
-
-        //---------------------------------------------------------
-        // 5. OBTENER REGISTROS CON DATOS DEL PERSONAL UTO (Listado)
-        $sql = "
-        SELECT 
-            v.*,
-            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
-            -- Campos del personal UTO (solo si es venta a crédito)
-            p.nombre AS nombre_personal,
-            p.dip,
-            cargos.cargo,
-            secciones.seccion
-        FROM condoriri.ventas v
-        LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
-        -- JOIN con personal UTO
-        LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
-        LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
-        LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ? 
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-        ORDER BY v.created_at DESC
-        LIMIT ? OFFSET ?
-    ";
-
-        $ventasParams = array_merge($baseParams, [$per_page, $offset]);
-
-        $ventasQuery = $db->query($sql, $ventasParams);
-        if ($ventasQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Listado de Ventas: ' . $db->error()['message']);
-        }
-
+        $ventasQuery = $db->query("
+            SELECT
+                v.*,
+                COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+                p.nombre_completo AS nombre_personal,
+                p.dip,
+                cargos.cargo,
+                secciones.seccion
+            FROM condoriri.ventas v
+            LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
+            LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
+            LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+            LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
+            LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              {$filtroAgro}
+            ORDER BY v.created_at DESC
+            LIMIT ? OFFSET ?
+        ", array_merge($baseParams, [$per_page, $offset]));
         $ventas = $ventasQuery->getResult();
 
-        //---------------------------------------------------------
-        // 6. Paginación (Sin cambios)
         $totalPages = ceil($total / $per_page);
-        $hasPrev = $page > 1;
-        $hasNext = $page < $totalPages;
+        $hasPrev   = $page > 1;
+        $hasNext   = $page < $totalPages;
 
         $pagerLinks = '';
         if ($totalPages > 1) {
-            $baseUrl = base_url('ventas');
-            $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
-
-            $prevPage = $page - 1;
+            $baseUrl  = base_url('productosagro/ventas');
             $queryArr = [
                 'fecha_desde' => $fecha_desde,
                 'fecha_hasta' => $fecha_hasta,
-                'per_page' => $per_page
+                'per_page'    => $per_page,
             ];
+            $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
 
-            $prevUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $prevPage]));
+            $prevUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $page - 1]));
             $pagerLinks .= '<li class="page-item' . (!$hasPrev ? ' disabled' : '') . '"><a class="page-link" href="' . ($hasPrev ? $prevUrl : '#') . '">Anterior</a></li>';
 
             $start = max(1, $page - 2);
-            $end = min($totalPages, $start + 4);
+            $end   = min($totalPages, $start + 4);
             if ($end - $start < 4 && $totalPages > 5) {
                 $start = max(1, $end - 4);
             }
-
             for ($i = $start; $i <= $end; $i++) {
-                $isActive = $i === $page ? ' active' : '';
-                $pageUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $i]));
+                $isActive   = $i === $page ? ' active' : '';
+                $pageUrl    = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $i]));
                 $pagerLinks .= '<li class="page-item' . $isActive . '"><a class="page-link" href="' . $pageUrl . '">' . $i . '</a></li>';
             }
 
-            $nextPage = $page + 1;
-            $nextUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $nextPage]));
+            $nextUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $page + 1]));
             $pagerLinks .= '<li class="page-item' . (!$hasNext ? ' disabled' : '') . '"><a class="page-link" href="' . ($hasNext ? $nextUrl : '#') . '">Siguiente</a></li>';
             $pagerLinks .= '</ul></nav>';
         }
@@ -329,6 +284,17 @@ class ventasAgroController extends BaseController
 
         if (empty($nombre) || empty($dip) || empty($segmento)) {
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+        }
+
+        $existente = $this->clienteExternoModel
+            ->where('dip', $dip)
+            ->where('deleted_at IS NULL')
+            ->first();
+        if ($existente) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => "Ya existe un cliente externo con DIP {$dip}: {$existente->nombre} ({$existente->segmento}).",
+            ]);
         }
 
         $id = $this->clienteExternoModel->insert([
@@ -734,42 +700,34 @@ class ventasAgroController extends BaseController
         }
         $detalles = $query->getResultArray();
 
-        
-        $cliente = null;
+        $cliente  = null;
         $personal = null;
+        $clienteExterno = null;
 
-        
-        if (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
-            $cliente = $this->clienteModel->find($venta->cliente_id);
-        }
-      
-        elseif (!empty($venta->personal_uto_id)) {
+        if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
                 ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
                 ->where('p.id_persona', $venta->personal_uto_id)
-                ->get()
-                ->getRowArray();
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $clienteExterno = $db->table('condoriri.clientes_externos')
+                ->select('nombre, dip, segmento')
+                ->where('id', $venta->cliente_externo_id)
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
+            $cliente = $this->clienteModel->find($venta->cliente_id);
         }
 
-       
-        $sucursalInfo = [
-            'nombre' => 'Mi Tienda POS',
-            'direccion' => 'Av. Principal #123',
-            'telefono' => '+591 555-1234',
-            'nit' => '123456789-0'
-        ];
-        
-      
         $data = [
-            'title' => 'Recibo de Venta #' . $ventaId,
-            'venta' => $venta,
-            'detalles' => $detalles,
-            'cliente' => $cliente,
-            'personal' => $personal, 
-            'sucursal' => $sucursalInfo,
+            'title'          => 'Recibo de Venta #' . $ventaId,
+            'venta'          => $venta,
+            'detalles'       => $detalles,
+            'cliente'        => $cliente,
+            'personal'       => $personal,
+            'clienteExterno' => $clienteExterno,
         ];
 
         return view('productosAgro/recibo_print', $data);
@@ -794,7 +752,7 @@ class ventasAgroController extends BaseController
         }
 
         $ventaModel = new \App\Models\Venta\VentaModel();
-        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipo);
+        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipo, true);
 
         $db = \Config\Database::connect();
         $usuarioGenerador = $db->table('condoriri.usuarios')
