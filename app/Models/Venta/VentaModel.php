@@ -171,7 +171,7 @@ class VentaModel extends Model
      * @param string $fecha_fin Fecha de fin (YYYY-MM-DD).
      * @return array Array de objetos con el detalle de ventas agrupado por producto.
      */
-    public function getDailySalesReportData(string $fecha_inicio, string $fecha_fin, ?string $tipo = null): array
+    public function getDailySalesReportData(string $fecha_inicio, string $fecha_fin, ?string $tipo = null, bool $soloAgro = false): array
     {
         $db = \Config\Database::connect();
 
@@ -202,6 +202,18 @@ class VentaModel extends Model
             $whereConditions[] = "LOWER(v.tipo_pago) = 'credito'";
         }
 
+        if ($soloAgro) {
+            $whereConditions[] = "EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )";
+        } else {
+            $whereConditions[] = "NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )";
+        }
+
         $whereClause = implode(' AND ', $whereConditions);
 
         $query = $db->query("
@@ -212,19 +224,21 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, ce.nombre, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
             vd.subtotal AS subtotal_item,
             COALESCE(pa.producto, ss.producto) AS producto_nombre,
-            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
-            p.dip AS personal_dip,
-            COALESCE(se.seccion, 'Sin sección') AS personal_seccion
+            COALESCE(p.nombre_completo, ce.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.dip, ce.dip) AS personal_dip,
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
         FROM
             condoriri.ventas v
         LEFT JOIN
             condoriri.clientes c ON c.id = v.cliente_id
+        LEFT JOIN
+            condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
         INNER JOIN
             condoriri.sucursales s ON s.id = v.sucursal_id
         LEFT JOIN
@@ -435,7 +449,7 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, ce.nombre, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
@@ -445,14 +459,16 @@ class VentaModel extends Model
             p2.nombre AS producto_nombre,
             p2.id AS producto_agro_id, 
             
-            -- Datos del personal UTO
-            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
-            p.dip AS personal_dip,
-            COALESCE(se.seccion, 'Sin sección') AS personal_seccion
+            -- Datos del personal UTO / cliente externo
+            COALESCE(p.nombre_completo, ce.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.dip, ce.dip) AS personal_dip,
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
         FROM
             condoriri.ventas v
         LEFT JOIN
             condoriri.clientes c ON c.id = v.cliente_id
+        LEFT JOIN
+            condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
         INNER JOIN
             condoriri.sucursales s ON s.id = v.sucursal_id
         LEFT JOIN

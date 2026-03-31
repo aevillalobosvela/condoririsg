@@ -17,7 +17,7 @@ class ExcelVentasAgroService
     {
         $tipoConsulta = in_array($tipo, ['contado', 'credito', 'general']) ? $tipo : 'general';
 
-        $reportData = $this->ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipoConsulta);
+        $reportData = $this->ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipoConsulta, true);
 
         $productosUnicos  = [];
         $ventasAgrupadas  = [];
