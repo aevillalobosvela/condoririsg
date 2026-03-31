@@ -39,10 +39,11 @@ class ExcelVentasAgroService
             $productosUnicos[$prodNombre]['total_cantidad'] += $item->cantidad;
 
             $ventaId = $item->venta_id;
+            $codigoVenta = $item->codigo_venta ?? (string)$ventaId;
             if (!isset($ventasAgrupadas[$ventaId])) {
                 $cliente = $item->cliente_nombre ?? 'Consumidor Final';
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = '';
-                $ventasAgrupadas[$ventaId] = ['cliente' => $cliente, 'notas' => $ventaId, 'total_venta' => 0, 'items' => []];
+                $ventasAgrupadas[$ventaId] = ['cliente' => $cliente, 'code' => $codigoVenta, 'total_venta' => 0, 'items' => []];
             }
 
             if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
@@ -71,8 +72,10 @@ class ExcelVentasAgroService
             : "Del: $d de {$meses[$m]} de $y Al: $d2 de {$meses[$m2]} de $y2";
 
         $ventaIds    = array_keys($ventasAgrupadas);
-        $nroVentaMin = !empty($ventaIds) ? min($ventaIds) : 0;
-        $nroVentaMax = !empty($ventaIds) ? max($ventaIds) : 0;
+        $codigos     = array_column($ventasAgrupadas, 'code');
+        $numeros     = array_map(fn($c) => (int) substr($c, strrpos($c, '-') + 1), $codigos);
+        $nroVentaMin = !empty($numeros) ? min($numeros) : 0;
+        $nroVentaMax = !empty($numeros) ? max($numeros) : 0;
 
         $tipoLabel = $tipo === 'contado' ? 'AL CONTADO' : ($tipo === 'credito' ? 'A CRÉDITO' : 'GENERALES');
         $tipoNota  = $tipo === 'contado' ? 'al contado' : ($tipo === 'credito' ? 'a crédito' : 'generales');
@@ -192,7 +195,7 @@ class ExcelVentasAgroService
                     echo '<Cell ss:StyleID="center"><Data ss:Type="String"></Data></Cell>';
                 }
             }
-            echo '<Cell ss:StyleID="center"><Data ss:Type="Number">' . $venta['notas'] . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($venta['code'], ENT_XML1) . '</Data></Cell>';
             echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($venta['total_venta'], 2, '.', '') . '</Data></Cell></Row>';
             $fill = !$fill;
         }
