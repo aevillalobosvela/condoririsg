@@ -553,7 +553,7 @@ class ventasController extends BaseController
         ";
         $externos = $db->query($sqlExt, [$pattern, $pattern])->getResult();
 
-        return $this->response->setJSON(array_values(array_merge($uto, $externos)));
+        return $this->response->setJSON(array_values(array_slice(array_merge($uto, $externos), 0, 3)));
     }
 
     public function guardarClienteExterno()
