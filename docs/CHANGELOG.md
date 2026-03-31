@@ -9,6 +9,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-04-01
+
+### Added
+- **Clientes externos con crédito**: nueva tabla `condoriri.clientes_externos` para registrar personas ajenas a la UTO pero vinculadas institucionalmente (Seguro Universitario, Spectrolab, etc.). No modifica `public.personas` ni `condoriri.clientes`.
+- **`condoriri.ventas` — campo `cliente_externo_id`**: campo nuevo paralelo a `personal_uto_id` para referenciar clientes externos en ventas a crédito.
+- **`ClienteExternoModel`**: nuevo modelo en `app/Models/ClienteExterno/ClienteExternoModel.php` con soft delete.
+- **Alta rápida de cliente externo**: los 3 módulos de venta a crédito (`/ventas/credito`, `/inventarios/credito`, `/productosagro/credito`) incluyen un botón "Nuevo externo" que abre un modal para registrar nombre, DIP y segmento sin salir de la pantalla de venta.
+- **Buscador unificado**: `buscarPersonalUto` en los 3 controllers ahora devuelve resultados de `public.personas` (tipo `uto`) y `condoriri.clientes_externos` (tipo `externo`) en un solo array, diferenciados por badge en la vista.
+- **Rutas `guardarClienteExterno`**: registradas en los 3 grupos (`ventas`, `inventarios`, `productosagro`).
+
+### Changed
+- **`guardarCreditoVenta` en los 3 controllers**: refactorizado para aceptar `tipo_receptor` (`uto` | `externo`) y poblar `personal_uto_id` o `cliente_externo_id` según corresponda.
+- **Vistas `ventasCredito.php`** (3 módulos): buscador muestra lista de resultados clickeables en lugar de seleccionar automáticamente el primero; campo hidden `tipo_receptor` añadido al formulario.
+- **`buscarPersonalUto` en `ventasAgroController`**: corregido `p.nombre` → `p.nombre_completo AS nombre` en SELECT y WHERE (bug previo que devolvía nombre truncado).
+
+### Fixed
+- **`ventasController.guardarCreditoVenta`**: eliminado `var_dump()` de depuración que quedó activo en producción.
+
+### Migration
+- `database/migrations/crear_clientes_externos.sql`
+
+---
+
 ## 2026-03-30
 
 ### Added

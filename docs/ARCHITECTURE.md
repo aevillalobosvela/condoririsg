@@ -32,6 +32,17 @@ app/Config/Routes.php          # Todas las rutas y permisos
 | `ganaderia` | Productos agro, envíos |
 | `dev` | Recepciones, acceso técnico |
 
+## Tipos de receptor en ventas a crédito
+Una venta a crédito puede tener exactamente uno de estos tres campos poblado en `condoriri.ventas`:
+
+| Campo | Tabla origen | Descripción |
+|---|---|---|
+| `cliente_id` | `condoriri.clientes` | Venta al contado con cliente registrado |
+| `personal_uto_id` | `public.personas` | Crédito a empleado UTO activo |
+| `cliente_externo_id` | `condoriri.clientes_externos` | Crédito a persona externa vinculada (Seguro Univ., Spectrolab, etc.) |
+
+Segmentos disponibles en `clientes_externos.segmento`: `SEGURO_UNIV`, `SPECTROLAB`.
+
 ## Cómo se definen rutas y permisos
 ```php
 // Patrón estándar en Routes.php
