@@ -137,9 +137,13 @@ class ventasAgroController extends BaseController
                 p.nombre_completo AS nombre_personal,
                 p.dip,
                 cargos.cargo,
-                secciones.seccion
+                secciones.seccion,
+                ce.nombre AS nombre_externo,
+                ce.dip AS dip_externo,
+                ce.segmento
             FROM condoriri.ventas v
             LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
+            LEFT JOIN condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
             LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
             LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
             LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
