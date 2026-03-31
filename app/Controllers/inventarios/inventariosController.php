@@ -401,6 +401,14 @@ class InventariosController extends BaseController
         // La restricción de ventas será por sucursal_id = 4.
         $sucursalId = 4;
 
+        // Filtro que excluye ventas agro
+        $filtroNoAgro = "
+            AND NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )
+        ";
+
         // Se quita la verificación de user_id ya que la restricción es por sucursal.
         // Si necesitas verificar que el usuario esté logueado, usa session()->get('id').
         // $userId = session()->get('id');
@@ -445,6 +453,7 @@ class InventariosController extends BaseController
           AND v.sucursal_id = ?  -- RESTRICCIÓN POR SUCURSAL
           AND v.created_at >= ?
           AND v.created_at <= ?
+          {$filtroNoAgro}
     ";
 
         $countQuery = $db->query($countSql, $baseParams);
@@ -466,6 +475,7 @@ class InventariosController extends BaseController
           AND v.created_at >= ?
           AND v.created_at <= ?
           AND v.estado = '1'
+          {$filtroNoAgro}
     ";
 
         $totalVentasQuery = $db->query($totalVentasSql, $baseParams);
@@ -488,6 +498,7 @@ class InventariosController extends BaseController
           AND v.created_at <= ?
           AND v.estado = '1'
           AND v.tipo_pago = 'contado' 
+          {$filtroNoAgro}
     ";
 
         $totalContadoQuery = $db->query($totalContadoSql, $baseParams);
@@ -511,6 +522,7 @@ class InventariosController extends BaseController
           AND v.created_at <= ?
           AND v.estado = '1'
           AND v.tipo_pago = 'credito' 
+          {$filtroNoAgro}
     ";
 
         $totalCreditoQuery = $db->query($totalCreditoSql, $baseParams);
@@ -545,6 +557,7 @@ class InventariosController extends BaseController
           AND v.sucursal_id = ?  -- RESTRICCIÓN POR SUCURSAL
           AND v.created_at >= ?
           AND v.created_at <= ?
+          {$filtroNoAgro}
         ORDER BY v.created_at DESC
         LIMIT ? OFFSET ?
     ";

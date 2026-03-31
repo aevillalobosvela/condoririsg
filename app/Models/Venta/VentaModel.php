@@ -424,9 +424,13 @@ class VentaModel extends Model
         // Construir condiciones dinámicas
         $whereConditions = [
             'v.deleted_at IS NULL',
-            'v.sucursal_id = 4', // ✅ Filtro fijo por sucursal 4
+            'v.sucursal_id = 4',
             'v.created_at >= ?',
-            'v.created_at <= ?'
+            'v.created_at <= ?',
+            "NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )"
         ];
 
         $params = [$fecha_inicio, $fecha_fin_full];
