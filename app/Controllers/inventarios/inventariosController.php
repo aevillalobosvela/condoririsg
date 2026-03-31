@@ -879,6 +879,7 @@ class InventariosController extends BaseController
             WHERE p.\"id_estado\" = true
               AND e.\"id_estado\" = true
               AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
+            LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
 
@@ -896,6 +897,7 @@ class InventariosController extends BaseController
             WHERE deleted_at IS NULL
               AND estado = true
               AND (dip ILIKE ? OR nombre ILIKE ?)
+            LIMIT 3
         ";
         $externos = $db->query($sqlExt, [$pattern, $pattern])->getResult();
 
