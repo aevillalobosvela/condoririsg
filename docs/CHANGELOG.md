@@ -9,7 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
-## 2026-05-28
+## 2026-04-01
 
 ### Fixed
 - **`productosAgroIndex` — `mb_strimwidth()` error**: replaced call to `mb_strimwidth()` (requires `mbstring` extension) with a `substr()`-based equivalent for truncating product descriptions. No functional change.
