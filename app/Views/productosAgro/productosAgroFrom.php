@@ -83,12 +83,9 @@
   }
   .cat-btn:hover { filter: brightness(0.92); }
   .cat-btn.selected { border-color: #1e293b; box-shadow: 0 0 0 2px rgba(0,0,0,0.15); }
-  /* Colores por categoría — reutilizar en otros módulos */
-  .cat-TUBERCULOS   { background:#fde68a; color:#78350f; }  /* amarillo */
-  .cat-HORTALIZAS   { background:#bbf7d0; color:#14532d; }  /* verde    */
-  .cat-DESHIDRATADOS{ background:#fed7aa; color:#7c2d12; }  /* naranja  */
-  .cat-CEREALES     { background:#bfdbfe; color:#1e3a8a; }  /* azul     */
-  .cat-LEGUMINOSAS  { background:#e9d5ff; color:#4c1d95; }  /* violeta  */
+  /* Colores por categoría */
+  .cat-AGRICOLA { background:#bbf7d0; color:#14532d; }  /* verde  */
+  .cat-PECUARIO { background:#fed7aa; color:#7c2d12; }  /* naranja */
 
   .btn-unidad-rapida {
     background: var(--agro-green-light);
@@ -174,11 +171,8 @@
               <label class="form-label">Categoría <span class="req">*</span></label>
               <?php
                 $cats = [
-                  'TUBERCULOS'    => 'Tubérculos',
-                  'HORTALIZAS'    => 'Hortalizas',
-                  'DESHIDRATADOS' => 'Deshidratados',
-                  'CEREALES'      => 'Cereales',
-                  'LEGUMINOSAS'   => 'Leguminosas',
+                  'AGRICOLA' => 'Agrícola',
+                  'PECUARIO' => 'Pecuario',
                 ];
                 $catActual = old('categoria', $base->categoria ?? $producto->categoria ?? '');
               ?>

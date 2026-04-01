@@ -795,9 +795,7 @@ class ventasController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            // Generar código con secuencias
-            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
-            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
+            $this->ventaModel->update($ventaId, ['code' => 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT)]);
 
 
             // 9. Inserción de Detalles y Actualización de Stock
@@ -968,8 +966,7 @@ class ventasController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            $codigoVenta = $this->ventaModel->generarCodigoVenta($sucursalId, $tipoPago);
-            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
+            $this->ventaModel->update($ventaId, ['code' => 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT)]);
 
             foreach ($itemsDetalle as $item) {
                 if (!$this->detalleModel->insert([
