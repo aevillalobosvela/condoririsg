@@ -9,6 +9,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
+## 2026-05-28
+
+### Fixed
+- **`productosAgroIndex` — `mb_strimwidth()` error**: replaced call to `mb_strimwidth()` (requires `mbstring` extension) with a `substr()`-based equivalent for truncating product descriptions. No functional change.
+
+### Added
+- **Recibos — columna Unidad** (`ventas/recibo_print.php`, `inventarios/recibo_print.php`): agregada columna "Unidad" entre "Producto" y "P.U." en la tabla de detalle de productos. La unidad se resuelve mediante un mapa hardcodeado por nombre de producto (LECHE → LITRO, QUESO → PIEZA, YOGURT/REQUESON/LACTOFRUIT → BOLSA, etc.). Cubre variantes `LACTOFRUIT` y `LACTOFRUT`. Fallback `UND` para nombres no contemplados. Anchos de columna redistribuidos (12+33+15+18+22 = 100%).
+- **Recibo Agro — columna Unidad** (`productosAgro/recibo_print.php`): agregada la misma columna "Unidad" en el recibo de ventas agropecuarias. A diferencia de los módulos lácteos, la unidad se obtiene dinámicamente desde la tabla `condoriri.unidades` mediante `LEFT JOIN` en `ventasAgroController::generarRecibo()` (campo `unidad_nombre`). Fallback `UND`.
+
+### Changed
+- **`ventasAgroController::generarRecibo()`**: la query de detalles del recibo ahora incluye `LEFT JOIN condoriri.unidades u ON u.id = SS.unidad_id` y selecciona `u.nombre AS unidad_nombre`.
+
+---
+
 ## 2026-03-31
 
 ### Fixed
