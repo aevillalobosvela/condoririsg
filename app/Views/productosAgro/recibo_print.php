@@ -250,18 +250,20 @@ $nombreUsuario    = session()->get('nombre') ?? session()->get('username') ?? 'U
             <div class="separator"></div>
 
             <div class="productos-header">
-                <span style="width: 15%;">Cant.</span>
-                <span style="width: 40%;">Producto</span>
-                <span style="width: 20%; text-align: right;">P.U.</span>
-                <span style="width: 25%; text-align: right;">Subtotal</span>
+                <span style="width: 12%;">Cant.</span>
+                <span style="width: 33%;">Producto</span>
+                <span style="width: 15%;">Unidad</span>
+                <span style="width: 18%; text-align: right;">P.U.</span>
+                <span style="width: 22%; text-align: right;">Subtotal</span>
             </div>
 
             <?php foreach ($detalles as $item): ?>
                 <div class="producto-item">
-                    <span style="width: 15%;"><?= esc($item['cantidad']) ?></span>
-                    <span style="width: 40%;"><?= esc(strtoupper($item['producto'] ?? 'PRODUCTO')) ?></span>
-                    <span style="width: 20%; text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></span>
-                    <span style="width: 25%; text-align: right;"><?= number_format($item['subtotal'], 2) ?></span>
+                    <span style="width: 12%;"><?= esc($item['cantidad']) ?></span>
+                    <span style="width: 33%;"><?= esc(strtoupper($item['producto'] ?? 'PRODUCTO')) ?></span>
+                    <span style="width: 15%;"><?= esc(strtoupper($item['unidad_nombre'] ?? 'UND')) ?></span>
+                    <span style="width: 18%; text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></span>
+                    <span style="width: 22%; text-align: right;"><?= number_format($item['subtotal'], 2) ?></span>
                 </div>
             <?php endforeach; ?>
 
