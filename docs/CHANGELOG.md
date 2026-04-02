@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-04-02
+
+### Added
+
+- se cambia el sidebar y se agrega arqueo
+
 ---
 
 ## 2026-04-01
