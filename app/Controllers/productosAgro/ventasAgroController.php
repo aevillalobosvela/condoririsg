@@ -483,7 +483,8 @@ class ventasAgroController extends BaseController
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
 
-        $this->ventaModel->update($ventaId, ['code' => 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT)]);
+        $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
+        $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         foreach ($itemsDetalle as $item) {
             $detalleData = [
@@ -631,7 +632,8 @@ class ventasAgroController extends BaseController
                 throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            $this->ventaModel->update($ventaId, ['code' => 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT)]);
+            $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
             foreach ($itemsDetalle as $item) {
                 if (!$this->detalleModel->insert([
