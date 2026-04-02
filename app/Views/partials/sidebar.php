@@ -217,7 +217,7 @@ $userRoleName = session()->get('rol_nombre');
             </div>
           </li>
 
-          <li class="menu-title"><span>Productos Agrícolas</span></li>
+          <li class="menu-title"><span>Productos Agropecuarios</span></li>
            <li class="nav-item">
             <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
               <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
@@ -300,7 +300,7 @@ $userRoleName = session()->get('rol_nombre');
             </div>
           </li>
 
-          <li class="menu-title"><span>Productos Agrícolas</span></li>
+          <li class="menu-title"><span>Productos Agropecuarios</span></li>
            <li class="nav-item">
             <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
               <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
