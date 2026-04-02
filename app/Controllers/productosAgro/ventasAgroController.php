@@ -5,6 +5,7 @@ namespace App\Controllers\productosAgro;
 use App\Controllers\BaseController;
 
 use App\Libraries\Agro\CierreVentaAgroPdf;
+use App\Libraries\ArqueoVentasPdf;
 
 
 use App\Models\Categoria\CategoriaModel;
@@ -786,5 +787,33 @@ class ventasAgroController extends BaseController
 
         $service = new \App\Services\Agro\ExcelVentasAgroService();
         $service->exportar($fecha_inicio, $fecha_fin, $tipo);
+    }
+
+    public function exportarArqueoPdf()
+    {
+        $hoy          = date('Y-m-d');
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?: $hoy;
+        $fecha_fin    = $this->request->getGet('fecha_fin')    ?: $hoy;
+
+        $ventaModel = new \App\Models\Venta\VentaModel();
+        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, null, true);
+
+        $db = \Config\Database::connect();
+        $usuarioGenerador = $db->table('condoriri.usuarios')
+            ->select('nombre, apellidos')
+            ->where('id', session()->get('id'))
+            ->get()->getRowArray();
+        $nombreUsuario = $usuarioGenerador
+            ? ucwords(strtolower(trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? ''))))
+            : 'Usuario';
+
+        $pdf = new ArqueoVentasPdf();
+        $pdf->generarArqueo($reportData, [
+            'fecha_inicio'      => $fecha_inicio,
+            'fecha_fin'         => $fecha_fin,
+            'nombre_usuario'    => $nombreUsuario,
+            'titulo_modulo'     => 'CONDORIRI AGROPECUARIO',
+            'responsable_cargo' => 'Responsable - Productos Agropecuarios',
+        ]);
     }
 }

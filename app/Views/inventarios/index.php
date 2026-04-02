@@ -506,6 +506,12 @@
               </ul>
             </div>
           </div>
+          <!-- Arqueo -->
+          <div class="col-md-2">
+            <a href="<?= base_url('inventarios/arqueo/pdf?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta)) ?>" target="_blank" class="btn btn-outline-danger w-100">
+              <i class="ri-file-chart-2-line me-1"></i> Cierre y Arqueo
+            </a>
+          </div>
         </form>
       </div>
     </div>

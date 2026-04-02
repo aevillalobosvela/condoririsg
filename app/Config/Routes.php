@@ -130,6 +130,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('cierre', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('cierre/rango', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarExcelVentas', 'inventarios\ReportesVentasController::exportarExcelVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('arqueo/pdf', 'inventarios\inventariosController::exportarArqueoPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarClienteExterno', 'inventarios\inventariosController::guardarClienteExterno', ['filter' => 'role:admin,almacen']);
@@ -276,6 +277,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cierre', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('cierre/rango', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('exportarExcelVentas', 'ventas\ventasController::exportarExcelVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
+    $routes->get('arqueo/pdf', 'ventas\ventasController::exportarArqueoPdf', ['filter' => 'role:admin,vendedor,contabilidad']);
 });
 
 // ============================================================================
@@ -307,6 +309,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
     $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
     $routes->get('exportarPdfVentas', 'productosAgro\ventasAgroController::exportarPdfVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
+    $routes->get('arqueo/pdf', 'productosAgro\ventasAgroController::exportarArqueoPdf', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
     $routes->post('storeUnidadRapida', 'productosAgro\productosAgroController::storeUnidadRapida', ['filter' => 'role:admin,agropecuario,ganaderia,vendedor,almacen']);
 });
 
