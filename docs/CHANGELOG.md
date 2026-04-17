@@ -7,6 +7,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-04-17
+
+### Fixed
+- **Campo de nombre personal UTO — inconsistencia en 3 módulos**: el campo `p.nombre_completo` de `public.personas` (formato `NOMBRES PATERNO MATERNO`) fue reemplazado por `p.nombre` (formato `PATERNO MATERNO NOMBRES`) en todas las queries que referencian personal UTO. El campo `nombre_completo` tenía orden incorrecto; `nombre` es la concatenación con el orden deseado.
+- **`ventasAgroController::generarRecibo()` — nombre truncado**: el SELECT usaba `p.nombre` (nombres de pila solamente, campo `nombres`) en lugar de `p.nombre_completo`. Corregido a `p.nombre` (la concatenación completa con apellidos primero). El recibo de agro mostraba solo los nombres de pila del personal UTO.
+
+### Changed
+- **`buscarPersonalUto()` — los 3 módulos** (`ventasController`, `inventariosController`, `ventasAgroController`): SELECT cambiado de `p.nombre_completo AS nombre` a `p.nombre AS nombre`; cláusula WHERE cambiada de `p.nombre_completo ILIKE ?` a `p.nombre ILIKE ?`. La barra de búsqueda ahora devuelve y busca por el formato `PATERNO MATERNO NOMBRES`.
+- **`guardarCreditoVenta()` validación receptor — los 3 módulos**: SELECT cambiado de `p.nombre_completo AS nombre` a `p.nombre AS nombre`.
+- **`generarRecibo()` — los 3 módulos**: SELECT cambiado de `p.nombre_completo` a `p.nombre` en la query de datos del personal UTO.
+- **Vistas de recibo** (`ventas/recibo_print.php`, `inventarios/recibo_print.php`, `productosAgro/recibo_print.php`): `$personal['nombre_completo']` → `$personal['nombre']`.
+- **Listado de ventas — los 3 módulos**: query principal cambiada de `p.nombre_completo AS nombre_personal` a `p.nombre AS nombre_personal`.
+- **`VentaModel::getDailySalesReportData()` y `getDailySalesReportDataInve()`**: COALESCE de `cliente_nombre` y `personal_nombre` actualizados de `p.nombre_completo` a `p.nombre`.
+
 ## 2026-04-02
 
 ### Added
