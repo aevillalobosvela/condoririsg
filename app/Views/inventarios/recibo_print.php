@@ -234,6 +234,10 @@ $userSucursalName = session()->get('sucursal_nombre');
                 <?php if (!empty($venta->personal_uto_id) && !empty($personal)): ?>
                     <div class="info-line">Cliente: <?= esc($personal['nombre_completo'] ?? 'N/A') ?></div>
                     <div class="info-line">Documento: <?= esc($personal['dip'] ?? 'N/A') ?></div>
+                <?php elseif (!empty($venta->cliente_externo_id) && !empty($clienteExterno)): ?>
+                    <div class="info-line">Cliente: <?= esc($clienteExterno['nombre']) ?></div>
+                    <div class="info-line">Documento: <?= esc($clienteExterno['dip']) ?></div>
+                    <div class="info-line">Segmento: <?= esc($clienteExterno['segmento']) ?></div>
                 <?php elseif (!empty($cliente)): ?>
                     <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
                     <div class="info-line">Documento: <?= esc($cliente['ci_nit'] ?? '0') ?></div>
@@ -245,19 +249,35 @@ $userSucursalName = session()->get('sucursal_nombre');
 
             <div class="separator"></div>
 
+            <?php
+            $unidadesMap = [
+                'LACTOFRUIT 120 ML'        => 'BOLSA',
+                'LACTOFRUT 120 ML'         => 'BOLSA',
+                'LECHE'                    => 'LITRO',
+                'QUESO 900 GRAMOS'         => 'PIEZA',
+                'QUESO SIN SAL 500 GRAMOS' => 'PIEZA',
+                'REQUESON 250 GRAMOS'      => 'BOLSA',
+                'YOGURT 1 LITRO'           => 'BOLSA',
+                'YOGURT 120 ML'            => 'BOLSA',
+                'YOGURT GRIEGO 250 GRAMOS' => 'PIEZA',
+            ];
+            ?>
             <div class="productos-header">
-                <span style="width: 15%;">Cant.</span>
-                <span style="width: 40%;">Producto</span>
-                <span style="width: 20%; text-align: right;">P.U.</span>
-                <span style="width: 25%; text-align: right;">Subtotal</span>
+                <span style="width: 12%;">Cant.</span>
+                <span style="width: 33%;">Producto</span>
+                <span style="width: 15%;">Unidad</span>
+                <span style="width: 18%; text-align: right;">P.U.</span>
+                <span style="width: 22%; text-align: right;">Subtotal</span>
             </div>
 
             <?php foreach ($detalles as $item): ?>
+                <?php $unidad = $unidadesMap[strtoupper(trim($item['nombre'] ?? ''))] ?? 'UND'; ?>
                 <div class="producto-item">
-                    <span style="width: 15%;"><?= esc($item['cantidad']) ?></span>
-                    <span style="width: 40%;"><?= esc(strtoupper($item['nombre'] ?? 'PRODUCTO')) ?></span>
-                    <span style="width: 20%; text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></span>
-                    <span style="width: 25%; text-align: right;"><?= number_format($item['subtotal'], 2) ?></span>
+                    <span style="width: 12%;"><?= esc($item['cantidad']) ?></span>
+                    <span style="width: 33%;"><?= esc(strtoupper($item['nombre'] ?? 'PRODUCTO')) ?></span>
+                    <span style="width: 15%;"><?= esc($unidad) ?></span>
+                    <span style="width: 18%; text-align: right;"><?= number_format($item['precio_unitario'], 2) ?></span>
+                    <span style="width: 22%; text-align: right;"><?= number_format($item['subtotal'], 2) ?></span>
                 </div>
             <?php endforeach; ?>
 

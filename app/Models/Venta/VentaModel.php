@@ -22,7 +22,8 @@ class VentaModel extends Model
         'estado',
         'observaciones',
         'user_id',
-        'personal_uto_id'
+        'personal_uto_id',
+        'cliente_externo_id',
     ];
 
 
@@ -36,6 +37,56 @@ class VentaModel extends Model
 
 
     protected $skipValidation = true;
+
+    /**
+     * Genera código de venta según sucursal y tipo de pago
+     * @param int $sucursal_id ID de la sucursal (2=Tienda, 4=Planta)
+     * @param string $tipo_pago Tipo de pago ('contado' o 'credito')
+     * @return string Código generado
+     */
+    public function generarCodigoVenta(int $sucursal_id, string $tipo_pago): string
+    {
+        $prefijo_sucursal = ($sucursal_id == 2) ? 'SC' : 'PP';
+        $prefijo_tipo = (strtolower($tipo_pago) == 'contado') ? 'CO' : 'CR';
+        $seq_name = 'seq_venta_' . strtolower($prefijo_sucursal . '_' . $prefijo_tipo);
+
+        $query = $this->db->query("SELECT nextval('condoriri.{$seq_name}') as numero");
+        $numero = $query->getRow()->numero;
+
+        return "{$prefijo_sucursal}-{$prefijo_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Genera código de venta para el módulo Agro.
+     *
+     * Requerimiento institucional:
+     * - 4 series independientes: (2 sucursales) x (2 tipos: contado/credito)
+     * - No se reinician
+     * - Ventas canceladas conservan el código (se consume secuencia una vez creada la venta)
+     */
+    public function generarCodigoAgroVenta(int $sucursal_id, string $tipo_pago): string
+    {
+        // Ajusta la segmentación solo para las sucursales usadas por Agro.
+        // (Si en el futuro se agregan sucursales nuevas, se deberá extender el mapeo
+        // y crear sus secuencias correspondientes).
+        if ($sucursal_id === 2) {
+            $prefijo_sucursal = 'SC';
+        } elseif ($sucursal_id === 4) {
+            $prefijo_sucursal = 'PP';
+        } else {
+            throw new \InvalidArgumentException("Sucursal Agro no soportada para numeración: {$sucursal_id}. Se esperan 2 o 4.");
+        }
+
+        $prefijo_tipo = (strtolower($tipo_pago) === 'contado') ? 'CO' : 'CR';
+
+        // Secuencias nuevas e independientes para Agro (4 series).
+        $seq_name = 'seq_agro_venta_' . strtolower($prefijo_sucursal . '_' . $prefijo_tipo);
+        $query = $this->db->query("SELECT nextval('condoriri.{$seq_name}') as numero");
+        $numero = $query->getRow()->numero;
+
+        // Prefijo "AG" para garantizar unicidad con la numeración histórica de otras ventas.
+        return "AG-{$prefijo_sucursal}-{$prefijo_tipo}-" . str_pad($numero, 6, '0', STR_PAD_LEFT);
+    }
 
     /**
      * Recupera todas las ventas no eliminadas con el nombre completo del cliente.
@@ -120,7 +171,7 @@ class VentaModel extends Model
      * @param string $fecha_fin Fecha de fin (YYYY-MM-DD).
      * @return array Array de objetos con el detalle de ventas agrupado por producto.
      */
-    public function getDailySalesReportData(string $fecha_inicio, string $fecha_fin, ?string $tipo = null): array
+    public function getDailySalesReportData(string $fecha_inicio, string $fecha_fin, ?string $tipo = null, bool $soloAgro = false): array
     {
         $db = \Config\Database::connect();
 
@@ -151,6 +202,18 @@ class VentaModel extends Model
             $whereConditions[] = "LOWER(v.tipo_pago) = 'credito'";
         }
 
+        if ($soloAgro) {
+            $whereConditions[] = "EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )";
+        } else {
+            $whereConditions[] = "NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )";
+        }
+
         $whereClause = implode(' AND ', $whereConditions);
 
         $query = $db->query("
@@ -161,19 +224,21 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, ce.nombre, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
             vd.subtotal AS subtotal_item,
             COALESCE(pa.producto, ss.producto) AS producto_nombre,
-            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
-            p.dip AS personal_dip,
-            COALESCE(se.seccion, 'Sin sección') AS personal_seccion
+            COALESCE(p.nombre_completo, ce.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.dip, ce.dip) AS personal_dip,
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
         FROM
             condoriri.ventas v
         LEFT JOIN
             condoriri.clientes c ON c.id = v.cliente_id
+        LEFT JOIN
+            condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
         INNER JOIN
             condoriri.sucursales s ON s.id = v.sucursal_id
         LEFT JOIN
@@ -359,9 +424,13 @@ class VentaModel extends Model
         // Construir condiciones dinámicas
         $whereConditions = [
             'v.deleted_at IS NULL',
-            'v.sucursal_id = 4', // ✅ Filtro fijo por sucursal 4
+            'v.sucursal_id = 4',
             'v.created_at >= ?',
-            'v.created_at <= ?'
+            'v.created_at <= ?',
+            "NOT EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )"
         ];
 
         $params = [$fecha_inicio, $fecha_fin_full];
@@ -384,7 +453,7 @@ class VentaModel extends Model
             v.monto_total AS monto_total_venta,
             v.tipo_pago,
             v.estado AS estado_venta,
-            COALESCE(p.nombre_completo, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+            COALESCE(p.nombre_completo, ce.nombre, c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
             s.nombre AS sucursal_nombre,
             vd.cantidad,
             vd.precio_unitario,
@@ -394,14 +463,16 @@ class VentaModel extends Model
             p2.nombre AS producto_nombre,
             p2.id AS producto_agro_id, 
             
-            -- Datos del personal UTO
-            COALESCE(p.nombre_completo, 'No asignado') AS personal_nombre,
-            p.dip AS personal_dip,
-            COALESCE(se.seccion, 'Sin sección') AS personal_seccion
+            -- Datos del personal UTO / cliente externo
+            COALESCE(p.nombre_completo, ce.nombre, 'No asignado') AS personal_nombre,
+            COALESCE(p.dip, ce.dip) AS personal_dip,
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
         FROM
             condoriri.ventas v
         LEFT JOIN
             condoriri.clientes c ON c.id = v.cliente_id
+        LEFT JOIN
+            condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
         INNER JOIN
             condoriri.sucursales s ON s.id = v.sucursal_id
         LEFT JOIN

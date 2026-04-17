@@ -22,6 +22,31 @@ class ProductosAgroController extends BaseController
     }
 
 
+    public function storeUnidadRapida()
+    {
+        $nombre = trim($this->request->getPost('nombre'));
+        if (empty($nombre)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'El nombre es requerido.']);
+        }
+
+        $unidadModel = new \App\Models\Unidad\UnidadModel();
+        $id = $unidadModel->insert([
+            'nombre'  => strtoupper($nombre),
+            'tipo'    => 'agro',
+            'estado'  => true,
+            'user_id' => session()->get('id'),
+        ]);
+
+        if (!$id) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al guardar la unidad.']);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'unidad'  => ['id' => $id, 'nombre' => strtoupper($nombre)],
+        ]);
+    }
+
     public function index()
     {
 
@@ -61,9 +86,9 @@ class ProductosAgroController extends BaseController
 
         $data = [
             'title'     => 'Nuevo Producto Agropecuario',
-            'unidades'  => $this->unidadModel->findAll(),
+            'unidades'  => $this->unidadModel->where('tipo', 'agro')->where('estado', true)->findAll(),
             'recientes' => $recientes,
-            'base'      => $base,   // producto a duplicar (null si no aplica)
+            'base'      => $base,
         ];
 
         return view('productosAgro/productosAgroFrom', $data);
@@ -71,79 +96,94 @@ class ProductosAgroController extends BaseController
 
     public function store(): RedirectResponse
     {
-
         $sucursal = (int) session()->get('sucursal_id');
-        $userId = (int) session()->get('id');
-        // 1. Verificación del método de solicitud
+        $userId   = (int) session()->get('id');
+
         if (!$this->request->is('post')) {
             return redirect()->back()->withInput()->with('error', 'Método de solicitud no permitido.');
         }
 
-        // 2. Iniciar la Transacción para asegurar la atomicidad (generación de código + inserción)
+        $rules = [
+            'producto'       => 'required|min_length[2]|max_length[255]',
+            'categoria'      => 'required',
+            'unidad_id'      => 'required|is_natural_no_zero',
+            'cantidad'       => 'required|is_natural',
+            'precio_contado' => 'required|decimal|greater_than[0]',
+            'precio_credito' => 'required|decimal|greater_than[0]',
+        ];
+
+        $messages = [
+            'producto'       => [
+                'required'   => 'El nombre del producto es obligatorio.',
+                'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+            ],
+            'categoria'      => ['required' => 'Seleccione una categoría.'],
+            'unidad_id'      => [
+                'required'            => 'Seleccione una unidad de medida.',
+                'is_natural_no_zero'  => 'Seleccione una unidad válida.',
+            ],
+            'cantidad'       => [
+                'required'   => 'La cantidad inicial es obligatoria.',
+                'is_natural' => 'La cantidad debe ser un número entero mayor o igual a 0.',
+            ],
+            'precio_contado' => [
+                'required'     => 'El precio de contado es obligatorio.',
+                'decimal'      => 'El precio de contado debe ser un número válido.',
+                'greater_than' => 'El precio de contado debe ser mayor a 0.',
+            ],
+            'precio_credito' => [
+                'required'     => 'El precio de crédito es obligatorio.',
+                'decimal'      => 'El precio de crédito debe ser un número válido.',
+                'greater_than' => 'El precio de crédito debe ser mayor a 0.',
+            ],
+        ];
+
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
         $this->productoModel->db->transStart();
 
         try {
-            // Generar código único AGRO-YYYYMMDD-NNN (Asumiendo PostgreSQL por el uso de SUBSTRING/regex)
-            $hoy = date('Ymd');
+            $hoy           = date('Ymd');
             $codigo_prefijo = 'AGRO-' . $hoy;
 
-            // Usamos el builder del modelo para ejecutar la consulta de manera limpia.
-            // La consulta busca el número secuencial más alto del día.
             $query = $this->productoModel->db->table($this->productoModel->table)
-                // Utilizamos una expresión regular específica de PostgreSQL para extraer el número secuencial.
                 ->select("COALESCE(MAX(CAST(SUBSTRING(code FROM '{$codigo_prefijo}-(\\d+)$') AS INTEGER)), 0) AS max_num")
-                // Filtramos solo por códigos que sigan el patrón del día actual
                 ->where("code ~ '^{$codigo_prefijo}-\\d+$'")
-                ->get()->getRow(); // Obtenemos el resultado como objeto
+                ->get()->getRow();
 
             $siguiente = ($query->max_num ?? 0) + 1;
-            $code = $codigo_prefijo . '-' . str_pad($siguiente, 3, '0', STR_PAD_LEFT);
+            $code      = $codigo_prefijo . '-' . str_pad($siguiente, 3, '0', STR_PAD_LEFT);
 
-            // 3. Preparar y sanear datos
             $data = [
-                'code' => $code,
-                'producto' => strtoupper(trim($this->request->getPost('producto'))),
-                'descripcion' => trim($this->request->getPost('descripcion')),
-                'categoria' => strtoupper(trim($this->request->getPost('categoria'))),
-
-                // Conversión explícita de tipos y uso de coalescing para seguridad
-                'unidad_id' => (int) $this->request->getPost('unidad_id'),
-                'precio_contado' => (float) $this->request->getPost('precio_contado'),
-                'precio_credito' => (float) $this->request->getPost('precio_credito'),
-                'cantidad' => (int) ($this->request->getPost('cantidad') ?? 0),
-                'cantidad_inve' => (int) ($this->request->getPost('cantidad') ?? 0),
-
-                // Obtener datos de sesión con valor predeterminado seguro
-                'sucursal_id' => $sucursal,
-                'user_id' => $userId,
-                'estado' => true,
+                'code'          => $code,
+                'producto'      => strtoupper(trim($this->request->getPost('producto'))),
+                'descripcion'   => trim($this->request->getPost('descripcion')),
+                'categoria'     => strtoupper(trim($this->request->getPost('categoria'))),
+                'unidad_id'     => (int) $this->request->getPost('unidad_id'),
+                'precio_contado'=> (float) $this->request->getPost('precio_contado'),
+                'precio_credito'=> (float) $this->request->getPost('precio_credito'),
+                'cantidad'      => (int) $this->request->getPost('cantidad'),
+                'cantidad_inve' => (int) $this->request->getPost('cantidad'),
+                'sucursal_id'   => $sucursal,
+                'user_id'       => $userId,
+                'estado'        => true,
             ];
 
-            // 4. Usar ORM: save() inserta + valida + maneja timestamps
             if (!$this->productoModel->save($data)) {
-                // Si save() devuelve false, es un error de VALIDACIÓN
-                // Forzamos un throw para que caiga en el catch y haga el rollback
                 throw new \Exception('Validation Failed');
             }
 
-            // 5. Si todo fue exitoso, completar la transacción (commit)
             $this->productoModel->db->transComplete();
 
             return redirect()->to('/productosagro')->with('success', "✅ Producto registrado. Código: <strong>{$code}</strong>");
+
         } catch (\Throwable $e) {
-            // Rollback de la transacción en caso de cualquier error
             $this->productoModel->db->transRollback();
-
-            // Manejar errores de validación (si save falló)
-            if ($e->getMessage() === 'Validation Failed') {
-                $errors = $this->productoModel->errors();
-                $msg = 'Errores de Validación: ' . implode(', ', $errors);
-            } else {
-                // Manejar otros errores (BD, sintaxis, etc.)
-                $msg = 'Error del Sistema/BD: ' . $e->getMessage();
-            }
-
-            // Redireccionar con los datos de entrada para que el usuario no pierda lo escrito
+            $msg = $e->getMessage() === 'Validation Failed'
+                ? 'Errores de Validación: ' . implode(', ', $this->productoModel->errors())
+                : 'Error del Sistema/BD: ' . $e->getMessage();
             return redirect()->back()->withInput()->with('error', $msg);
         }
     }
@@ -160,10 +200,10 @@ class ProductosAgroController extends BaseController
         $sucursalModel = model('App\Models\Sucursal\SucursalModel');
 
         $data = [
-            'title' => 'Editar Producto',
-            'producto' => $producto,
-            'unidades' => $unidadModel->findAll(),
-            'sucursales' => $sucursalModel->findAll(),
+            'title'     => 'Editar Producto',
+            'producto'  => $producto,
+            'unidades'  => $unidadModel->where('tipo', 'agro')->where('estado', true)->findAll(),
+            'sucursales'=> $sucursalModel->findAll(),
         ];
 
         return view('productosAgro/productosAgroFrom', $data);
@@ -175,15 +215,47 @@ class ProductosAgroController extends BaseController
         if (!$this->request->is('post')) {
             return redirect()->back()->with('error', 'Método no permitido.');
         }
-
         if (!$id) {
             return redirect()->back()->with('error', 'ID de producto no especificado.');
         }
 
-        // ✅ Obtener producto existente (para preservar campos no editables)
         $producto = $this->productoModel->find($id);
         if (!$producto) {
             return redirect()->to('/productosagro')->with('error', 'Producto no encontrado.');
+        }
+
+        $rules = [
+            'producto'       => 'required|min_length[2]|max_length[255]',
+            'categoria'      => 'required',
+            'unidad_id'      => 'required|is_natural_no_zero',
+            'precio_contado' => 'required|decimal|greater_than[0]',
+            'precio_credito' => 'required|decimal|greater_than[0]',
+        ];
+
+        $messages = [
+            'producto'       => [
+                'required'   => 'El nombre del producto es obligatorio.',
+                'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+            ],
+            'categoria'      => ['required' => 'Seleccione una categoría.'],
+            'unidad_id'      => [
+                'required'           => 'Seleccione una unidad de medida.',
+                'is_natural_no_zero' => 'Seleccione una unidad válida.',
+            ],
+            'precio_contado' => [
+                'required'     => 'El precio de contado es obligatorio.',
+                'decimal'      => 'El precio de contado debe ser un número válido.',
+                'greater_than' => 'El precio de contado debe ser mayor a 0.',
+            ],
+            'precio_credito' => [
+                'required'     => 'El precio de crédito es obligatorio.',
+                'decimal'      => 'El precio de crédito debe ser un número válido.',
+                'greater_than' => 'El precio de crédito debe ser mayor a 0.',
+            ],
+        ];
+
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $data = [
@@ -193,7 +265,6 @@ class ProductosAgroController extends BaseController
             'unidad_id'      => (int) $this->request->getPost('unidad_id'),
             'precio_contado' => (float) $this->request->getPost('precio_contado'),
             'precio_credito' => (float) $this->request->getPost('precio_credito'),
-            'cantidad'       => (int) $this->request->getPost('cantidad'),
             'cantidad_inve'  => (int) $producto->cantidad_inve,
             'sucursal_id'    => (int) $producto->sucursal_id,
             'user_id'        => (int) $producto->user_id,

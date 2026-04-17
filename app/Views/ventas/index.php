@@ -147,19 +147,18 @@
     border-radius: 6px;
   }
 
-  /* Colores para filas de tabla */
   .venta-contado {
-    background-color: var(--color-contado-light) !important;
-    border-left: 4px solid var(--color-contado) !important;
+    background-color: #cffafe !important;
+    border-left: 4px solid #06b6d4 !important;
   }
 
   .venta-credito {
-    background-color: var(--color-credito-light) !important;
-    border-left: 4px solid var(--color-credito) !important;
+    background-color: #ffedd5 !important;
+    border-left: 4px solid #f97316 !important;
   }
 
   .badge-tipo-contado {
-    background-color: var(--color-contado);
+    background-color: #06b6d4;
     color: white;
     font-weight: 600;
     padding: 0.35em 0.6em;
@@ -167,7 +166,7 @@
   }
 
   .badge-tipo-credito {
-    background-color: var(--color-credito);
+    background-color: #f97316;
     color: white;
     font-weight: 600;
     padding: 0.35em 0.6em;
@@ -509,6 +508,12 @@
               </ul>
             </div>
           </div>
+          <!-- Arqueo -->
+          <div class="col-md-2">
+            <a href="<?= base_url('ventas/arqueo/pdf?fecha_inicio=' . urlencode($fecha_desde) . '&fecha_fin=' . urlencode($fecha_hasta)) ?>" target="_blank" class="btn btn-outline-danger w-100">
+              <i class="ri-file-chart-2-line me-1"></i> Cierre y Arqueo
+            </a>
+          </div>
         </form>
       </div>
     </div>
@@ -538,8 +543,8 @@
               <table class="table align-middle table-nowrap">
                 <thead class="table-light text-muted">
                   <tr>
-                    <th>Nro</th>
-                    <th>Cliente / Personal UTO</th>
+                    <th>Código</th>
+                    <th>Cliente / Receptor</th>
                     <th>Monto Total</th>
                     <th>Tipo Pago</th>
                     <th>Fecha</th>
@@ -554,11 +559,14 @@
                     $claseBadge = ($tipoPago === 'contado') ? 'badge-tipo-contado' : 'badge-tipo-credito';
                   ?>
                     <tr class="<?= $claseRow ?>">
-                      <td><strong><?= esc($venta->id ?? 'N/A') ?></strong></td>
+                      <td><strong><?= esc($venta->code ?? 'N/A') ?></strong></td>
                       <td>
                         <?php if (!empty($venta->personal_uto_id)): ?>
                           <strong><?= esc($venta->nombre_personal ?? 'Personal UTO') ?></strong><br>
                           <small>CI: <?= esc($venta->dip ?? 'N/A') ?> | <?= esc($venta->cargo ?? '') ?> - <?= esc($venta->seccion ?? '') ?></small>
+                        <?php elseif (!empty($venta->cliente_externo_id)): ?>
+                          <strong><?= esc($venta->nombre_externo ?? 'Cliente Externo') ?></strong><br>
+                          <small>CI: <?= esc($venta->dip_externo ?? 'N/A') ?> | <?= esc($venta->segmento ?? '') ?></small>
                         <?php else: ?>
                           <?= esc($venta->cliente_nombre ?? 'Consumidor Final') ?>
                         <?php endif; ?>

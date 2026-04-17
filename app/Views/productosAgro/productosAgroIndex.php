@@ -29,7 +29,7 @@
   .table-agro thead th {
     background: var(--agro-green-light);
     border-bottom: 2px solid var(--agro-green-border);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -41,6 +41,7 @@
   .table-agro thead th .sort-icon { font-size: 0.7rem; opacity: 0.5; margin-left: 3px; }
   .table-agro thead th.sorted .sort-icon { opacity: 1; color: var(--agro-green); }
 
+  .table-agro tbody td { font-size: 0.78rem; }
   .table-agro tbody tr { transition: background 0.15s; }
   .table-agro tbody tr:hover { background: #f0fdf4 !important; }
 
@@ -238,6 +239,7 @@
                 <tr>
                   <th data-col="producto">Producto <span class="sort-icon">↕</span></th>
                   <th data-col="categoria">Categoría <span class="sort-icon">↕</span></th>
+                  <th>Unidad</th>
                   <th data-col="precio_contado" class="text-end">P. Contado <span class="sort-icon">↕</span></th>
                   <th data-col="precio_credito" class="text-end">P. Crédito <span class="sort-icon">↕</span></th>
                   <th data-col="cantidad_inve" class="text-center">Stock Inv. <span class="sort-icon">↕</span></th>
@@ -277,6 +279,7 @@
                         <?= esc($p->categoria) ?>
                       </span>
                     </td>
+                    <td class="text-muted"><?= esc($p->unidad_nombre ?? '—') ?></td>
                     <td class="text-end fw-semibold" style="color:var(--agro-green); font-size:0.88rem;">
                       Bs. <?= number_format($p->precio_contado, 2) ?>
                     </td>

@@ -130,8 +130,10 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('cierre', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('cierre/rango', 'inventarios\ReportesVentasController::exportarPdfVentas', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarExcelVentas', 'inventarios\ReportesVentasController::exportarExcelVentas', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('arqueo/pdf', 'inventarios\inventariosController::exportarArqueoPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
+    $routes->post('guardarClienteExterno', 'inventarios\inventariosController::guardarClienteExterno', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarVenta', 'inventarios\inventariosController::guardarVenta', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarCreditoVenta', 'inventarios\inventariosController::guardarCreditoVenta', ['filter' => 'role:admin,almacen']);
     $routes->get('buscar-clientes', 'inventarios\inventariosController::buscarClientes', ['filter' => 'role:admin,almacen']);
@@ -264,6 +266,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     
     // Funciones auxiliares
     $routes->get('buscarPersonalUto', 'ventas\ventasController::buscarPersonalUto', ['filter' => 'role:admin,vendedor']);
+    $routes->post('guardarClienteExterno', 'ventas\ventasController::guardarClienteExterno', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-clientes', 'ventas\ventasController::buscarClientes', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-productos', 'ventas\ventasController::buscarProductos', ['filter' => 'role:admin,vendedor']);
     $routes->post('guardar-cliente', 'ventas\ventasController::guardarCliente', ['filter' => 'role:admin,vendedor']);
@@ -274,6 +277,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     $routes->get('cierre', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('cierre/rango', 'ventas\ventasController::exportarPdfVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
     $routes->get('exportarExcelVentas', 'ventas\ventasController::exportarExcelVentas', ['filter' => 'role:admin,vendedor,contabilidad']);
+    $routes->get('arqueo/pdf', 'ventas\ventasController::exportarArqueoPdf', ['filter' => 'role:admin,vendedor,contabilidad']);
 });
 
 // ============================================================================
@@ -282,28 +286,31 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
 // ============================================================================
 $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     // CRUD básico
-    $routes->get('/', 'productosAgro\productosAgroController::index', ['filter' => 'role:admin,agropecuario,ganaderia,contabilidad']);
-    $routes->get('create', 'productosAgro\productosAgroController::create', ['filter' => 'role:admin,agropecuario,ganaderia']);
-    $routes->post('store', 'productosAgro\productosAgroController::store', ['filter' => 'role:admin,agropecuario,ganaderia']);
-    $routes->get('edit/(:num)', 'productosAgro\productosAgroController::edit/$1', ['filter' => 'role:admin,ganaderia,agropecuario']);
-    $routes->post('update/(:num)', 'productosAgro\productosAgroController::update/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia']);
-    $routes->get('delete/(:num)', 'productosAgro\productosAgroController::delete/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia']);
+    $routes->get('/', 'productosAgro\productosAgroController::index', ['filter' => 'role:admin,agropecuario,ganaderia,contabilidad,vendedor,almacen']);
+    $routes->get('create', 'productosAgro\productosAgroController::create', ['filter' => 'role:admin,agropecuario,ganaderia,vendedor,almacen']);
+    $routes->post('store', 'productosAgro\productosAgroController::store', ['filter' => 'role:admin,agropecuario,ganaderia,vendedor,almacen']);
+    $routes->get('edit/(:num)', 'productosAgro\productosAgroController::edit/$1', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('update/(:num)', 'productosAgro\productosAgroController::update/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia,vendedor']);
+    $routes->get('delete/(:num)', 'productosAgro\productosAgroController::delete/$1', ['filter' => 'role:admin,almacen,agropecuario,ganaderia,vendedor']);
     
     // Gestión de clientes
-    $routes->post('registerCliente', 'cliente\clienteController::registerCliente', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia']);
+    $routes->post('registerCliente', 'cliente\clienteController::registerCliente', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     
     // Ventas agropecuarias
-    $routes->get('ventas', 'productosAgro\ventasAgroController::index', ['filter' => 'role:admin,ganaderia,agropecuario']);
-    $routes->get('registerVentas', 'productosAgro\ventasAgroController::register', ['filter' => 'role:admin,ganaderia,agropecuario']);
-    $routes->post('guardarVenta', 'productosAgro\ventasAgroController::guardarVenta', ['filter' => 'role:admin, ganaderia,agropecuario']);
-    $routes->post('guardarCreditoVenta', 'productosAgro\ventasAgroController::guardarCreditoVenta', ['filter' => 'role:admin,ganaderia,agropecuario']);
+    $routes->get('ventas', 'productosAgro\ventasAgroController::index', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->get('registerVentas', 'productosAgro\ventasAgroController::register', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('guardarVenta', 'productosAgro\ventasAgroController::guardarVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('guardarCreditoVenta', 'productosAgro\ventasAgroController::guardarCreditoVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     
     // Funciones auxiliares
-    $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario']);
-    $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario']);
+    $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('guardarClienteExterno', 'productosAgro\ventasAgroController::guardarClienteExterno', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
-    $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
-    $routes->get('exportarPdfVentas', 'productosAgro\ventasAgroController::exportarPdfVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad']);
+    $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
+    $routes->get('exportarPdfVentas', 'productosAgro\ventasAgroController::exportarPdfVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
+    $routes->get('arqueo/pdf', 'productosAgro\ventasAgroController::exportarArqueoPdf', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
+    $routes->post('storeUnidadRapida', 'productosAgro\productosAgroController::storeUnidadRapida', ['filter' => 'role:admin,agropecuario,ganaderia,vendedor,almacen']);
 });
 
 // ============================================================================

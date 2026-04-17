@@ -5,10 +5,12 @@ namespace App\Controllers\productosAgro;
 use App\Controllers\BaseController;
 
 use App\Libraries\Agro\CierreVentaAgroPdf;
+use App\Libraries\ArqueoVentasPdf;
 
 
 use App\Models\Categoria\CategoriaModel;
 use App\Models\Cliente\ClienteModel;
+use App\Models\ClienteExterno\ClienteExternoModel;
 use App\Models\ProductoAgro\ProductoAgroModel;
 use App\Models\Venta\DetalleModel;
 use App\Models\Venta\VentaModel;
@@ -17,29 +19,21 @@ use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class ventasAgroController extends BaseController
 {
-    /**
-     * @var CategoriaModel 
-     */
     protected $categoriaModel;
     protected $clienteModel;
-
+    protected $clienteExternoModel;
     protected $ventaModel;
     protected $detalleModel;
-
     protected $productoAgroModel;
-    /**
-     * Constructor del controlador.
-     */
+
     public function __construct()
     {
-
-        $this->categoriaModel = new CategoriaModel();
-        $this->clienteModel = new ClienteModel();
-
-        $this->ventaModel = new VentaModel();
-        $this->detalleModel = new DetalleModel();
-
-        $this->productoAgroModel = new ProductoAgroModel();
+        $this->categoriaModel      = new CategoriaModel();
+        $this->clienteModel        = new ClienteModel();
+        $this->clienteExternoModel = new ClienteExternoModel();
+        $this->ventaModel          = new VentaModel();
+        $this->detalleModel        = new DetalleModel();
+        $this->productoAgroModel   = new ProductoAgroModel();
     }
 
     /**
@@ -50,6 +44,7 @@ class ventasAgroController extends BaseController
     public function index()
     {
         $userId = session()->get('id');
+        $sucursalId = (int) session()->get('sucursal_id');
 
         if (empty($userId)) {
             return redirect()->to(base_url('login'))->with('error', 'Debe iniciar sesión para ver las ventas.');
@@ -73,168 +68,126 @@ class ventasAgroController extends BaseController
         $page = max(1, $page);
 
         $inicio = $fecha_desde . ' 00:00:00';
-        $fin = $fecha_hasta . ' 23:59:59';
-
+        $fin    = $fecha_hasta . ' 23:59:59';
         $offset = ($page - 1) * $per_page;
 
         $db = \Config\Database::connect();
 
-        $baseParams = [$userId, $inicio, $fin];
+        // Filtro base: sucursal + rango de fechas + solo ventas agro
+        $baseParams = [$sucursalId, $inicio, $fin];
+        $filtroAgro = "
+            AND EXISTS (
+                SELECT 1 FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+            )
+        ";
 
-        //---------------------------------------------------------
+        $countQuery = $db->query("
+            SELECT COUNT(*) as total
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              {$filtroAgro}
+        ", $baseParams);
+        $total = (int)($countQuery->getRow()->total ?? 0);
 
-        $countSql = "
-        SELECT COUNT(*) as total
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-    ";
+        $totalVentasQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_monto
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalVentas = (float)($totalVentasQuery->getRow()->total_monto ?? 0);
 
-        $countQuery = $db->query($countSql, $baseParams);
-        if ($countQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Conteo de Ventas: ' . $db->error()['message']);
-        }
+        $totalContadoQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_contado
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              AND v.tipo_pago = 'contado'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalContado = (float)($totalContadoQuery->getRow()->total_contado ?? 0);
 
-        $countResult = $countQuery->getRow();
-        $total = (int)($countResult->total ?? 0);
+        $totalCreditoQuery = $db->query("
+            SELECT SUM(v.monto_total) AS total_credito
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              AND v.estado = '1'
+              AND v.tipo_pago = 'credito'
+              {$filtroAgro}
+        ", $baseParams);
+        $totalCredito = (float)($totalCreditoQuery->getRow()->total_credito ?? 0);
 
-        //---------------------------------------------------------
-
-        $totalVentasSql = "
-        SELECT SUM(v.monto_total) AS total_monto
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-    ";
-
-        $totalVentasQuery = $db->query($totalVentasSql, $baseParams);
-        if ($totalVentasQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total de Ventas: ' . $db->error()['message']);
-        }
-
-        $totalVentasResult = $totalVentasQuery->getRow();
-        $totalVentas = (float)($totalVentasResult->total_monto ?? 0);
-
-
-        $totalContadoSql = "
-        SELECT SUM(v.monto_total) AS total_contado
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-          AND v.tipo_pago = 'contado' 
-    ";
-
-        $totalContadoQuery = $db->query($totalContadoSql, $baseParams);
-        if ($totalContadoQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total Contado: ' . $db->error()['message']);
-        }
-
-        $totalContadoResult = $totalContadoQuery->getRow();
-        $totalContado = (float)($totalContadoResult->total_contado ?? 0);
-
-
-        // =========================================================
-        // 4. Monto total de ventas A CRÉDITO (NUEVO KPI)
-        // =========================================================
-        $totalCreditoSql = "
-        SELECT SUM(v.monto_total) AS total_credito
-        FROM condoriri.ventas v
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ?
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-          AND v.estado = '1'
-          AND v.tipo_pago = 'credito' 
-    ";
-
-        $totalCreditoQuery = $db->query($totalCreditoSql, $baseParams);
-        if ($totalCreditoQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Monto Total Crédito: ' . $db->error()['message']);
-        }
-
-        $totalCreditoResult = $totalCreditoQuery->getRow();
-        $totalCredito = (float)($totalCreditoResult->total_credito ?? 0);
-        // =========================================================
-
-
-        //---------------------------------------------------------
-        // 5. OBTENER REGISTROS CON DATOS DEL PERSONAL UTO (Listado)
-        $sql = "
-        SELECT 
-            v.*,
-            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
-            -- Campos del personal UTO (solo si es venta a crédito)
-            p.nombre AS nombre_personal,
-            p.dip,
-            cargos.cargo,
-            secciones.seccion
-        FROM condoriri.ventas v
-        LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
-        -- JOIN con personal UTO
-        LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
-        LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
-        LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
-        WHERE v.deleted_at IS NULL 
-          AND v.user_id = ? 
-          AND v.created_at >= ?
-          AND v.created_at <= ?
-        ORDER BY v.created_at DESC
-        LIMIT ? OFFSET ?
-    ";
-
-        $ventasParams = array_merge($baseParams, [$per_page, $offset]);
-
-        $ventasQuery = $db->query($sql, $ventasParams);
-        if ($ventasQuery === false) {
-            throw new \RuntimeException('Error en la consulta de Listado de Ventas: ' . $db->error()['message']);
-        }
-
+        $ventasQuery = $db->query("
+            SELECT
+                v.*,
+                COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
+                p.nombre_completo AS nombre_personal,
+                p.dip,
+                cargos.cargo,
+                secciones.seccion,
+                ce.nombre AS nombre_externo,
+                ce.dip AS dip_externo,
+                ce.segmento
+            FROM condoriri.ventas v
+            LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
+            LEFT JOIN condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
+            LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
+            LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+            LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
+            LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
+            WHERE v.deleted_at IS NULL
+              AND v.sucursal_id = ?
+              AND v.created_at >= ?
+              AND v.created_at <= ?
+              {$filtroAgro}
+            ORDER BY v.created_at DESC
+            LIMIT ? OFFSET ?
+        ", array_merge($baseParams, [$per_page, $offset]));
         $ventas = $ventasQuery->getResult();
 
-        //---------------------------------------------------------
-        // 6. Paginación (Sin cambios)
         $totalPages = ceil($total / $per_page);
-        $hasPrev = $page > 1;
-        $hasNext = $page < $totalPages;
+        $hasPrev   = $page > 1;
+        $hasNext   = $page < $totalPages;
 
         $pagerLinks = '';
         if ($totalPages > 1) {
-            $baseUrl = base_url('ventas');
-            $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
-
-            $prevPage = $page - 1;
+            $baseUrl  = base_url('productosagro/ventas');
             $queryArr = [
                 'fecha_desde' => $fecha_desde,
                 'fecha_hasta' => $fecha_hasta,
-                'per_page' => $per_page
+                'per_page'    => $per_page,
             ];
+            $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
 
-            $prevUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $prevPage]));
+            $prevUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $page - 1]));
             $pagerLinks .= '<li class="page-item' . (!$hasPrev ? ' disabled' : '') . '"><a class="page-link" href="' . ($hasPrev ? $prevUrl : '#') . '">Anterior</a></li>';
 
             $start = max(1, $page - 2);
-            $end = min($totalPages, $start + 4);
+            $end   = min($totalPages, $start + 4);
             if ($end - $start < 4 && $totalPages > 5) {
                 $start = max(1, $end - 4);
             }
-
             for ($i = $start; $i <= $end; $i++) {
-                $isActive = $i === $page ? ' active' : '';
-                $pageUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $i]));
+                $isActive   = $i === $page ? ' active' : '';
+                $pageUrl    = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $i]));
                 $pagerLinks .= '<li class="page-item' . $isActive . '"><a class="page-link" href="' . $pageUrl . '">' . $i . '</a></li>';
             }
 
-            $nextPage = $page + 1;
-            $nextUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $nextPage]));
+            $nextUrl = $baseUrl . '?' . http_build_query(array_merge($queryArr, ['page' => $page + 1]));
             $pagerLinks .= '<li class="page-item' . (!$hasNext ? ' disabled' : '') . '"><a class="page-link" href="' . ($hasNext ? $nextUrl : '#') . '">Siguiente</a></li>';
             $pagerLinks .= '</ul></nav>';
         }
@@ -257,65 +210,122 @@ class ventasAgroController extends BaseController
 
     public function credito()
     {
-
         $sucursal = (int) session()->get('sucursal_id');
+        $db = \Config\Database::connect();
+        $q = $db->query(
+            'SELECT pa.*, u.nombre AS unidad_nombre
+             FROM condoriri.productos_agro pa
+             LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
+             WHERE pa.fecha_delete IS NULL
+               AND pa.estado = true
+               AND pa.cantidad_inve > 0
+               AND pa.sucursal_id = ?',
+            [$sucursal]
+        );
+        $productos = $q ? $q->getResult() : [];
 
-        $productos = $this->productoAgroModel
-            ->where('sucursal_id', $sucursal)
-            ->where('estado', true)
-            ->where('cantidad_inve >', 0)
-            ->findAll();
-        
-
-
-
-
-        $data = [
+        return view('productosAgro/ventasCredito', [
             'title'     => 'Registrar Venta Crédito',
             'productos' => $productos,
-
-        ];
-
-
-        return view('productosAgro/ventasCredito', $data);
+        ]);
     }
 
 
     public function buscarPersonalUto()
     {
-        $db = db_connect();
+        $db      = db_connect();
         $termino = $this->request->getGet('dip');
         $pattern = '%' . $termino . '%';
 
-        $sql = "
-            SELECT 
-                p.id_persona, 
-                p.nombre, 
-                p.dip, 
-                p.telefono, 
-                p.celular, 
-                COALESCE(e.\"id_estado\", false) AS es_empleado_uto, 
-                c.cargo, 
-                s.seccion 
-            FROM public.personas p 
-            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\") 
-            LEFT JOIN rrhh.cargos c ON (e.id_cargo = c.id_cargo) 
-            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion) 
-            WHERE 
-                p.\"id_estado\" = true
-                AND e.\"id_estado\" = true
-                AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
+        $sqlUto = "
+            SELECT
+                p.id_persona,
+                p.nombre_completo AS nombre,
+                p.dip,
+                p.telefono,
+                p.celular,
+                c.cargo,
+                s.seccion,
+                'uto' AS tipo
+            FROM public.personas p
+            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\")
+            LEFT JOIN rrhh.cargos c    ON (e.id_cargo = c.id_cargo)
+            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
+            WHERE p.\"id_estado\" = true
+              AND e.\"id_estado\" = true
+              AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
+            LIMIT 3
         ";
+        $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
 
-        $query = $db->query($sql, [$pattern, $pattern]);
-        $results = $query->getResult();
+        $sqlExt = "
+            SELECT
+                id,
+                nombre,
+                dip,
+                NULL AS telefono,
+                NULL AS celular,
+                segmento AS cargo,
+                NULL AS seccion,
+                'externo' AS tipo
+            FROM condoriri.clientes_externos
+            WHERE deleted_at IS NULL
+              AND estado = true
+              AND (dip ILIKE ? OR nombre ILIKE ?)
+            LIMIT 3
+        ";
+        $externos = $db->query($sqlExt, [$pattern, $pattern])->getResult();
 
+        return $this->response->setJSON(array_values(array_slice(array_merge($uto, $externos), 0, 3)));
+    }
 
-        $personal = array_filter($results, function ($person) {
-            return $person->es_empleado_uto == true;
-        });
+    public function guardarClienteExterno()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
 
-        return $this->response->setJSON(array_values($personal));
+        $nombre   = strtoupper(trim($this->request->getPost('nombre') ?? ''));
+        $dip      = trim($this->request->getPost('dip') ?? '');
+        $segmento = trim($this->request->getPost('segmento') ?? '');
+
+        if (empty($nombre) || empty($dip) || empty($segmento)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+        }
+
+        $existente = $this->clienteExternoModel
+            ->where('dip', $dip)
+            ->where('deleted_at IS NULL')
+            ->first();
+        if ($existente) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => "Ya existe un cliente externo con DIP {$dip}: {$existente->nombre} ({$existente->segmento}).",
+            ]);
+        }
+
+        $id = $this->clienteExternoModel->insert([
+            'nombre'   => $nombre,
+            'dip'      => $dip,
+            'segmento' => $segmento,
+            'estado'   => true,
+            'user_id'  => session()->get('id'),
+        ]);
+
+        if (!$id) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Error al guardar el cliente.']);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'cliente' => [
+                'id'       => $id,
+                'nombre'   => $nombre,
+                'dip'      => $dip,
+                'segmento' => $segmento,
+                'tipo'     => 'externo',
+            ],
+        ]);
     }
 
 
@@ -328,22 +338,25 @@ class ventasAgroController extends BaseController
     public function register()
     {
         $sucursal = (int) session()->get('sucursal_id');
+        $db = \Config\Database::connect();
+        $q = $db->query(
+            'SELECT pa.*, u.nombre AS unidad_nombre
+             FROM condoriri.productos_agro pa
+             LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
+             WHERE pa.fecha_delete IS NULL
+               AND pa.estado = true
+               AND pa.cantidad_inve > 0
+               AND pa.sucursal_id = ?',
+            [$sucursal]
+        );
+        $productos = $q ? $q->getResult() : [];
+        $clientes  = $this->clienteModel->findAll();
 
-        $productos = $this->productoAgroModel
-            ->where('sucursal_id', $sucursal)
-            ->where('estado', true)
-            ->where('cantidad_inve >', 0)
-            ->findAll();
-        $clientes = $this->clienteModel->findAll();
-
-        $data = [
+        return view('productosAgro/ventasIndex', [
             'title'     => 'Registrar Venta',
             'productos' => $productos,
             'clientes'  => $clientes,
-        ];
-
-
-        return view('productosAgro/ventasIndex', $data);
+        ]);
     }
 
 
@@ -471,7 +484,7 @@ class ventasAgroController extends BaseController
             throw new \Exception('Error al crear la cabecera de la venta.');
         }
 
-        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
+        $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
         $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
 
         foreach ($itemsDetalle as $item) {
@@ -508,163 +521,146 @@ class ventasAgroController extends BaseController
 }
 
     public function guardarCreditoVenta(): RedirectResponse
-{
-    if (!$this->request->is('post')) {
-        return redirect()->back()->with('error', 'Método no permitido.');
-    }
+    {
+        if (!$this->request->is('post')) {
+            return redirect()->back()->with('error', 'Método no permitido.');
+        }
 
-    $personalUtoId = (int)$this->request->getPost('cliente_id');
-    $tipoPago = $this->request->getPost('tipo_pago');
-    $productosJson = $this->request->getPost('productos');
+        $receptorId   = (int)$this->request->getPost('cliente_id');
+        $tipoReceptor = $this->request->getPost('tipo_receptor');
+        $tipoPago     = $this->request->getPost('tipo_pago');
+        $productosJson = $this->request->getPost('productos');
 
-    if ($personalUtoId <= 0) {
-        return redirect()->back()->with('error', 'Debe seleccionar un personal UTO válido.');
-    }
-    if (empty($tipoPago)) {
-        return redirect()->back()->with('error', 'Faltan datos obligatorios (Tipo de Pago).');
-    }
-    if (empty($productosJson)) {
-        return redirect()->back()->with('error', 'Faltan datos obligatorios (Carrito vacío).');
-    }
+        if ($receptorId <= 0) {
+            return redirect()->back()->with('error', 'Debe seleccionar un receptor válido.');
+        }
+        if (empty($tipoPago)) {
+            return redirect()->back()->with('error', 'Faltan datos obligatorios (Tipo de Pago).');
+        }
+        if (empty($productosJson)) {
+            return redirect()->back()->with('error', 'Faltan datos obligatorios (Carrito vacío).');
+        }
 
-    $productos = json_decode($productosJson, true);
-    if (json_last_error() !== JSON_ERROR_NONE || !is_array($productos) || empty($productos)) {
-        return redirect()->back()->with('error', 'Formato de productos inválido o carrito vacío.');
-    }
+        $productos = json_decode($productosJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($productos) || empty($productos)) {
+            return redirect()->back()->with('error', 'Formato de productos inválido o carrito vacío.');
+        }
 
-    $sucursalId = session()->get('sucursal_id') ?? 1;
-    $userId = session()->get('id') ?? 1;
+        $sucursalId = session()->get('sucursal_id') ?? 1;
+        $userId     = session()->get('id') ?? 1;
 
-    
-    $db = \Config\Database::connect();
-    $persona = $db->table('public.personas p')
-        ->select('p.id_persona, p.nombre')
-        ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'inner')
-        ->where('p.id_persona', $personalUtoId)
-        ->where('p.id_estado', true)
-        ->where('e.id_estado', true)
-        ->get()
-        ->getRow();
+        $db = \Config\Database::connect();
 
-    if (!$persona) {
-        return redirect()->back()->with('error', 'El personal seleccionado no es un empleado UTO activo.');
-    }
-
-    $db->transBegin();
-
-    try {
-        $totalVenta = 0;
-        $itemsDetalle = [];
-        $productosCache = []; 
-
-        foreach ($productos as $item) {
-            $productoId = (int)($item['id'] ?? 0);
-            $cantidad = (int)($item['quantity'] ?? 0);
-            $precioUnitario = (float)($item['price'] ?? 0);
-            $descuentoPorcentaje = (float)($item['discount'] ?? 0);
-
-            if ($cantidad <= 0 || $precioUnitario <= 0 || $productoId <= 0) {
-                throw new \Exception("Datos inválidos para el producto ID {$productoId}.");
+        if ($tipoReceptor === 'externo') {
+            $receptor = $this->clienteExternoModel->find($receptorId);
+            if (!$receptor || !$receptor->estado) {
+                return redirect()->back()->with('error', 'El cliente externo seleccionado no es válido.');
             }
+        } else {
+            $receptor = $db->table('public.personas p')
+                ->select('p.id_persona, p.nombre_completo AS nombre')
+                ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'inner')
+                ->where('p.id_persona', $receptorId)
+                ->where('p.id_estado', true)
+                ->where('e.id_estado', true)
+                ->get()->getRow();
+            if (!$receptor) {
+                return redirect()->back()->with('error', 'El personal seleccionado no es un empleado UTO activo.');
+            }
+        }
 
-       
-            if (!isset($productosCache[$productoId])) {
-                $producto = $this->productoAgroModel->find($productoId);
-                if (!$producto) {
-                    throw new \Exception("Producto con ID {$productoId} no encontrado.");
+        $db->transBegin();
+
+        try {
+            $totalVenta   = 0;
+            $itemsDetalle = [];
+            $productosCache = [];
+
+            foreach ($productos as $item) {
+                $productoId          = (int)($item['id'] ?? 0);
+                $cantidad            = (int)($item['quantity'] ?? 0);
+                $precioUnitario      = (float)($item['price'] ?? 0);
+                $descuentoPorcentaje = (float)($item['discount'] ?? 0);
+
+                if ($cantidad <= 0 || $precioUnitario <= 0 || $productoId <= 0) {
+                    throw new \Exception("Datos inválidos para el producto ID {$productoId}.");
                 }
-                $productosCache[$productoId] = $producto;
+
+                if (!isset($productosCache[$productoId])) {
+                    $producto = $this->productoAgroModel->find($productoId);
+                    if (!$producto) {
+                        throw new \Exception("Producto con ID {$productoId} no encontrado.");
+                    }
+                    $productosCache[$productoId] = $producto;
+                }
+
+                $producto = $productosCache[$productoId];
+
+                if ($producto->cantidad_inve < $cantidad) {
+                    throw new \Exception("Stock insuficiente para: {$producto->producto}. Disponible: {$producto->cantidad_inve}.");
+                }
+
+                $subtotalBruto = $precioUnitario * $cantidad;
+                $subtotalFinal = $subtotalBruto - ($subtotalBruto * ($descuentoPorcentaje / 100));
+                $totalVenta   += $subtotalFinal;
+
+                $itemsDetalle[] = [
+                    'producto_id'         => $productoId,
+                    'cantidad'            => $cantidad,
+                    'precio_unitario'     => $precioUnitario,
+                    'descuento_porcentaje' => $descuentoPorcentaje,
+                    'subtotal'            => $subtotalFinal,
+                    'stock_actual'        => $producto->cantidad_inve,
+                    'producto_nombre'     => $producto->producto,
+                ];
             }
 
-            $producto = $productosCache[$productoId];
-
-            // ✅ Validar estado (0 = activo, según tu lógica anterior)
-            if ((int)$producto->estado !== 0) { 
-                // NOTA: En tu guardarVenta usas: if ((int)$producto->estado === 1) → inactivo
-                // Ajusta según tu lógica real: 
-                // - Si `estado = 1` → activo, usa `!== 1`
-                // - Si `estado = 0` → activo, usa `!== 0`
-                // Aquí asumo que `1 = activo` (como en formularios)
-            }
-
-            // ✅ CORREGIDO: cantidad_inve (no catidad_inve, ni stock_inve)
-            if ($producto->cantidad_inve < $cantidad) {
-                $nombreProd = $producto->producto ?? 'Sin nombre';
-                throw new \Exception("Stock insuficiente para: {$nombreProd}. Disponible: {$producto->cantidad_inve}.");
-            }
-
-            $subtotalBruto = $precioUnitario * $cantidad;
-            $descuentoMonto = $subtotalBruto * ($descuentoPorcentaje / 100);
-            $subtotalFinal = $subtotalBruto - $descuentoMonto;
-            $totalVenta += $subtotalFinal;
-
-            $itemsDetalle[] = [
-                'producto_id' => $productoId,
-                'cantidad' => $cantidad,
-                'precio_unitario' => $precioUnitario,
-                'descuento_porcentaje' => $descuentoPorcentaje,
-                'subtotal' => $subtotalFinal,
-                'stock_actual' => $producto->cantidad_inve, 
-                'producto_nombre' => $producto->producto ?? 'Sin nombre', 
-            ];
-        }
-
-        
-        $ventaData = [
-            'code' => 'TEMP',
-            'cliente_id' => null,
-            'sucursal_id' => $sucursalId,
-            'tipo_pago' => $tipoPago,
-            'monto_total' => $totalVenta,
-            'estado' => 1, // 1 = activa
-            'observaciones' => 'Venta a crédito para personal UTO',
-            'user_id' => $userId,
-            'personal_uto_id' => $personalUtoId,
-        ];
-
-        $ventaId = $this->ventaModel->insert($ventaData);
-        if (!$ventaId) {
-            throw new \Exception('Error al crear la cabecera de la venta.');
-        }
-
-        $codigoVenta = 'VENTA-' . str_pad($ventaId, 6, '0', STR_PAD_LEFT);
-        $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
-
-        // ✅ Procesar detalles y actualizar stock
-        foreach ($itemsDetalle as $item) {
-            $detalleData = [
-                'venta_id' => $ventaId,
-                'producto_agro_id' => $item['producto_id'], // ✅ producto_id, no stock_id
-                'cantidad' => $item['cantidad'],
-                'precio_unitario' => $item['precio_unitario'],
-                'subtotal' => $item['subtotal'],
-                'observaciones' => '',
+            $ventaData = [
+                'code'               => 'TEMP',
+                'cliente_id'         => null,
+                'sucursal_id'        => $sucursalId,
+                'tipo_pago'          => $tipoPago,
+                'monto_total'        => $totalVenta,
+                'estado'             => 1,
+                'observaciones'      => 'Venta a crédito',
+                'user_id'            => $userId,
+                'personal_uto_id'    => $tipoReceptor === 'uto'     ? $receptorId : null,
+                'cliente_externo_id' => $tipoReceptor === 'externo' ? $receptorId : null,
             ];
 
-            if (!$this->detalleModel->insert($detalleData)) {
-                throw new \Exception('Error al registrar el detalle para: ' . $item['producto_nombre']);
+            $ventaId = $this->ventaModel->insert($ventaData);
+            if (!$ventaId) {
+                throw new \Exception('Error al crear la cabecera de la venta.');
             }
 
-            // ✅ Actualizar stock
-            $newStock = $item['stock_actual'] - $item['cantidad'];
-            if (!$this->productoAgroModel->update($item['producto_id'], ['cantidad_inve' => $newStock])) {
-                throw new \Exception('Error al actualizar el stock de: ' . $item['producto_nombre']);
+            $codigoVenta = $this->ventaModel->generarCodigoAgroVenta($sucursalId, $tipoPago);
+            $this->ventaModel->update($ventaId, ['code' => $codigoVenta]);
+
+            foreach ($itemsDetalle as $item) {
+                if (!$this->detalleModel->insert([
+                    'venta_id'         => $ventaId,
+                    'producto_agro_id' => $item['producto_id'],
+                    'cantidad'         => $item['cantidad'],
+                    'precio_unitario'  => $item['precio_unitario'],
+                    'subtotal'         => $item['subtotal'],
+                    'observaciones'    => '',
+                ])) {
+                    throw new \Exception('Error al registrar el detalle para: ' . $item['producto_nombre']);
+                }
+
+                $newStock = $item['stock_actual'] - $item['cantidad'];
+                if (!$this->productoAgroModel->update($item['producto_id'], ['cantidad_inve' => $newStock])) {
+                    throw new \Exception('Error al actualizar el stock de: ' . $item['producto_nombre']);
+                }
             }
-        }
 
-        $db->transCommit();
-        return redirect()->to('/productosagro/recibo/' . $ventaId) // ✅ Ruta corregida: productosagro (no produtosagro)
-            ->with('success', 'Venta a crédito registrada exitosamente.');
-
-    } catch (\Exception $e) {
-        $db->transRollback();
-        $error = $e->getMessage();
-        if ($e instanceof \CodeIgniter\Database\Exceptions\DatabaseException) {
-            $error .= " (DB: " . $db->error()['message'] . ")";
+            $db->transCommit();
+            return redirect()->to('/productosagro/recibo/' . $ventaId)->with('success', 'Venta a crédito registrada exitosamente.');
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return redirect()->back()->withInput()->with('error', 'Error al procesar la venta: ' . $e->getMessage());
         }
-        return redirect()->back()->withInput()->with('error', 'Error al procesar la venta: ' . $error);
     }
-}
 
 
 
@@ -695,8 +691,9 @@ class ventasAgroController extends BaseController
         $stockAlias = 'SS';
 
         $builder = $db->table($detalleTableName);
-        $builder->select("{$detalleTableName}.*, {$stockAlias}.producto");
+        $builder->select("{$detalleTableName}.*, {$stockAlias}.producto, u.nombre AS unidad_nombre");
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.producto_agro_id");
+        $builder->join('condoriri.unidades u', "u.id = {$stockAlias}.unidad_id", 'left');
         $builder->where('venta_id', $ventaId);
 
         $query = $builder->get();
@@ -710,42 +707,34 @@ class ventasAgroController extends BaseController
         }
         $detalles = $query->getResultArray();
 
-        
-        $cliente = null;
+        $cliente  = null;
         $personal = null;
+        $clienteExterno = null;
 
-        
-        if (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
-            $cliente = $this->clienteModel->find($venta->cliente_id);
-        }
-      
-        elseif (!empty($venta->personal_uto_id)) {
+        if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
                 ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
                 ->where('p.id_persona', $venta->personal_uto_id)
-                ->get()
-                ->getRowArray();
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $clienteExterno = $db->table('condoriri.clientes_externos')
+                ->select('nombre, dip, segmento')
+                ->where('id', $venta->cliente_externo_id)
+                ->get()->getRowArray();
+        } elseif (!empty($venta->cliente_id) && $venta->cliente_id != 0) {
+            $cliente = $this->clienteModel->find($venta->cliente_id);
         }
 
-       
-        $sucursalInfo = [
-            'nombre' => 'Mi Tienda POS',
-            'direccion' => 'Av. Principal #123',
-            'telefono' => '+591 555-1234',
-            'nit' => '123456789-0'
-        ];
-        
-      
         $data = [
-            'title' => 'Recibo de Venta #' . $ventaId,
-            'venta' => $venta,
-            'detalles' => $detalles,
-            'cliente' => $cliente,
-            'personal' => $personal, 
-            'sucursal' => $sucursalInfo,
+            'title'          => 'Recibo de Venta #' . $ventaId,
+            'venta'          => $venta,
+            'detalles'       => $detalles,
+            'cliente'        => $cliente,
+            'personal'       => $personal,
+            'clienteExterno' => $clienteExterno,
         ];
 
         return view('productosAgro/recibo_print', $data);
@@ -770,7 +759,7 @@ class ventasAgroController extends BaseController
         }
 
         $ventaModel = new \App\Models\Venta\VentaModel();
-        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipo);
+        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, $tipo, true);
 
         $db = \Config\Database::connect();
         $usuarioGenerador = $db->table('condoriri.usuarios')
@@ -798,5 +787,33 @@ class ventasAgroController extends BaseController
 
         $service = new \App\Services\Agro\ExcelVentasAgroService();
         $service->exportar($fecha_inicio, $fecha_fin, $tipo);
+    }
+
+    public function exportarArqueoPdf()
+    {
+        $hoy          = date('Y-m-d');
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?: $hoy;
+        $fecha_fin    = $this->request->getGet('fecha_fin')    ?: $hoy;
+
+        $ventaModel = new \App\Models\Venta\VentaModel();
+        $reportData = $ventaModel->getDailySalesReportData($fecha_inicio, $fecha_fin, null, true);
+
+        $db = \Config\Database::connect();
+        $usuarioGenerador = $db->table('condoriri.usuarios')
+            ->select('nombre, apellidos')
+            ->where('id', session()->get('id'))
+            ->get()->getRowArray();
+        $nombreUsuario = $usuarioGenerador
+            ? ucwords(strtolower(trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? ''))))
+            : 'Usuario';
+
+        $pdf = new ArqueoVentasPdf();
+        $pdf->generarArqueo($reportData, [
+            'fecha_inicio'      => $fecha_inicio,
+            'fecha_fin'         => $fecha_fin,
+            'nombre_usuario'    => $nombreUsuario,
+            'titulo_modulo'     => 'CONDORIRI AGROPECUARIO',
+            'responsable_cargo' => 'Responsable - Productos Agropecuarios',
+        ]);
     }
 }

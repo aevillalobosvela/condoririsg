@@ -152,8 +152,13 @@
 
       <!-- Búsqueda por DIP -->
       <div class="mb-4">
-        <label for="dipSearch" class="form-label mb-2">Buscar Personal UTO por CI o Nombre:</label>
-        <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (ej. 745687 o Juan Perez)" autocomplete="off">
+        <label for="dipSearch" class="form-label mb-2">Buscar por CI o Nombre:</label>
+        <div class="input-group">
+          <input type="text" class="form-control" id="dipSearch" placeholder="Ingrese CI o nombre (mín. 3 caracteres)" autocomplete="off">
+          <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalNuevoExterno">
+            <i class="ri-user-add-line"></i> Nuevo externo
+          </button>
+        </div>
         <div id="personalInfo" class="mt-3"></div>
       </div>
 
@@ -171,8 +176,16 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
+        <div class="mb-3 d-flex gap-2">
+          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
+          <select id="categoryFilter" class="form-select" style="max-width:160px;">
+            <option value="">Todas las categorías</option>
+            <option value="TUBERCULOS">Tubérculos</option>
+            <option value="HORTALIZAS">Hortalizas</option>
+            <option value="DESHIDRATADOS">Deshidratados</option>
+            <option value="CEREALES">Cereales</option>
+            <option value="LEGUMINOSAS">Leguminosas</option>
+          </select>
         </div>
    
 
@@ -209,8 +222,8 @@
 
      
       <form id="ventaForm" method="post" action="<?= base_url('productosagro/guardarCreditoVenta') ?>">
-        
         <input type="hidden" name="cliente_id" id="clienteIdInput" value="">
+        <input type="hidden" name="tipo_receptor" id="tipoReceptorInput" value="">
 
         <input type="hidden" name="productos" id="productosInput">
 
@@ -271,6 +284,44 @@
             <i class="ri-file-list-line me-1"></i> Ver reporte completo
           </a>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO CLIENTE EXTERNO -->
+<div class="modal fade" id="modalNuevoExterno" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-success"><i class="ri-user-add-line me-1"></i> Registrar Cliente Externo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="nuevoExternoError" class="alert alert-danger d-none"></div>
+        <div class="mb-3">
+          <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extNombre" placeholder="Ej. JUAN PEREZ MAMANI">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">DIP / CI <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extDip" placeholder="Ej. 7456123">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Segmento <span class="text-danger">*</span></label>
+          <select class="form-select" id="extSegmento">
+            <option value="">Seleccione...</option>
+            <option value="SEGURO_UNIV">Seguro Universitario</option>
+            <option value="SPECTROLAB">Spectrolab</option>
+            <option value="OTROS">Otros</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btnGuardarExterno">
+          <i class="ri-save-line me-1"></i> Guardar y seleccionar
+        </button>
       </div>
     </div>
   </div>
@@ -349,76 +400,132 @@
     const montoRecibidoGroup = document.getElementById('montoRecibidoGroup');
     const cambioGroup = document.getElementById('cambioGroup');
 
+    const tipoReceptorInput = document.getElementById('tipoReceptorInput');
+    const modalNuevoExterno = new bootstrap.Modal(document.getElementById('modalNuevoExterno'));
+
     let searchTimeout;
 
-    // --- BÚSQUEDA DE PERSONAL POR DIP ---
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
       const dip = this.value.trim();
-
       personalInfo.innerHTML = '';
       clienteIdInput.value = '';
+      tipoReceptorInput.value = '';
       selectedPersonal = null;
-
       if (dip.length < 3) return;
-
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
-          .then(response => response.json())
+          .then(r => r.json())
           .then(data => {
-            if (data && data.length > 0) {
-              const p = data[0];
-              selectedPersonal = p;
-              clienteIdInput.value = p.id_persona;
-
-              personalInfo.innerHTML = `
-                <div class="card border-success">
-                  <div class="card-body">
-                    <p><strong>Nombre:</strong> ${p.nombre}</p>
-                    <p><strong>DIP:</strong> ${p.dip}</p>
-                    <p><strong>Teléfono:</strong> ${p.telefono || 'No disponible'}</p>
-                    <p><strong>Celular:</strong> ${p.celular || 'No disponible'}</p>
-                    <p><strong>Cargo:</strong> ${p.cargo || 'Sin cargo'}</p>
-                    <p><strong>Sección:</strong> ${p.seccion || 'Sin sección'}</p>
-                  </div>
-                </div>
-              `;
-            } else {
-              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró personal con ese DIP.</div>';
+            if (!data || data.length === 0) {
+              personalInfo.innerHTML = '<div class="alert alert-warning">No se encontró ningún resultado. Puede registrar un cliente externo con el botón "Nuevo externo".</div>';
+              return;
             }
+            const html = data.map(p => {
+              const esExterno = p.tipo === 'externo';
+              const badge = esExterno
+                ? `<span class="badge bg-warning text-dark">${p.cargo}</span>`
+                : `<span class="badge bg-info text-dark">${p.cargo || 'Personal UTO'}</span>`;
+              const idVal = esExterno ? p.id : p.id_persona;
+              return `
+                <div class="card border-success mb-2 resultado-persona" style="cursor:pointer;"
+                     data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}" data-dip="${p.dip}">
+                  <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>${p.nombre}</strong> — DIP: ${p.dip}<br>
+                      <small>${p.seccion || ''}</small>
+                    </div>
+                    ${badge}
+                  </div>
+                </div>`;
+            }).join('');
+            personalInfo.innerHTML = html;
+
+            document.querySelectorAll('.resultado-persona').forEach(el => {
+              el.addEventListener('click', () => {
+                selectedPersonal = { nombre: el.dataset.nombre, dip: el.dataset.dip, tipo: el.dataset.tipo };
+                clienteIdInput.value    = el.dataset.id;
+                tipoReceptorInput.value = el.dataset.tipo;
+                personalInfo.innerHTML  = `
+                  <div class="alert alert-success py-2">
+                    <strong>Seleccionado:</strong> ${el.dataset.nombre} — DIP: ${el.dataset.dip}
+                    <span class="badge ${el.dataset.tipo === 'externo' ? 'bg-warning text-dark' : 'bg-info text-dark'} ms-2">
+                      ${el.dataset.tipo === 'externo' ? 'Externo' : 'Personal UTO'}
+                    </span>
+                  </div>`;
+              });
+            });
           })
-          .catch(error => {
-            console.error('Error al buscar personal:', error);
+          .catch(() => {
             personalInfo.innerHTML = '<div class="alert alert-danger">Error al buscar. Intente nuevamente.</div>';
           });
       }, 500);
     });
 
-    // --- PALETA DE COLORES POR PRODUCTO ---
-    const COLOR_PALETTE = [
-      { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
-      { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
-      { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
-      { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' },
-      { bg: '#F3E5F5', border: '#9C27B0', text: '#6A1B9A' },
-      { bg: '#E0F7FA', border: '#00BCD4', text: '#00838F' },
-      { bg: '#FFFDE7', border: '#FFC107', text: '#F57F17' },
-    ];
-    const productColorMap = {};
-    let colorIndex = 0;
-    function getProductColor(nombre) {
-      if (!productColorMap[nombre]) {
-        productColorMap[nombre] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-        colorIndex++;
+    document.getElementById('btnGuardarExterno').addEventListener('click', function() {
+      const nombre   = document.getElementById('extNombre').value.trim();
+      const dip      = document.getElementById('extDip').value.trim();
+      const segmento = document.getElementById('extSegmento').value;
+      const errDiv   = document.getElementById('nuevoExternoError');
+
+      if (!nombre || !dip || !segmento) {
+        errDiv.textContent = 'Todos los campos son obligatorios.';
+        errDiv.classList.remove('d-none');
+        return;
       }
-      return productColorMap[nombre];
+      errDiv.classList.add('d-none');
+
+      fetch('<?= base_url('productosagro/guardarClienteExterno') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: new URLSearchParams({ nombre, dip, segmento, '<?= csrf_token() ?>': '<?= csrf_hash() ?>' })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success) {
+          errDiv.textContent = res.error;
+          errDiv.classList.remove('d-none');
+          return;
+        }
+        const c = res.cliente;
+        selectedPersonal = { nombre: c.nombre, dip: c.dip, tipo: 'externo' };
+        clienteIdInput.value    = c.id;
+        tipoReceptorInput.value = 'externo';
+        personalInfo.innerHTML  = `
+          <div class="alert alert-success py-2">
+            <strong>Seleccionado:</strong> ${c.nombre} — DIP: ${c.dip}
+            <span class="badge bg-warning text-dark ms-2">Externo</span>
+          </div>`;
+        modalNuevoExterno.hide();
+        document.getElementById('extNombre').value    = '';
+        document.getElementById('extDip').value       = '';
+        document.getElementById('extSegmento').value  = '';
+      })
+      .catch(() => {
+        errDiv.textContent = 'Error de conexión. Intente nuevamente.';
+        errDiv.classList.remove('d-none');
+      });
+    });
+
+    // Colores por categoría (mismo esquema que el formulario)
+    const CAT_COLORS = {
+      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
+      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
+      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
+      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+    };
+    function getCatColor(cat) {
+      return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
     }
 
     // --- FUNCIONES DE PRODUCTOS Y CARRITO ---
 
-    function renderProducts(filter = '') {
+    function renderProducts(nameFilter = '', catFilter = '') {
       const filtered = allProducts.filter(p =>
-        p.producto.toLowerCase().includes(filter.toLowerCase())
+        p.producto.toLowerCase().includes(nameFilter.toLowerCase()) &&
+        (!catFilter || (p.categoria || '').toUpperCase() === catFilter)
       );
 
       const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -426,47 +533,41 @@
       const paginated = filtered.slice(start, start + itemsPerPage);
 
       productsGrid.innerHTML = paginated.map(p => {
-        const c = getProductColor(p.producto);
+        const c = getCatColor(p.categoria);
         return `
         <div class="col-6 col-md-4 product-card"
              data-id="${p.id}"
              data-name="${p.producto}"
              data-price="${p.precio_contado}"
              data-stock="${p.cantidad_inve}"
-             data-unidad="und">
-          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${c.border} !important;">
-            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${c.bg} 0%, #ffffff 100%);">
+             data-unidad="und"
+             data-categoria="${(p.categoria||'').toUpperCase()}">
+          <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
+            <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
               <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width: 60px; height: 60px; background-color: ${c.border};">
-                <span class="fw-bold" style="color: #fff; font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
+                   style="width:56px;height:56px;background-color:${c.border};">
+                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
               </div>
-              <h6 class="card-title fs-6 mb-1" style="color: ${c.text};">${p.producto}</h6>
+              <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color: ${c.border};">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <p class="card-text mb-0">
-                <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
-              </p>
-              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
+              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
       }).join('');
 
       renderPagination(totalPages);
 
       document.querySelectorAll('.product-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const product = {
-            id: card.dataset.id,
-            name: card.dataset.name,
-            price: parseFloat(card.dataset.price),
-            stock: parseInt(card.dataset.stock),
-            unidad: card.dataset.unidad
-          };
-          addToCart(product);
-        });
+        card.addEventListener('click', () => addToCart({
+          id: card.dataset.id,
+          name: card.dataset.name,
+          price: parseFloat(card.dataset.price),
+          stock: parseInt(card.dataset.stock),
+          unidad: card.dataset.unidad
+        }));
       });
     }
 
@@ -521,6 +622,15 @@
       }
       renderCart();
       updateSummary();
+
+      // Feedback visual en la card del producto
+      const card = document.querySelector(`.product-card[data-id="${product.id}"] .card`);
+      if (card) {
+        card.style.transition = 'transform 0.15s, box-shadow 0.15s';
+        card.style.transform = 'scale(1.06)';
+        card.style.boxShadow = '0 0 0 3px #28a745';
+        setTimeout(() => { card.style.transform = ''; card.style.boxShadow = ''; }, 200);
+      }
     }
 
     function renderCart() {
@@ -648,7 +758,12 @@
     // --- LISTENERS PRODUCTOS ---
     document.getElementById('productFilter').addEventListener('input', (e) => {
       currentPage = 1;
-      renderProducts(e.target.value);
+      renderProducts(e.target.value, document.getElementById('categoryFilter').value);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+      currentPage = 1;
+      renderProducts(document.getElementById('productFilter').value, e.target.value);
     });
 
     document.getElementById('itemsPerPage').addEventListener('change', (e) => {
@@ -697,7 +812,7 @@
     montoRecibidoInput.addEventListener('input', updateChange);
 
     // Inicializar
-    renderProducts();
+    renderProducts('', '');
     tipoPagoSelect.dispatchEvent(new Event('change'));
   });
 </script>

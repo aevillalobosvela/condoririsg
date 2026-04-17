@@ -77,7 +77,7 @@ class ProductosController extends BaseController
             'title'      => 'Crear Nuevo Producto',
             'producto'   => (object)['inventario_id' => $inventarioId],
             'categorias' => $this->categoriaModel->findAll(),
-            'unidades'   => $this->unidadModel->findAll(),
+            'unidades'   => $this->unidadModel->where('tipo', 'lacteo')->where('estado', true)->findAll(),
             'inventarios' => $this->inventarioModel->findAll(),
             'inventario_seleccionado' => $inventarioSeleccionado, // Nuevo dato
             'validation' => service('validation'),
@@ -215,7 +215,7 @@ class ProductosController extends BaseController
             'producto'   => $producto,
             'title'      => 'Editar Producto',
             'categorias' => $this->categoriaModel->findAll(),
-            'unidades'   => $this->unidadModel->findAll(),
+            'unidades'   => $this->unidadModel->where('tipo', 'lacteo')->where('estado', true)->findAll(),
             'inventarios' => $this->inventarioModel->findAll(),
             'inventario_seleccionado' => $inventarioSeleccionado, // Pasar el inventario seleccionado
             'validation' => service('validation'),

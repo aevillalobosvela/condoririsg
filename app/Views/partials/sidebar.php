@@ -174,7 +174,7 @@ $userRoleName = session()->get('rol_nombre');
 
 
         <?php if ($userRoleName === 'vendedor'): ?>
-          <li class="menu-title"><span>Ventas</span></li>
+          <li class="menu-title"><span>Venta de Lacteos</span></li>
           <li class="nav-item">
             <a class="nav-link menu-link" href="#sidebarVentas" data-bs-toggle="collapse">
               <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
@@ -215,6 +215,18 @@ $userRoleName = session()->get('rol_nombre');
                     Stock</a></li>
               </ul>
             </div>
+          </li>
+
+          <li class="menu-title"><span>Productos Agropecuarios</span></li>
+           <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
+              <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
+              <i class="ri-leaf-line"></i> <span>Registrar Productos</span>
+            </a>
           </li>
         <?php endif; ?>
 
@@ -286,6 +298,18 @@ $userRoleName = session()->get('rol_nombre');
                 <li class="nav-item"><a href="<?= base_url('baja') ?>" class="nav-link">Gestionar Bajas</a></li>
               </ul>
             </div>
+          </li>
+
+          <li class="menu-title"><span>Productos Agropecuarios</span></li>
+           <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro/ventas') ?>">
+              <i class="ri-shopping-bag-2-line"></i> <span>Ventas</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
+              <i class="ri-leaf-line"></i> <span>Registrar Productos</span>
+            </a>
           </li>
         <?php endif; ?>
 

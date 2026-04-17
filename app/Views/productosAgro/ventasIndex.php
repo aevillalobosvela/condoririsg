@@ -200,8 +200,16 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar productos por nombre...">
+        <div class="mb-3 d-flex gap-2">
+          <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
+          <select id="categoryFilter" class="form-select" style="max-width:160px;">
+            <option value="">Todas las categorías</option>
+            <option value="TUBERCULOS">Tubérculos</option>
+            <option value="HORTALIZAS">Hortalizas</option>
+            <option value="DESHIDRATADOS">Deshidratados</option>
+            <option value="CEREALES">Cereales</option>
+            <option value="LEGUMINOSAS">Leguminosas</option>
+          </select>
         </div>
 
         <div class="row g-3" id="productsGrid"></div>
@@ -410,31 +418,23 @@
     const montoRecibidoGroup = document.getElementById('montoRecibidoGroup');
     const cambioGroup = document.getElementById('cambioGroup');
 
-    // --- FUNCIONES DE RENDERIZADO Y LÓGICA ---
-
-    // Paleta de 7 colores asignada por nombre de producto (hash determinista)
-    const COLOR_PALETTE = [
-      { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
-      { bg: '#E3F2FD', border: '#2196F3', text: '#1565C0' },
-      { bg: '#FFF3E0', border: '#FF9800', text: '#E65100' },
-      { bg: '#FCE4EC', border: '#E91E63', text: '#C2185B' },
-      { bg: '#F3E5F5', border: '#9C27B0', text: '#6A1B9A' },
-      { bg: '#E0F7FA', border: '#00BCD4', text: '#00838F' },
-      { bg: '#FFFDE7', border: '#FFC107', text: '#F57F17' },
-    ];
-    const productColorMap = {};
-    let colorIndex = 0;
-    function getProductColor(nombre) {
-      if (!productColorMap[nombre]) {
-        productColorMap[nombre] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-        colorIndex++;
-      }
-      return productColorMap[nombre];
+    // Colores por categoría (mismo esquema que el formulario)
+    const CAT_COLORS = {
+      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
+      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
+      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
+      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+    };
+    function getCatColor(cat) {
+      return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
     }
 
-    function renderProducts(filter = '') {
-      const filtered = allProducts.filter(p => 
-        p.producto.toLowerCase().includes(filter.toLowerCase())
+    function renderProducts(nameFilter = '', catFilter = '') {
+      const filtered = allProducts.filter(p =>
+        p.producto.toLowerCase().includes(nameFilter.toLowerCase()) &&
+        (!catFilter || (p.categoria || '').toUpperCase() === catFilter)
       );
 
       const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -442,47 +442,41 @@
       const paginated = filtered.slice(start, start + itemsPerPage);
 
       productsGrid.innerHTML = paginated.map(p => {
-        const c = getProductColor(p.producto);
+        const c = getCatColor(p.categoria);
         return `
-        <div class="col-6 col-md-4 product-card" 
-             data-id="${p.id}" 
-             data-name="${p.producto}" 
-             data-price="${p.precio_contado}" 
+        <div class="col-6 col-md-4 product-card"
+             data-id="${p.id}"
+             data-name="${p.producto}"
+             data-price="${p.precio_contado}"
              data-stock="${p.cantidad_inve}"
-             data-unidad="${p.unidad_id || 'und'}">
-          <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${c.border} !important;">
-            <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${c.bg} 0%, #ffffff 100%);">
+             data-unidad="${p.unidad_id || 'und'}"
+             data-categoria="${(p.categoria||'').toUpperCase()}">
+          <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
+            <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
               <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width: 60px; height: 60px; background-color: ${c.border};">
-                <span class="fw-bold" style="color: #fff; font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
+                   style="width:56px;height:56px;background-color:${c.border};">
+                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
               </div>
-              <h6 class="card-title fs-6 mb-1" style="color: ${c.text};">${p.producto}</h6>
+              <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color: ${c.border};">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <p class="card-text mb-0">
-                <span class="badge" style="background-color: ${c.border}; font-size: 0.65rem;">Stock: ${p.cantidad_inve} und</span>
-              </p>
-              ${p.fecha_creacion ? `<p class="card-text mt-1 mb-0" style="font-size: 0.65rem; color: #6c757d;">${new Date(p.fecha_creacion).toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'})}</p>` : ''}
+              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
       }).join('');
 
       renderPagination(totalPages);
-      
+
       document.querySelectorAll('.product-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const product = {
-            id: card.dataset.id,
-            name: card.dataset.name,
-            price: parseFloat(card.dataset.price),
-            stock: parseInt(card.dataset.stock),
-            unidad: card.dataset.unidad
-          };
-          addToCart(product);
-        });
+        card.addEventListener('click', () => addToCart({
+          id: card.dataset.id,
+          name: card.dataset.name,
+          price: parseFloat(card.dataset.price),
+          stock: parseInt(card.dataset.stock),
+          unidad: card.dataset.unidad
+        }));
       });
     }
 
@@ -541,6 +535,15 @@
       }
       renderCart();
       updateSummary();
+
+      // Feedback visual en la card del producto
+      const card = document.querySelector(`.product-card[data-id="${product.id}"] .card`);
+      if (card) {
+        card.style.transition = 'transform 0.15s, box-shadow 0.15s';
+        card.style.transform = 'scale(1.06)';
+        card.style.boxShadow = '0 0 0 3px #28a745';
+        setTimeout(() => { card.style.transform = ''; card.style.boxShadow = ''; }, 200);
+      }
     }
 
     function renderCart() {
@@ -765,7 +768,12 @@
 
     document.getElementById('productFilter').addEventListener('input', (e) => {
       currentPage = 1;
-      renderProducts(e.target.value);
+      renderProducts(e.target.value, document.getElementById('categoryFilter').value);
+    });
+
+    document.getElementById('categoryFilter').addEventListener('change', (e) => {
+      currentPage = 1;
+      renderProducts(document.getElementById('productFilter').value, e.target.value);
     });
 
     document.getElementById('itemsPerPage').addEventListener('change', (e) => {
@@ -818,7 +826,7 @@
     montoRecibidoInput.addEventListener('input', updateChange);
 
     // Inicializar
-    renderProducts();
+    renderProducts('', '');
     // Asegurar que la visibilidad de los campos de pago sea correcta al inicio
     tipoPagoSelect.dispatchEvent(new Event('change'));
   });

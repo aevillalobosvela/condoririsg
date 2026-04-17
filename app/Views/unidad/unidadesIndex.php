@@ -9,6 +9,7 @@
 
 
 
+
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
@@ -59,7 +60,7 @@
                                         <tr>
                                             <th>ID</th>
                                             <th>Nombre</th>
-                                            <th>Descripción</th>
+                                            <th>Tipo</th>
                                             <th>Estado</th>
                                             <th>Creado</th>
                                             <th>Actualizado</th>
@@ -72,7 +73,14 @@
                                             <tr class="<?= !$isActive ? 'table-secondary' : '' ?>">
                                                 <td><?= $unidad['id'] ?></td>
                                                 <td><?= esc($unidad['nombre']) ?></td>
-                                                <td><?= esc($unidad['descripcion']) ?></td>
+                                                <td>
+                                                    <?php $tipo = $unidad['tipo'] ?? 'lacteo'; ?>
+                                                    <?php if ($tipo === 'agro'): ?>
+                                                        <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #86efac;">Agropecuario</span>
+                                                    <?php else: ?>
+                                                        <span class="badge" style="background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd;">Lácteos</span>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td>
                                                     <span class="badge <?= $isActive ? 'bg-success' : 'bg-danger' ?>">
                                                         <?= $isActive ? 'Activa' : 'Inactiva' ?>

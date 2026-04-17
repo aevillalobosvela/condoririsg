@@ -12,9 +12,7 @@ class UnidadModel extends Model
 
   
     protected $allowedFields = [
-      
-        'nombre', 'descripcion', 'estado','user_id'
-
+        'nombre', 'descripcion', 'estado', 'tipo', 'user_id'
     ];
 
     protected $useTimestamps = true;
