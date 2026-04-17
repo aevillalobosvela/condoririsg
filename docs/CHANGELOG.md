@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ---
 
-## [Unreleased]
+## [Unreleased]s
 
 ## 2026-04-17
 
