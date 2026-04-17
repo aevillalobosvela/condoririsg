@@ -713,7 +713,7 @@ class ventasAgroController extends BaseController
 
         if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')

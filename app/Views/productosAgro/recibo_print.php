@@ -230,7 +230,7 @@ $nombreUsuario    = session()->get('nombre') ?? session()->get('username') ?? 'U
 
             <div class="cliente-section">
                 <?php if (!empty($venta->personal_uto_id) && !empty($personal)): ?>
-                    <div class="info-line">Personal UTO: <?= esc($personal['nombre'] ?? 'N/A') ?></div>
+                    <div class="info-line">Personal UTO: <?= esc($personal['nombre_completo'] ?? 'N/A') ?></div>
                     <div class="info-line">DIP: <?= esc($personal['dip'] ?? 'N/A') ?></div>
                     <div class="info-line">Cargo: <?= esc($personal['cargo'] ?? 'Sin cargo') ?></div>
                     <div class="info-line">Sección: <?= esc($personal['seccion'] ?? 'Sin sección') ?></div>
