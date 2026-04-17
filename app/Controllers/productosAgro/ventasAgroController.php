@@ -135,7 +135,7 @@ class ventasAgroController extends BaseController
             SELECT
                 v.*,
                 COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
-                p.nombre_completo AS nombre_personal,
+                p.nombre AS nombre_personal,
                 p.dip,
                 cargos.cargo,
                 secciones.seccion,
@@ -240,7 +240,7 @@ class ventasAgroController extends BaseController
         $sqlUto = "
             SELECT
                 p.id_persona,
-                p.nombre_completo AS nombre,
+                p.nombre AS nombre,
                 p.dip,
                 p.telefono,
                 p.celular,
@@ -253,7 +253,7 @@ class ventasAgroController extends BaseController
             LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
             WHERE p.\"id_estado\" = true
               AND e.\"id_estado\" = true
-              AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
+              AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
             LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
@@ -558,7 +558,7 @@ class ventasAgroController extends BaseController
             }
         } else {
             $receptor = $db->table('public.personas p')
-                ->select('p.id_persona, p.nombre_completo AS nombre')
+                ->select('p.id_persona, p.nombre AS nombre')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'inner')
                 ->where('p.id_persona', $receptorId)
                 ->where('p.id_estado', true)
@@ -713,7 +713,7 @@ class ventasAgroController extends BaseController
 
         if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
