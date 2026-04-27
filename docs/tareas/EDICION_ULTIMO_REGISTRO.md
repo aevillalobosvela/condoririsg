@@ -33,7 +33,7 @@ Se trabaja de menor a mayor complejidad/riesgo:
 | 🟢 Baja | Usuarios | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟢 Baja | Catálogos (categorías, unidades, sucursales) | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟡 Media | Inventarios de leche | Afecta reserva acumulativa | ✅ Completado |
-| 🟡 Media | Productos lácteos / agro (stock) | `stock_inve`/`cantidad_inve` vinculado a ventas | ⏳ Pendiente |
+| 🟡 Media | Productos lácteos / agro (stock) | `stock_inve`/`cantidad_inve` vinculado a ventas | ✅ Completado (ayudas visuales) |
 | 🔴 Alta | Ventas (3 módulos) | Requiere revertir stock + recalcular totales | ⏳ Pendiente |
 | 🔴 Alta | Envíos confirmados | Requiere revertir stock de `stock_sucursales` | ⏳ Pendiente |
 
@@ -160,13 +160,25 @@ evaluación de condiciones en el JS.
 - Solo `rol_id` 1 (admin) o 3 (almacen)
 - Sin restricción de día ni de productos
 
-### 3. Módulo Productos — `condoriri.productos` y `condoriri.productos_agro`
+### 3. ~~Módulo Productos~~ ✅ Completado
 
-**Riesgo medio:** `stock_inve` / `cantidad_inve` están vinculados a ventas y mermas.
+**Decisión tomada:** en lugar de permitir edición post-creación (demasiado riesgo de desincronizar
+inventario, reserva y ventas), se mejoró la experiencia de creación para prevenir errores.
 
-**Preguntas pendientes antes de implementar:**
-- ¿Qué campos son editables? (precios, nombre, descripción, stock, calidad)
-- ¿El stock es editable directamente o solo a través de merma/agregar?
+**Archivo modificado:** `app/Views/productos/productosform.php`
+
+**Cambios en modo creación:**
+- Panel de reserva del inventario con barra de progreso visual que cambia de color según el % de uso (verde / amarillo ≥90% / rojo =100%)
+- Panel de resultados del cálculo rediseñado: muestra unidades, litros usados y reserva restante con colores de alerta
+- Badge de estado en el panel de resultados: "Listo para guardar" / "Uso alto de reserva" / "0 unidades — revise los valores"
+- Alerta inline cuando el cálculo produce 0 unidades
+- Botón "Crear Producto" deshabilitado hasta que el cálculo sea válido (≥1 unidad, litros ≤ reserva)
+- Modal de confirmación antes del POST con resumen completo: nombre, categoría, precios, litros, unidades, reserva restante
+
+**Cambios en modo edición:**
+- Reemplazado el `alert-warning` genérico por un panel claro que muestra stock original y actual, y explica explícitamente qué campos sí y qué no se pueden modificar
+
+**Productos agro:** omitidos por ser poco frecuentes.
 
 ### 4. Módulo Ventas — los 3 módulos (alta complejidad)
 
