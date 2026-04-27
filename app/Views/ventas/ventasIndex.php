@@ -225,6 +225,30 @@
             </button>
           </div>
          <div id="clientResults" class="list-group"></div>
+          <!-- Panel de edición inline -->
+          <div id="clientEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
+            <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
+              <i class="ri-information-line me-1"></i>
+              Puede editar el último cliente registrado por usted hoy.
+            </div>
+            <div class="row g-2">
+              <div class="col-sm-5">
+                <input type="text" class="form-control form-control-sm" id="editNombre" placeholder="Nombre completo">
+              </div>
+              <div class="col-sm-3">
+                <input type="text" class="form-control form-control-sm" id="editCi" placeholder="CI / NIT">
+              </div>
+              <div class="col-sm-4 d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-warning flex-grow-1" id="btnGuardarEdit">
+                  <i class="ri-save-line me-1"></i> Guardar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelarEdit">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+            <div id="editClientError" class="text-danger mt-1" style="font-size:0.8rem; display:none;"></div>
+          </div>
         </div>
       </div>
 
@@ -440,6 +464,8 @@
 
     // Datos iniciales
     const allProducts = <?= json_encode($productos) ?>;
+    const SESSION_USER_ID = <?= (int)session()->get('id') ?>;
+    const TODAY = '<?= date('Y-m-d') ?>';
     let itemsPerPage = 9;
     let currentPage = 1;
     let selectedClient = null;
@@ -752,7 +778,12 @@
         `;
       } else {
         clientResults.innerHTML = filtered.map(c => `
-          <a href="#" class="list-group-item list-group-item-action client-item" data-id="${c.id}" data-name="${c.nombre_completo}" data-ci="${c.ci_nit}">
+          <a href="#" class="list-group-item list-group-item-action client-item"
+             data-id="${c.id}"
+             data-name="${c.nombre_completo}"
+             data-ci="${c.ci_nit}"
+             data-user-id="${c.user_id}"
+             data-created-at="${c.created_at || ''}">
             ${c.nombre_completo} - CI: ${c.ci_nit}
           </a>
         `).join('');
@@ -765,6 +796,18 @@
       clientSearch.value = client.name;
       clienteIdInput.value = client.id;
       document.getElementById('clientResults').style.display = 'none';
+
+      // Mostrar panel de edición si el cliente cumple las condiciones
+      const panel = document.getElementById('clientEditPanel');
+      const clientDate = client.created_at ? client.created_at.substring(0, 10) : '';
+      if (parseInt(client.user_id) === SESSION_USER_ID && clientDate === TODAY) {
+        document.getElementById('editNombre').value = client.name;
+        document.getElementById('editCi').value = client.ci || '';
+        document.getElementById('editClientError').style.display = 'none';
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
     }
     
     /**
@@ -892,7 +935,9 @@
         selectClient({
           id: target.dataset.id,
           name: target.dataset.name,
-          ci: target.dataset.ci
+          ci: target.dataset.ci,
+          user_id: target.dataset.userId,
+          created_at: target.dataset.createdAt,
         });
       } else if (target.classList.contains('client-add-new')) {
         newClientModal.show();
@@ -985,6 +1030,49 @@
       }
       renderCart();
       updateSummary();
+    });
+
+    // Edición inline de cliente
+    document.getElementById('btnGuardarEdit').addEventListener('click', function () {
+      const nombre = document.getElementById('editNombre').value.trim();
+      const ci     = document.getElementById('editCi').value.trim();
+      const errDiv = document.getElementById('editClientError');
+
+      if (!nombre || !ci) {
+        errDiv.textContent = 'Nombre y CI/NIT son obligatorios.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      fetch('<?= base_url('cliente/update') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          id: clienteIdInput.value,
+          nombre_completo: nombre,
+          ci_nit: ci,
+        }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            clientSearch.value = res.nombre_completo;
+            selectedClient.name = res.nombre_completo;
+            selectedClient.ci   = res.ci_nit;
+            document.getElementById('clientEditPanel').style.display = 'none';
+          } else {
+            errDiv.textContent = res.error;
+            errDiv.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errDiv.textContent = 'Error de conexión. Intente nuevamente.';
+          errDiv.style.display = 'block';
+        });
+    });
+
+    document.getElementById('btnCancelarEdit').addEventListener('click', function () {
+      document.getElementById('clientEditPanel').style.display = 'none';
     });
 
     montoRecibidoInput.addEventListener('input', updateChange);
