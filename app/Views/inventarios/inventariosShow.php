@@ -111,7 +111,32 @@
                         <dt class="col-sm-4 fw-bold">Reserva:</dt>
                         <dd class="col-sm-8"><?= esc($inventario->reserva ?: 'N/A') ?></dd>
                     </dl>
-                    
+
+                    <?php if ($puedeEditarCantidad): ?>
+                    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.85rem;">
+                        <i class="ri-edit-line me-1"></i>
+                        Puede corregir la cantidad de este inventario porque es el último que registró hoy y aún no tiene productos asociados.
+                    </div>
+                    <form method="post" action="<?= base_url('inventarios/update-cantidad/' . $inventario->id) ?>">
+                        <?= csrf_field() ?>
+                        <div class="input-group input-group-sm mb-3">
+                            <span class="input-group-text">Nueva cantidad</span>
+                            <input type="number" step="0.01" min="0" name="stock"
+                                   class="form-control"
+                                   value="<?= esc($inventario->stock) ?>"
+                                   required>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="ri-save-line me-1"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                    <?php elseif ($esUltimoDelUsuario && $esDehoy && $tieneProductos): ?>
+                    <div class="alert alert-secondary py-2 px-3" style="font-size:0.82rem;">
+                        <i class="ri-lock-line me-1"></i>
+                        La cantidad no puede editarse porque ya existen productos registrados bajo este inventario.
+                    </div>
+                    <?php endif; ?>
+
                     <h6 class="text-muted mb-2">Fechas</h6>
                     <hr class="mt-2 mb-3">
                     <dl class="row">
@@ -148,11 +173,8 @@
                         </div>
                     <?php else: ?>
                         <div class="row g-3">
-                            
-                            
                             <h6 class="text-muted mt-3 mb-2">Valores Medidos</h6>
                             <hr class="mt-2 mb-3">
-                            
                             <div class="col-md-6">
                                 <ul class="list-unstyled">
                                     <li class="mb-2"><strong>Grasa (%):</strong> <span class="badge bg-primary-subtle text-primary"><?= esc($inventario->grasa ?? 'N/A') ?></span></li>
@@ -163,7 +185,6 @@
                                     <li class="mb-2"><strong>Proteína (%):</strong> <span class="badge bg-primary-subtle text-primary"><?= esc($inventario->proteina ?? 'N/A') ?></span></li>
                                 </ul>
                             </div>
-                            
                             <div class="col-md-6">
                                 <ul class="list-unstyled">
                                     <li class="mb-2"><strong>Agua Agregada (%):</strong> <span class="badge bg-danger-subtle text-danger"><?= esc($inventario->agua ?? 'N/A') ?></span></li>
@@ -172,8 +193,65 @@
                                     <li class="mb-2"><strong>pH:</strong> <span class="badge bg-success-subtle text-success"><?= esc($inventario->ph ?? 'N/A') ?></span></li>
                                 </ul>
                             </div>
-
                         </div>
+                    <?php endif; ?>
+
+                    <?php if ($puedeEditarCalidad): ?>
+                    <hr class="mt-3">
+                    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.85rem;">
+                        <i class="ri-edit-line me-1"></i>
+                        Puede editar los datos de calidad de este inventario.
+                    </div>
+                    <form method="post" action="<?= base_url('inventarios/update-calidad/' . $inventario->id) ?>">
+                        <?= csrf_field() ?>
+                        <div class="row g-2">
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Grasa (%)</label>
+                                <input type="number" step="0.01" name="grasa" class="form-control form-control-sm" value="<?= esc($inventario->grasa ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">SNG</label>
+                                <input type="number" step="0.01" name="sng" class="form-control form-control-sm" value="<?= esc($inventario->sng ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Densidad</label>
+                                <input type="number" step="0.001" name="densidad" class="form-control form-control-sm" value="<?= esc($inventario->densidad ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Lactosa (%)</label>
+                                <input type="number" step="0.01" name="lactosa" class="form-control form-control-sm" value="<?= esc($inventario->lactosa ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Sólidos (%)</label>
+                                <input type="number" step="0.01" name="solidos" class="form-control form-control-sm" value="<?= esc($inventario->solidos ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Proteína (%)</label>
+                                <input type="number" step="0.01" name="proteina" class="form-control form-control-sm" value="<?= esc($inventario->proteina ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Agua (%)</label>
+                                <input type="number" step="0.01" name="agua" class="form-control form-control-sm" value="<?= esc($inventario->agua ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Temperatura (°C)</label>
+                                <input type="number" step="0.01" name="temperatura" class="form-control form-control-sm" value="<?= esc($inventario->temperatura ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">Congelación</label>
+                                <input type="number" step="0.001" name="congelacion" class="form-control form-control-sm" value="<?= esc($inventario->congelacion ?? '') ?>" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label form-label-sm">pH</label>
+                                <input type="number" step="0.01" min="0" max="14" name="ph" class="form-control form-control-sm" value="<?= esc($inventario->ph ?? '') ?>" required>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="ri-save-line me-1"></i> Guardar datos de calidad
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                     <?php endif; ?>
                 </div>
             </div>

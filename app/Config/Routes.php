@@ -141,6 +141,8 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->post('guardar-cliente', 'inventarios\inventariosController::guardarCliente', ['filter' => 'role:admin,almacen']);
     $routes->post('registerClienteInve', 'cliente\clienteController::registerClienteInve', ['filter' => 'role:admin,almacen']);
     $routes->post('guardar-calidad/(:num)', 'inventarios\inventariosController::guardarCalidad/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('update-cantidad/(:num)', 'inventarios\inventariosController::updateCantidad/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('update-calidad/(:num)', 'inventarios\inventariosController::updateCalidad/$1', ['filter' => 'role:admin,almacen']);
     $routes->get('control-calidad-pdf/(:num)', 'inventarios\inventariosController::controlCalidadPdf/$1', ['filter' => 'role:admin,almacen']);
     $routes->get('control-calidad-excel/(:num)', 'inventarios\inventariosController::controlCalidadExcel/$1', ['filter' => 'role:admin,almacen,contabilidad']);
 });

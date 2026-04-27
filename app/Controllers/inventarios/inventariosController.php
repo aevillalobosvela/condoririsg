@@ -124,7 +124,6 @@ class InventariosController extends BaseController
 
         $productosArbol = $this->productoModel->buildTree($productosPlanos);
 
-        // Ahora estos NO son null
         $categorias = $this->categoriaModel->findAll();
         $unidades   = $this->unidadModel->findAll();
 
@@ -138,12 +137,34 @@ class InventariosController extends BaseController
             $unidadesSelect[$uni['id']] = $uni['nombre'];
         }
 
+        $userId = session()->get('id');
+        $rolId  = (int)session()->get('rol_id');
+        $hoy    = date('Y-m-d');
+
+        // ¿Es el último inventario del usuario y fue creado hoy?
+        $ultimo = $this->inventarioModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        $esUltimoDelUsuario = $ultimo && (int)$ultimo->id === $id;
+        $esDehoy            = $inventario->created_at && date('Y-m-d', strtotime($inventario->created_at)) === $hoy;
+        $tieneProductos     = count($productosPlanos) > 0;
+        $puedeEditarCantidad = $esUltimoDelUsuario && $esDehoy && !$tieneProductos;
+        $puedeEditarCalidad  = in_array($rolId, [1, 3]);
+
         $data = [
-            'inventario' => $inventario,
-            'productos' => $productosArbol,
-            'categoriasSelect' => $categoriasSelect,
-            'unidadesSelect' => $unidadesSelect,
-            'title' => 'Detalles del Inventario',
+            'inventario'          => $inventario,
+            'productos'           => $productosArbol,
+            'categoriasSelect'    => $categoriasSelect,
+            'unidadesSelect'      => $unidadesSelect,
+            'title'               => 'Detalles del Inventario',
+            'puedeEditarCantidad' => $puedeEditarCantidad,
+            'puedeEditarCalidad'  => $puedeEditarCalidad,
+            'tieneProductos'      => $tieneProductos,
+            'esUltimoDelUsuario'  => $esUltimoDelUsuario,
+            'esDehoy'             => $esDehoy,
         ];
 
         return view('inventarios/inventariosShow', $data);
@@ -2367,5 +2388,126 @@ class InventariosController extends BaseController
 
         $service = new \App\Services\Inventarios\ExportacionExcelVentasService();
         $service->exportar($fecha_inicio, $fecha_fin, $tipo);
+    }
+
+    /**
+     * Edita la cantidad (stock + reserva) del último inventario registrado por el usuario hoy,
+     * solo si no tiene productos asociados.
+     */
+    public function updateCantidad(int $id): RedirectResponse
+    {
+        $userId     = session()->get('id');
+        $sucursalId = session()->get('sucursal_id');
+
+        $inventario = $this->inventarioModel->find($id);
+        if (!$inventario) {
+            return redirect()->back()->with('error', 'Inventario no encontrado.');
+        }
+
+        // Verificar que sea el último inventario del usuario hoy
+        $ultimo = $this->inventarioModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo->id !== $id) {
+            return redirect()->back()->with('error', 'Solo puede editar el último inventario que usted registró.');
+        }
+
+        if (date('Y-m-d', strtotime($ultimo->created_at)) !== date('Y-m-d')) {
+            return redirect()->back()->with('error', 'Solo puede editar inventarios registrados el día de hoy.');
+        }
+
+        // Verificar que no tenga productos asociados
+        $tieneProductos = $this->productoModel
+            ->where('inventario_id', $id)
+            ->countAllResults();
+
+        if ($tieneProductos > 0) {
+            return redirect()->back()->with('error', 'No se puede editar la cantidad: este inventario ya tiene productos registrados.');
+        }
+
+        $nuevaCantidad = (float)$this->request->getPost('stock');
+        if ($nuevaCantidad < 0) {
+            return redirect()->back()->with('error', 'La cantidad no puede ser negativa.');
+        }
+
+        // Recalcular reserva igual que en create()
+        if (strtoupper($inventario->nombre) === 'LECHE') {
+            $anterior = $this->inventarioModel
+                ->where('sucursal_id', $sucursalId)
+                ->where('nombre', 'LECHE')
+                ->where('id !=', $id)
+                ->orderBy('id', 'DESC')
+                ->first();
+            $reservaAnterior = $anterior ? (float)$anterior->reserva : 0;
+            $nuevaReserva    = $reservaAnterior + $nuevaCantidad;
+        } else {
+            $nuevaReserva = $nuevaCantidad;
+        }
+
+        if ($this->inventarioModel->update($id, ['stock' => $nuevaCantidad, 'reserva' => $nuevaReserva])) {
+            return redirect()->to('/inventarios/show/' . $id)->with('success', 'Cantidad actualizada exitosamente.');
+        }
+
+        return redirect()->back()->with('error', 'Error al actualizar la cantidad.');
+    }
+
+    /**
+     * Edita los datos de calidad del inventario.
+     * Solo roles admin (rol_id=1) y almacen (rol_id=3).
+     */
+    public function updateCalidad(int $id): RedirectResponse
+    {
+        $rolId = (int)session()->get('rol_id');
+
+        if (!in_array($rolId, [1, 3])) {
+            return redirect()->back()->with('error', 'No tiene permisos para editar datos de calidad.');
+        }
+
+        $inventario = $this->inventarioModel->find($id);
+        if (!$inventario) {
+            return redirect()->back()->with('error', 'Inventario no encontrado.');
+        }
+
+        $rules = [
+            'grasa'       => 'required|numeric',
+            'sng'         => 'required|numeric',
+            'densidad'    => 'required|numeric',
+            'lactosa'     => 'required|numeric',
+            'solidos'     => 'required|numeric',
+            'proteina'    => 'required|numeric',
+            'agua'        => 'required|numeric',
+            'temperatura' => 'required|numeric',
+            'congelacion' => 'required|numeric',
+            'ph'          => 'required|numeric|less_than_equal_to[14]|greater_than_equal_to[0]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->with('error', 'Error de validación. Revise los campos numéricos.')
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        $data = [
+            'grasa'       => $this->request->getPost('grasa'),
+            'sng'         => $this->request->getPost('sng'),
+            'densidad'    => $this->request->getPost('densidad'),
+            'lactosa'     => $this->request->getPost('lactosa'),
+            'solidos'     => $this->request->getPost('solidos'),
+            'proteina'    => $this->request->getPost('proteina'),
+            'agua'        => $this->request->getPost('agua'),
+            'temperatura' => $this->request->getPost('temperatura'),
+            'congelacion' => $this->request->getPost('congelacion'),
+            'ph'          => $this->request->getPost('ph'),
+            'fecha_calidad' => date('Y-m-d H:i:s'),
+            'user_cali'   => session()->get('id'),
+        ];
+
+        if ($this->inventarioModel->update($id, $data)) {
+            return redirect()->to('/inventarios/show/' . $id)->with('success', 'Datos de calidad actualizados exitosamente.');
+        }
+
+        return redirect()->back()->with('error', 'Error al actualizar los datos de calidad.');
     }
 }

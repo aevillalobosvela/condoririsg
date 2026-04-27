@@ -32,7 +32,7 @@ Se trabaja de menor a mayor complejidad/riesgo:
 | 🟢 Baja | Clientes externos (`condoriri.clientes_externos`) | Sin dependencias de stock | ✅ Completado (contado + crédito) |
 | 🟢 Baja | Usuarios | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟢 Baja | Catálogos (categorías, unidades, sucursales) | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
-| 🟡 Media | Inventarios de leche | Afecta reserva acumulativa | ⏳ Pendiente |
+| 🟡 Media | Inventarios de leche | Afecta reserva acumulativa | ✅ Completado |
 | 🟡 Media | Productos lácteos / agro (stock) | `stock_inve`/`cantidad_inve` vinculado a ventas | ⏳ Pendiente |
 | 🔴 Alta | Ventas (3 módulos) | Requiere revertir stock + recalcular totales | ⏳ Pendiente |
 | 🔴 Alta | Envíos confirmados | Requiere revertir stock de `stock_sucursales` | ⏳ Pendiente |
@@ -138,17 +138,27 @@ evaluación de condiciones en el JS.
 - Llama a `POST /cliente/updateExterno`
 - Actualiza el `#personalInfo` con el nombre/DIP nuevos sin recargar
 
-### 2. Módulo Inventarios de leche — `condoriri.inventarios`
+### 2. ~~Módulo Inventarios de leche~~ ✅ Completado
 
-**Campos editables a definir:** básicos (`nombre`, `stock`, `turno`, `descripcion`) y/o
-calidad (`grasa`, `sng`, `densidad`, etc.).
+**Archivos modificados:**
+- `app/Controllers/inventarios/inventariosController.php`
+  - `show()` — ahora calcula y pasa a la vista: `puedeEditarCantidad`, `puedeEditarCalidad`, `tieneProductos`, `esUltimoDelUsuario`, `esDehoy`
+  - `updateCantidad(int $id)` — método nuevo: valida último del usuario + hoy + sin productos, actualiza `stock` y recalcula `reserva`
+  - `updateCalidad(int $id)` — método nuevo: valida `rol_id` en [1,3], actualiza los 10 campos de calidad
+- `app/Config/Routes.php` — 2 rutas nuevas: `POST inventarios/update-cantidad/(:num)` y `POST inventarios/update-calidad/(:num)`
+- `app/Views/inventarios/inventariosShow.php`
+  - Card "Detalles del Inventario": formulario inline de cantidad visible solo si `$puedeEditarCantidad`; mensaje de bloqueo si tiene productos
+  - Card "Control de Calidad": formulario de edición de los 10 campos visible solo si `$puedeEditarCalidad`
 
-**Riesgo:** el `stock` del último inventario de LECHE alimenta la `reserva` acumulativa.
-Modificar el stock requiere recalcular la reserva.
+**Reglas implementadas para cantidad:**
+- Mismo `user_id` que el usuario en sesión
+- `created_at` del día de hoy
+- Sin productos en `condoriri.productos` con ese `inventario_id`
+- Recalcula `reserva`: para LECHE = `reserva_inventario_anterior + nueva_cantidad`; para otros = `nueva_cantidad`
 
-**Preguntas pendientes antes de implementar:**
-- ¿Son editables los datos de calidad del último inventario?
-- ¿El campo `stock` es editable o queda excluido?
+**Reglas implementadas para calidad:**
+- Solo `rol_id` 1 (admin) o 3 (almacen)
+- Sin restricción de día ni de productos
 
 ### 3. Módulo Productos — `condoriri.productos` y `condoriri.productos_agro`
 
