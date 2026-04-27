@@ -4,15 +4,18 @@ namespace App\Controllers\cliente;
 
 use App\Controllers\BaseController;
 use App\Models\Cliente\ClienteModel;
+use App\Models\ClienteExterno\ClienteExternoModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class clienteController extends BaseController
 {
     protected $clienteModel;
+    protected $clienteExternoModel;
 
     public function __construct()
     {
-        $this->clienteModel = new ClienteModel();
+        $this->clienteModel        = new ClienteModel();
+        $this->clienteExternoModel = new ClienteExternoModel();
     }
 
     /**
@@ -54,16 +57,32 @@ class clienteController extends BaseController
     }
 
     /**
-     * Actualiza los datos de un cliente.
+     * Actualiza los datos de un cliente (último registrado por el usuario, mismo día).
      */
     public function update()
     {
-        $id = $this->request->getPost('id');
+        $id             = $this->request->getPost('id');
         $nombreCompleto = $this->request->getPost('nombre_completo');
-        $ciNit = $this->request->getPost('ci_nit');
+        $ciNit          = $this->request->getPost('ci_nit');
+        $userId         = session()->get('id');
 
         if (empty($id)) {
-            return $this->response->setJSON(['success' => false, 'error' => 'ID de cliente no proporcionado']);
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de cliente no proporcionado.']);
+        }
+
+        // Verificar que sea el último cliente registrado por este usuario hoy
+        $ultimo = $this->clienteModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo['id'] !== (int)$id) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar el último cliente que usted registró.']);
+        }
+
+        if (date('Y-m-d', strtotime($ultimo['created_at'])) !== date('Y-m-d')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar clientes registrados el día de hoy.']);
         }
 
         $data = [
@@ -76,10 +95,66 @@ class clienteController extends BaseController
         }
 
         if ($this->clienteModel->update($id, $data)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Cliente actualizado exitosamente.']);
-        } else {
-            return $this->response->setJSON(['success' => false, 'error' => 'Error al actualizar el cliente.']);
+            return $this->response->setJSON([
+                'success'         => true,
+                'message'         => 'Cliente actualizado exitosamente.',
+                'nombre_completo' => $data['nombre_completo'],
+                'ci_nit'          => $data['ci_nit'],
+            ]);
         }
+
+        return $this->response->setJSON(['success' => false, 'error' => 'Error al actualizar el cliente.']);
+    }
+
+    /**
+     * Actualiza los datos de un cliente externo (último registrado por el usuario, mismo día).
+     */
+    public function updateExterno()
+    {
+        $id       = $this->request->getPost('id');
+        $nombre   = $this->request->getPost('nombre');
+        $dip      = $this->request->getPost('dip');
+        $segmento = $this->request->getPost('segmento');
+        $userId   = session()->get('id');
+
+        if (empty($id)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de cliente no proporcionado.']);
+        }
+
+        $ultimo = $this->clienteExternoModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo->id !== (int)$id) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar el último cliente externo que usted registró.']);
+        }
+
+        if (date('Y-m-d', strtotime($ultimo->created_at)) !== date('Y-m-d')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar clientes registrados el día de hoy.']);
+        }
+
+        $data = [
+            'nombre'   => !empty($nombre)   ? strtoupper(trim($nombre))  : '',
+            'dip'      => !empty($dip)       ? trim($dip)                 : '',
+            'segmento' => !empty($segmento)  ? trim($segmento)            : '',
+        ];
+
+        if (empty($data['nombre']) || empty($data['dip']) || empty($data['segmento'])) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+        }
+
+        if ($this->clienteExternoModel->update($id, $data)) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Cliente externo actualizado exitosamente.',
+                'nombre'  => $data['nombre'],
+                'dip'     => $data['dip'],
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => false, 'error' => 'Error al actualizar el cliente externo.']);
     }
 
     /**
