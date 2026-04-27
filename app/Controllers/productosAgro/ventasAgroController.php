@@ -267,6 +267,8 @@ class ventasAgroController extends BaseController
                 NULL AS celular,
                 segmento AS cargo,
                 NULL AS seccion,
+                user_id,
+                created_at,
                 'externo' AS tipo
             FROM condoriri.clientes_externos
             WHERE deleted_at IS NULL
