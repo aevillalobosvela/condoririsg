@@ -206,6 +206,37 @@
           </button>
         </div>
         <div id="personalInfo" class="mt-3"></div>
+        <!-- Panel de edición inline cliente externo -->
+        <div id="clienteExternoEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
+          <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
+            <i class="ri-information-line me-1"></i>
+            Puede editar el último cliente externo registrado por usted hoy.
+          </div>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <input type="text" class="form-control form-control-sm" id="editExtNombre" placeholder="Nombre">
+            </div>
+            <div class="col-sm-3">
+              <input type="text" class="form-control form-control-sm" id="editExtDip" placeholder="DIP / CI">
+            </div>
+            <div class="col-sm-2">
+              <select class="form-select form-select-sm" id="editExtSegmento">
+                <option value="SEGURO_UNIV">Seguro Univ.</option>
+                <option value="SPECTROLAB">Spectrolab</option>
+                <option value="OTROS">Otros</option>
+              </select>
+            </div>
+            <div class="col-sm-3 d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-warning flex-grow-1" id="btnGuardarEditExterno">
+                <i class="ri-save-line me-1"></i> Guardar
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelarEditExterno">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+          <div id="editExternoError" class="text-danger mt-1" style="font-size:0.8rem; display:none;"></div>
+        </div>
       </div>
 
       <!-- Popular Products -->
@@ -489,6 +520,8 @@
             'unidad' => $p->unidad ?? 'und'
         ];
     }, $productos)) ?>;
+    const SESSION_USER_ID = <?= (int)session()->get('id') ?>;
+    const TODAY = '<?= date('Y-m-d') ?>';
 
     let itemsPerPage = 9;
     let currentPage = 1;
@@ -546,7 +579,8 @@
               const idVal = esExterno ? p.id : p.id_persona;
               return `
                 <div class="card border-success mb-2 resultado-persona" style="cursor:pointer;"
-                     data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}" data-dip="${p.dip}">
+                     data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}" data-dip="${p.dip}"
+                     data-user-id="${p.user_id || ''}" data-created-at="${p.created_at || ''}" data-segmento="${p.cargo || ''}">
                   <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
                     <div>
                       <strong>${p.nombre}</strong> — DIP: ${p.dip}<br>
@@ -563,6 +597,24 @@
                 selectedPersonal = { nombre: el.dataset.nombre, dip: el.dataset.dip, tipo: el.dataset.tipo };
                 clienteIdInput.value    = el.dataset.id;
                 tipoReceptorInput.value = el.dataset.tipo;
+
+                const panel = document.getElementById('clienteExternoEditPanel');
+                if (el.dataset.tipo === 'externo') {
+                  const createdAt = el.dataset.createdAt || '';
+                  const userId    = el.dataset.userId    || '';
+                  if (parseInt(userId) === SESSION_USER_ID && createdAt.substring(0, 10) === TODAY) {
+                    document.getElementById('editExtNombre').value   = el.dataset.nombre;
+                    document.getElementById('editExtDip').value      = el.dataset.dip;
+                    document.getElementById('editExtSegmento').value = el.dataset.segmento || '';
+                    document.getElementById('editExternoError').style.display = 'none';
+                    panel.style.display = 'block';
+                  } else {
+                    panel.style.display = 'none';
+                  }
+                } else {
+                  panel.style.display = 'none';
+                }
+
                 personalInfo.innerHTML  = `
                   <div class="alert alert-success py-2">
                     <strong>Seleccionado:</strong> ${el.dataset.nombre} — DIP: ${el.dataset.dip}
@@ -608,6 +660,13 @@
         selectedPersonal = { nombre: c.nombre, dip: c.dip, tipo: 'externo' };
         clienteIdInput.value    = c.id;
         tipoReceptorInput.value = 'externo';
+
+        document.getElementById('editExtNombre').value   = c.nombre;
+        document.getElementById('editExtDip').value      = c.dip;
+        document.getElementById('editExtSegmento').value = c.segmento || '';
+        document.getElementById('editExternoError').style.display = 'none';
+        document.getElementById('clienteExternoEditPanel').style.display = 'block';
+
         personalInfo.innerHTML  = `
           <div class="alert alert-success py-2">
             <strong>Seleccionado:</strong> ${c.nombre} — DIP: ${c.dip}
@@ -963,6 +1022,48 @@
       }
       renderCart();
       updateSummary();
+    });
+
+    // Edición inline cliente externo
+    document.getElementById('btnGuardarEditExterno').addEventListener('click', function () {
+      const nombre   = document.getElementById('editExtNombre').value.trim();
+      const dip      = document.getElementById('editExtDip').value.trim();
+      const segmento = document.getElementById('editExtSegmento').value;
+      const errDiv   = document.getElementById('editExternoError');
+
+      if (!nombre || !dip || !segmento) {
+        errDiv.textContent = 'Nombre, DIP y segmento son obligatorios.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      fetch('<?= base_url('cliente/updateExterno') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ id: clienteIdInput.value, nombre, dip, segmento }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            selectedPersonal.nombre = res.nombre;
+            selectedPersonal.dip    = res.dip;
+            personalInfo.querySelector('.alert-success').innerHTML =
+              `<strong>Seleccionado:</strong> ${res.nombre} — DIP: ${res.dip}
+               <span class="badge bg-warning text-dark ms-2">Externo</span>`;
+            document.getElementById('clienteExternoEditPanel').style.display = 'none';
+          } else {
+            errDiv.textContent = res.error;
+            errDiv.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errDiv.textContent = 'Error de conexión. Intente nuevamente.';
+          errDiv.style.display = 'block';
+        });
+    });
+
+    document.getElementById('btnCancelarEditExterno').addEventListener('click', function () {
+      document.getElementById('clienteExternoEditPanel').style.display = 'none';
     });
 
     montoRecibidoInput.addEventListener('input', updateChange);

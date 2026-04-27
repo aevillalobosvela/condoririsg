@@ -29,7 +29,7 @@ Se trabaja de menor a mayor complejidad/riesgo:
 | Prioridad | Módulo | Complejidad | Estado |
 |---|---|---|---|
 | 🟢 Baja | Clientes (`condoriri.clientes`) | Sin dependencias de stock | ✅ Completado (contado) |
-| 🟢 Baja | Clientes externos (`condoriri.clientes_externos`) | Sin dependencias de stock | 🔄 Parcial (falta crédito) |
+| 🟢 Baja | Clientes externos (`condoriri.clientes_externos`) | Sin dependencias de stock | ✅ Completado (contado + crédito) |
 | 🟢 Baja | Usuarios | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟢 Baja | Catálogos (categorías, unidades, sucursales) | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟡 Media | Inventarios de leche | Afecta reserva acumulativa | ⏳ Pendiente |
@@ -119,22 +119,24 @@ Los 3 archivos recibieron cambios idénticos:
 
 ## Cambios pendientes
 
-### 1. Vistas de venta a **crédito** — clientes externos (próximo paso)
-
-Los clientes externos (`clientes_externos`) solo aparecen en las vistas de crédito.
-Estas 3 vistas necesitan el mismo panel pero llamando a `POST /cliente/updateExterno`.
+### 1. ~~Vistas de venta a **crédito** — clientes externos~~ ✅ Completado
 
 | Archivo | Estado |
 |---|---|
-| `app/Views/ventas/ventasCredito.php` | ⏳ Pendiente |
-| `app/Views/inventarios/ventasCredito.php` | ⏳ Pendiente |
-| `app/Views/productosAgro/ventasCredito.php` | ⏳ Pendiente |
+| `app/Views/ventas/ventasCredito.php` | ✅ Modificado |
+| `app/Views/inventarios/ventasCredito.php` | ✅ Modificado |
+| `app/Views/productosAgro/ventasCredito.php` | ✅ Modificado |
 
-**Diferencias respecto a las vistas de contado:**
-- El buscador de receptor busca en `public.personas` (personal UTO) Y `condoriri.clientes_externos`
-- Solo los resultados de tipo `externo` (badge amarillo) son editables con `updateExterno`
-- Los de tipo `uto` vienen de `public.personas` (schema externo, no editable desde este sistema)
-- Los campos del panel serán: `nombre`, `dip`, `segmento` (en lugar de `nombre_completo`, `ci_nit`)
+Además se corrigieron los 3 endpoints `buscarPersonalUto` en los controllers para incluir
+`user_id` y `created_at` en los resultados de `clientes_externos`, necesarios para la
+evaluación de condiciones en el JS.
+
+**Diferencias implementadas respecto a contado:**
+- Panel `#clienteExternoEditPanel` con campos `nombre`, `dip`, `segmento`
+- Solo aparece para resultados de tipo `externo`; los de tipo `uto` nunca muestran el panel
+- Al crear un externo nuevo con "Nuevo externo", el panel aparece automáticamente
+- Llama a `POST /cliente/updateExterno`
+- Actualiza el `#personalInfo` con el nombre/DIP nuevos sin recargar
 
 ### 2. Módulo Inventarios de leche — `condoriri.inventarios`
 
