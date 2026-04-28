@@ -746,6 +746,229 @@ class ventasAgroController extends BaseController
 
 
 
+    /**
+     * Devuelve JSON con la última venta del usuario hoy (módulo agropecuario).
+     */
+    public function ultimaVenta()
+    {
+        $userId     = (int)session()->get('id');
+        $sucursalId = (int)session()->get('sucursal_id');
+        $db         = \Config\Database::connect();
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY v.id DESC
+            LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['venta' => null]);
+        }
+
+        $detalles = $db->query("
+            SELECT dv.id, dv.producto_agro_id, dv.cantidad, dv.precio_unitario, dv.subtotal, pa.producto
+            FROM condoriri.detalle_venta dv
+            JOIN condoriri.productos_agro pa ON pa.id = dv.producto_agro_id
+            WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+        ", [$venta->id])->getResult();
+
+        $receptor = ['tipo' => 'cliente', 'id' => null, 'nombre' => 'Consumidor Final'];
+        if (!empty($venta->personal_uto_id)) {
+            $p = $db->query("
+                SELECT id_persona AS id, nombre FROM public.personas WHERE id_persona = ?
+            ", [$venta->personal_uto_id])->getRow();
+            if ($p) $receptor = ['tipo' => 'uto', 'id' => $p->id, 'nombre' => $p->nombre];
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $ce = $db->query("
+                SELECT id, nombre, dip, segmento FROM condoriri.clientes_externos WHERE id = ?
+            ", [$venta->cliente_externo_id])->getRow();
+            if ($ce) $receptor = ['tipo' => 'externo', 'id' => $ce->id, 'nombre' => $ce->nombre, 'dip' => $ce->dip, 'segmento' => $ce->segmento];
+        } elseif (!empty($venta->cliente_id)) {
+            $c = $db->query("
+                SELECT id, nombre_completo AS nombre FROM condoriri.clientes WHERE id = ?
+            ", [$venta->cliente_id])->getRow();
+            if ($c) $receptor = ['tipo' => 'cliente', 'id' => $c->id, 'nombre' => $c->nombre];
+        }
+
+        $productosDisponibles = $this->productoAgroModel
+            ->where('cantidad_inve >', 0)
+            ->where('sucursal_id', $sucursalId)
+            ->findAll();
+
+        return $this->response->setJSON([
+            'venta'                => $venta,
+            'detalles'             => $detalles,
+            'receptor'             => $receptor,
+            'productos_disponibles' => $productosDisponibles,
+        ]);
+    }
+
+    /**
+     * Actualiza la última venta del usuario hoy (módulo agropecuario).
+     */
+    public function updateUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = (int)session()->get('sucursal_id');
+        $db         = \Config\Database::connect();
+
+        $ventaId      = (int)$this->request->getPost('venta_id');
+        $receptorId   = (int)$this->request->getPost('receptor_id');
+        $tipoReceptor = $this->request->getPost('tipo_receptor');
+        $carritoJson  = $this->request->getPost('carrito');
+
+        if ($ventaId <= 0 || empty($carritoJson)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Datos incompletos.']);
+        }
+
+        $carrito = json_decode($carritoJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE || empty($carrito)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Carrito inválido.']);
+        }
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no editable.']);
+        }
+
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detallesOriginales = $db->query("
+                SELECT dv.id, dv.producto_agro_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver cantidad_inve original
+            foreach ($detallesOriginales as $det) {
+                $db->query("
+                    UPDATE condoriri.productos_agro SET cantidad_inve = cantidad_inve + ? WHERE id = ?
+                ", [$det->cantidad, $det->producto_agro_id]);
+            }
+
+            // 3. Validar nuevo carrito
+            $itemsNuevos = [];
+            $nuevoTotal  = 0;
+            foreach ($carrito as $item) {
+                $productoId     = (int)($item['id'] ?? 0);
+                $cantidad       = (int)($item['cantidad'] ?? 0);
+                $precioUnitario = (float)($item['precio_unitario'] ?? 0);
+
+                if ($productoId <= 0 || $cantidad <= 0 || $precioUnitario <= 0) {
+                    throw new \Exception('Datos inválidos en el carrito.');
+                }
+
+                $producto = $this->productoAgroModel->find($productoId);
+                if (!$producto) {
+                    throw new \Exception("Producto agro ID {$productoId} no encontrado.");
+                }
+                if ($producto->cantidad_inve < $cantidad) {
+                    throw new \Exception("Stock insuficiente para: {$producto->producto}. Disponible: {$producto->cantidad_inve}.");
+                }
+
+                $subtotal    = $precioUnitario * $cantidad;
+                $nuevoTotal += $subtotal;
+                $itemsNuevos[] = [
+                    'producto_agro_id' => $productoId,
+                    'cantidad'         => $cantidad,
+                    'precio_unitario'  => $precioUnitario,
+                    'subtotal'         => $subtotal,
+                ];
+            }
+
+            // 4. Soft-delete detalles originales
+            foreach ($detallesOriginales as $det) {
+                $this->detalleModel->delete($det->id);
+            }
+
+            // 5. Insertar nuevos detalles y descontar cantidad_inve
+            foreach ($itemsNuevos as $item) {
+                $this->detalleModel->insert([
+                    'venta_id'         => $ventaId,
+                    'producto_agro_id' => $item['producto_agro_id'],
+                    'cantidad'         => $item['cantidad'],
+                    'precio_unitario'  => $item['precio_unitario'],
+                    'subtotal'         => $item['subtotal'],
+                    'observaciones'    => '',
+                ]);
+
+                $db->query("
+                    UPDATE condoriri.productos_agro SET cantidad_inve = cantidad_inve - ? WHERE id = ?
+                ", [$item['cantidad'], $item['producto_agro_id']]);
+            }
+
+            // 6. Actualizar receptor y monto
+            $updateVenta = ['monto_total' => $nuevoTotal];
+            if ($tipoReceptor === 'uto') {
+                $updateVenta['personal_uto_id']    = $receptorId ?: null;
+                $updateVenta['cliente_externo_id'] = null;
+                $updateVenta['cliente_id']         = null;
+            } elseif ($tipoReceptor === 'externo') {
+                $updateVenta['cliente_externo_id'] = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_id']         = null;
+            } else {
+                $updateVenta['cliente_id']         = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_externo_id'] = null;
+            }
+            $this->ventaModel->update($ventaId, $updateVenta);
+
+            $db->transCommit();
+
+            return $this->response->setJSON([
+                'success'     => true,
+                'nuevo_monto' => $nuevoTotal,
+                'recibo_url'  => base_url('productosagro/recibo/' . $ventaId),
+            ]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     public function exportarPdfVentas()
     {
         $fecha_inicio = $this->request->getGet('fecha_inicio');

@@ -156,15 +156,15 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 - `guardarVenta()` — usa `stock_sucursales`, campo `stock`, detalle con `stock_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
 - `buscarPersonalUto()` — devuelve uto + externos con `user_id` y `created_at` ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado y verificado
+- `updateUltimaVenta()` — ✅ Implementado y verificado
 
 **`inventariosController`** (`app/Controllers/inventarios/inventariosController.php`):
 - `guardarVenta()` — usa `condoriri.productos`, campo `stock_inve`, detalle con `producto_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
 - `updateCantidad()` / `updateCalidad()` — ya implementados (inventarios de leche) ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado y verificado
+- `updateUltimaVenta()` — ✅ Implementado y verificado
 
 **`ventasAgroController`** (`app/Controllers/productosAgro/ventasAgroController.php`):
 - `guardarVenta()` — usa `condoriri.productos_agro`, campo `cantidad_inve`, detalle con `producto_agro_id` ✅
@@ -184,7 +184,9 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 | `productosAgro/ventasCredito.php` | ❌ No existe | ❌ No existe |
 
 ### Routes.php — estado real
-- Las 6 rutas nuevas (`ultimaVenta` + `updateUltimaVenta` × 3 grupos) **NO EXISTEN** ❌
+- Grupo `ventas`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
+- Grupo `inventarios`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
+- Grupo `productosagro`: `ultimaVenta` + `updateUltimaVenta` ❌ Pendiente
 
 ---
 
