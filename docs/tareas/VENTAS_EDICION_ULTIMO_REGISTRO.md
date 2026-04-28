@@ -169,8 +169,8 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 **`ventasAgroController`** (`app/Controllers/productosAgro/ventasAgroController.php`):
 - `guardarVenta()` — usa `condoriri.productos_agro`, campo `cantidad_inve`, detalle con `producto_agro_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado y verificado
+- `updateUltimaVenta()` — ✅ Implementado y verificado
 
 ### Vistas — estado real
 
@@ -186,7 +186,7 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 ### Routes.php — estado real
 - Grupo `ventas`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
 - Grupo `inventarios`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
-- Grupo `productosagro`: `ultimaVenta` + `updateUltimaVenta` ❌ Pendiente
+- Grupo `productosagro`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
 
 ---
 

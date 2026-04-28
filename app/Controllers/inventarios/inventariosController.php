@@ -1319,6 +1319,7 @@ class InventariosController extends BaseController
         $builder->select("{$detalleTableName}.*, {$stockAlias}.nombre");
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.producto_id");
         $builder->where('venta_id', $ventaId);
+        $builder->where("{$detalleTableName}.deleted_at IS NULL");
 
         $query = $builder->get();
         if ($query === false) {

@@ -697,6 +697,7 @@ class ventasAgroController extends BaseController
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.producto_agro_id");
         $builder->join('condoriri.unidades u', "u.id = {$stockAlias}.unidad_id", 'left');
         $builder->where('venta_id', $ventaId);
+        $builder->where("{$detalleTableName}.deleted_at IS NULL");
 
         $query = $builder->get();
         if ($query === false) {

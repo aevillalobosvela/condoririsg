@@ -1031,6 +1031,7 @@ class ventasController extends BaseController
         $builder->select("{$detalleTableName}.*, {$stockAlias}.producto");
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.stock_id");
         $builder->where('venta_id', $ventaId);
+        $builder->where("{$detalleTableName}.deleted_at IS NULL");
 
         $query = $builder->get();
         if ($query === false) {
