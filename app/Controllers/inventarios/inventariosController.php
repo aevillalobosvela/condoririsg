@@ -1447,12 +1447,14 @@ class InventariosController extends BaseController
         }
 
         $productosDisponibles = $this->productoModel->where('stock_inve >', 0)->findAll();
+        $clientes = $this->clienteModel->findAll();
 
         return $this->response->setJSON([
             'venta'                => $venta,
             'detalles'             => $detalles,
             'receptor'             => $receptor,
             'productos_disponibles' => $productosDisponibles,
+            'clientes'             => $clientes,
         ]);
     }
 

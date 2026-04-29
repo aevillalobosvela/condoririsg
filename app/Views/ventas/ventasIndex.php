@@ -363,20 +363,36 @@
         </div>
       </form>
 
-      <!-- Sales of the Day -->
-      <div class="sales-of-day-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h3 class="h5 mb-0 text-success">Ventas del Día</h3>
-          <span class="badge bg-light text-success" id="salesCount">0 ventas</span>
+      <!-- Panel Última Venta -->
+      <div id="panelUltimaVenta" style="display:none" class="sales-of-day-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="h5 mb-0 text-warning"><i class="ri-edit-line me-1"></i>Última Venta</h3>
+          <span class="badge bg-warning text-dark" id="uvCode"></span>
         </div>
-        <div class="chart-placeholder rounded text-center py-3">
-          <i class="ri-bar-chart-2-line display-5 text-success"></i>
+        <p class="text-muted small mb-2" style="font-size:0.78rem;">
+          <i class="ri-information-line me-1"></i>
+          ¿Cometió un error en la última venta? Puede corregir los productos o el cliente antes de cerrar el día. Solo aplica a su última venta registrada hoy.
+        </p>
+        
+        <div class="mb-2 pb-2 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Cliente:</span>
+            <strong class="small" id="uvCliente"></strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Monto:</span>
+            <strong class="text-success" id="uvMonto"></strong>
+          </div>
         </div>
-        <div class="text-center mt-3">
-          <a href="<?= base_url('ventas/reportes') ?>" class="text-success text-decoration-none">
-            <i class="ri-file-list-line me-1"></i> Ver reporte completo
-          </a>
+        
+        <div class="mb-2">
+          <span class="text-muted small d-block mb-1">Productos:</span>
+          <div id="uvProductos" class="small" style="max-height:80px;overflow-y:auto;"></div>
         </div>
+        
+        <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
+          <i class="ri-pencil-line me-1"></i> Corregir esta venta
+        </button>
       </div>
     </div>
   </div>
@@ -1085,4 +1101,271 @@
     });
   });
 </script>
+
+<!-- MODAL EDITAR ÚLTIMA VENTA -->
+<div class="modal fade" id="modalEditarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="ri-edit-line me-1"></i>Corregir Última Venta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="editVentaError" class="alert alert-danger d-none"></div>
+        <input type="hidden" id="editVentaId">
+
+        <!-- Receptor -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Cliente</label>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="editClienteSearch" placeholder="Buscar por nombre o CI..." autocomplete="off">
+            <div id="editClienteResults" class="list-group" style="position:absolute;z-index:1050;width:100%;max-height:180px;overflow-y:auto;display:none;"></div>
+          </div>
+          <input type="hidden" id="editReceptorId" value="0">
+          <input type="hidden" id="editTipoReceptor" value="cliente">
+          <small class="text-muted" id="editClienteSeleccionado">Consumidor Final</small>
+        </div>
+
+        <!-- Carrito editable -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Productos</label>
+          <div id="editCarritoContainer"></div>
+          <div class="mt-2">
+            <select class="form-select form-select-sm" id="editAgregarProducto">
+              <option value="">+ Agregar producto...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+          <span class="fw-bold">Total:</span>
+          <strong class="text-success fs-5" id="editTotal">Bs. 0.00</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning" id="btnGuardarCorreccion">
+          <i class="ri-save-line me-1"></i>Guardar corrección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ENDPOINT_GET  = '<?= base_url('ventas/ultimaVenta') ?>';
+  const ENDPOINT_POST = '<?= base_url('ventas/updateUltimaVenta') ?>';
+  const CAMPO_ID      = 'stock_id'; // campo que identifica el producto en detalle
+
+  let uvData = null; // datos cargados del GET
+  let editCarrito = []; // [{id, nombre, cantidad, precio_unitario}]
+
+  // --- Cargar última venta al iniciar ---
+  function cargarUltimaVenta() {
+    fetch(ENDPOINT_GET)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.venta) return;
+        uvData = data;
+        document.getElementById('uvCode').textContent  = data.venta.code;
+        document.getElementById('uvMonto').textContent = 'Bs. ' + parseFloat(data.venta.monto_total).toFixed(2);
+        document.getElementById('uvCliente').textContent = data.receptor && data.receptor.id
+          ? data.receptor.nombre
+          : 'Consumidor Final';
+        document.getElementById('uvProductos').innerHTML = (data.detalles || []).map(d =>
+          `<div class="d-flex justify-content-between">
+            <span class="text-truncate me-2">${d.producto}</span>
+            <span class="text-nowrap text-muted">${d.cantidad} &times; Bs.${parseFloat(d.precio_unitario).toFixed(2)}</span>
+          </div>`
+        ).join('');
+        document.getElementById('panelUltimaVenta').style.display = 'block';
+      })
+      .catch(() => {});
+  }
+
+  // --- Abrir modal y pre-llenar ---
+  document.getElementById('btnCorregirVenta').addEventListener('click', function() {
+    if (!uvData) return;
+
+    document.getElementById('editVentaId').value = uvData.venta.id;
+    document.getElementById('editVentaError').classList.add('d-none');
+
+    // Pre-llenar receptor
+    const receptor = uvData.receptor;
+    document.getElementById('editReceptorId').value = receptor && receptor.id ? receptor.id : 0;
+    document.getElementById('editTipoReceptor').value = 'cliente';
+    document.getElementById('editClienteSearch').value = receptor && receptor.id ? receptor.nombre : '';
+    document.getElementById('editClienteSeleccionado').textContent = receptor && receptor.id ? receptor.nombre : 'Consumidor Final';
+
+    // Pre-llenar carrito con detalles originales
+    editCarrito = uvData.detalles.map(d => ({
+      id: d[CAMPO_ID] ?? d.stock_id,
+      nombre: d.producto,
+      cantidad: parseInt(d.cantidad),
+      precio_unitario: parseFloat(d.precio_unitario)
+    }));
+    renderEditCarrito();
+
+    // Pre-llenar selector de productos disponibles
+    const sel = document.getElementById('editAgregarProducto');
+    sel.innerHTML = '<option value="">+ Agregar producto...</option>';
+    (uvData.productos_disponibles || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.dataset.nombre = p.producto ?? p.nombre;
+      opt.dataset.precio = p.precio_contado ?? p.precio ?? 0;
+      opt.textContent = (p.producto ?? p.nombre) + ' (stock: ' + (p.stock ?? p.cantidad_inve ?? p.stock_inve ?? 0) + ')';
+      sel.appendChild(opt);
+    });
+
+    new bootstrap.Modal(document.getElementById('modalEditarVenta')).show();
+  });
+
+  // --- Buscador de clientes en el modal ---
+  document.getElementById('editClienteSearch').addEventListener('input', function() {
+    const termino = this.value.trim().toLowerCase();
+    const results = document.getElementById('editClienteResults');
+    if (!termino) {
+      document.getElementById('editReceptorId').value = 0;
+      document.getElementById('editClienteSeleccionado').textContent = 'Consumidor Final';
+      results.style.display = 'none';
+      return;
+    }
+    const clientes = uvData.clientes || [];
+    const filtered = clientes.filter(c =>
+      c.nombre_completo.toLowerCase().includes(termino) ||
+      (c.ci_nit && c.ci_nit.toString().includes(termino))
+    ).slice(0, 8);
+    results.innerHTML = filtered.length
+      ? filtered.map(c =>
+          `<a href="#" class="list-group-item list-group-item-action small py-1"
+              data-id="${c.id}" data-nombre="${c.nombre_completo}">
+            ${c.nombre_completo} <span class="text-muted">&mdash; ${c.ci_nit}</span>
+          </a>`
+        ).join('')
+      : '<a class="list-group-item list-group-item-action text-muted small">Sin resultados</a>';
+    results.style.display = 'block';
+  });
+
+  document.getElementById('editClienteResults').addEventListener('click', function(e) {
+    e.preventDefault();
+    const a = e.target.closest('a[data-id]');
+    if (!a) return;
+    document.getElementById('editReceptorId').value = a.dataset.id;
+    document.getElementById('editClienteSearch').value = a.dataset.nombre;
+    document.getElementById('editClienteSeleccionado').textContent = a.dataset.nombre;
+    this.style.display = 'none';
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#editClienteSearch') && !e.target.closest('#editClienteResults')) {
+      const r = document.getElementById('editClienteResults');
+      if (r) r.style.display = 'none';
+    }
+  });
+
+  // --- Agregar producto desde selector ---
+  document.getElementById('editAgregarProducto').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (!opt.value) return;
+    const existe = editCarrito.find(i => i.id == opt.value);
+    if (existe) { existe.cantidad++; }
+    else {
+      editCarrito.push({
+        id: parseInt(opt.value),
+        nombre: opt.dataset.nombre,
+        cantidad: 1,
+        precio_unitario: parseFloat(opt.dataset.precio) || 0
+      });
+    }
+    this.value = '';
+    renderEditCarrito();
+  });
+
+  // --- Renderizar carrito editable ---
+  function renderEditCarrito() {
+    const cont = document.getElementById('editCarritoContainer');
+    if (!editCarrito.length) {
+      cont.innerHTML = '<p class="text-muted small">Sin productos.</p>';
+      document.getElementById('editTotal').textContent = 'Bs. 0.00';
+      return;
+    }
+    let total = 0;
+    cont.innerHTML = editCarrito.map((item, i) => {
+      const sub = item.cantidad * item.precio_unitario;
+      total += sub;
+      return `<div class="d-flex align-items-center gap-2 mb-2 border-bottom pb-2">
+        <span class="flex-grow-1 small">${item.nombre}</span>
+        <input type="number" min="1" value="${item.cantidad}" class="form-control form-control-sm" style="width:65px"
+          onchange="editCantidad(${i}, this.value)">
+        <span class="small text-muted" style="width:55px">Bs.${item.precio_unitario.toFixed(2)}</span>
+        <span class="small fw-bold" style="width:60px">Bs.${sub.toFixed(2)}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="editEliminar(${i})">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>`;
+    }).join('');
+    document.getElementById('editTotal').textContent = 'Bs. ' + total.toFixed(2);
+  }
+
+  window.editCantidad = function(i, val) {
+    editCarrito[i].cantidad = Math.max(1, parseInt(val) || 1);
+    renderEditCarrito();
+  };
+  window.editEliminar = function(i) {
+    editCarrito.splice(i, 1);
+    renderEditCarrito();
+  };
+
+  // --- Guardar corrección ---
+  document.getElementById('btnGuardarCorreccion').addEventListener('click', function() {
+    if (!editCarrito.length) {
+      document.getElementById('editVentaError').textContent = 'El carrito no puede estar vacío.';
+      document.getElementById('editVentaError').classList.remove('d-none');
+      return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+    const carrito = editCarrito.map(i => ({id: i.id, cantidad: i.cantidad, precio_unitario: i.precio_unitario}));
+    const params  = new URLSearchParams({
+      venta_id:      document.getElementById('editVentaId').value,
+      receptor_id:   document.getElementById('editReceptorId').value,
+      tipo_receptor: document.getElementById('editTipoReceptor').value,
+      carrito:       JSON.stringify(carrito)
+    });
+
+    fetch(ENDPOINT_POST, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: params
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEditarVenta')).hide();
+        window.open(data.recibo_url, '_blank');
+        window.location.reload();
+      } else {
+        document.getElementById('editVentaError').textContent = data.error;
+        document.getElementById('editVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+      }
+    })
+    .catch(() => {
+      document.getElementById('editVentaError').textContent = 'Error de conexión.';
+      document.getElementById('editVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+    });
+  });
+
+  // Iniciar al cargar
+  document.addEventListener('DOMContentLoaded', cargarUltimaVenta);
+})();
+</script>
+
 <?= $this->endSection() ?>

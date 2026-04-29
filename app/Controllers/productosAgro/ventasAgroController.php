@@ -810,6 +810,7 @@ class ventasAgroController extends BaseController
             'detalles'             => $detalles,
             'receptor'             => $receptor,
             'productos_disponibles' => $productosDisponibles,
+            'clientes'             => $this->clienteModel->findAll(),
         ]);
     }
 

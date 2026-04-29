@@ -1168,11 +1168,15 @@ class ventasController extends BaseController
         // Productos disponibles con stock (para agregar al carrito)
         $productosDisponibles = $this->stockSucursalModel->where('stock >', 0)->findAll();
 
+        // Lista de clientes para el selector del modal
+        $clientes = $this->clienteModel->findAll();
+
         return $this->response->setJSON([
             'venta'                => $venta,
             'detalles'             => $detalles,
             'receptor'             => $receptor,
             'productos_disponibles' => $productosDisponibles,
+            'clientes'             => $clientes,
         ]);
     }
 
@@ -1288,9 +1292,9 @@ class ventasController extends BaseController
                 ];
             }
 
-            // 4. Soft-delete de detalles originales
+            // 4. Hard-delete de detalles originales (uk_detalle_stock impide soft-delete + reinsert)
             foreach ($detallesOriginales as $det) {
-                $this->detalleModel->delete($det->id);
+                $db->query("DELETE FROM condoriri.detalle_venta WHERE id = ?", [$det->id]);
             }
 
             // 5. Insertar nuevos detalles y descontar stock

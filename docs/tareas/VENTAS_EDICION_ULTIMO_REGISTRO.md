@@ -148,7 +148,7 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 
 ---
 
-## Estado actual del módulo (revisión al 2026-04-17)
+## Estado actual del módulo (revisión al 2026-04-28)
 
 ### Controllers — estado real
 
@@ -157,7 +157,7 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
 - `buscarPersonalUto()` — devuelve uto + externos con `user_id` y `created_at` ✅
 - `ultimaVenta()` — ✅ Implementado y verificado
-- `updateUltimaVenta()` — ✅ Implementado y verificado
+- `updateUltimaVenta()` — ✅ Implementado, verificado y **bug corregido** (ver nota `uk_detalle_stock`)
 
 **`inventariosController`** (`app/Controllers/inventarios/inventariosController.php`):
 - `guardarVenta()` — usa `condoriri.productos`, campo `stock_inve`, detalle con `producto_id` ✅
@@ -176,12 +176,12 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 
 | Vista | Panel "Última venta" | Modal edición |
 |---|---|---|
-| `ventas/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `inventarios/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `productosAgro/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `ventas/ventasCredito.php` | ❌ No existe | ❌ No existe |
-| `inventarios/ventasCredito.php` | ❌ No existe | ❌ No existe |
-| `productosAgro/ventasCredito.php` | ❌ No existe | ❌ No existe |
+| `ventas/ventasIndex.php` | ✅ Completo | ✅ Completo |
+| `inventarios/ventasIndex.php` | ✅ Completo | ✅ Completo |
+| `productosAgro/ventasIndex.php` | ✅ Completo | ✅ Completo |
+| `ventas/ventasCredito.php` | ✅ Completo | ✅ Completo |
+| `inventarios/ventasCredito.php` | ✅ Completo | ✅ Completo |
+| `productosAgro/ventasCredito.php` | ✅ Completo | ✅ Completo |
 
 ### Routes.php — estado real
 - Grupo `ventas`: `ultimaVenta` + `updateUltimaVenta` ✅ Agregadas
@@ -232,69 +232,138 @@ Criterio de éxito: mismo que Parte 1 pero en `/productosagro/ultimaVenta` y `/p
 ---
 
 ### Parte 4 — Vistas contado (3 × ventasIndex.php)
-**Objetivo:** agregar el panel "Última venta" y el modal de edición en los 3 POS de contado.
+**Estado: ✅ Completado (2026-04-28)**
 
-Tareas por cada vista (`ventas/ventasIndex.php`, `inventarios/ventasIndex.php`, `productosAgro/ventasIndex.php`):
-1. Reemplazar la sección "Ventas del día" por el panel `#panelUltimaVenta`
-2. Agregar el modal `#modalEditarVenta` con carrito editable y buscador de productos
-3. Agregar JS: `cargarUltimaVenta()` al cargar la página, listener del botón "Corregir", `fetch POST updateUltimaVenta`
+**Panel `#panelUltimaVenta` — contenido final:**
+- Código de venta (`code`) como badge
+- Texto explicativo: *"¿Cometió un error en la última venta? Puede corregir los productos o el cliente antes de cerrar el día. Solo aplica a su última venta registrada hoy."*
+- Nombre del cliente/receptor (o "Consumidor Final")
+- Monto total
+- Lista de productos: `nombre × cantidad × precio_unitario`, con scroll si hay muchos
+- Botón "Corregir esta venta"
 
-Diferencias entre módulos en la vista:
-- Lácteos tienda: productos de `stock_sucursales`, campo `stock_id` en carrito
-- Lácteos planta: productos de `condoriri.productos`, campo `producto_id` en carrito
-- Agropecuario: productos de `condoriri.productos_agro`, campo `producto_agro_id` en carrito
+**Modal `#modalEditarVenta` — comportamiento final:**
+- Carrito pre-llenado con productos y precios originales, editable (cantidad, agregar, eliminar)
+- Buscador de cliente: input con dropdown, filtra sobre `uvData.clientes` por nombre o CI (máx. 8), pre-llenado con receptor actual; borrar el input vuelve a "Consumidor Final" (id=0)
+- `<select>` para agregar productos con stock disponible
+- Total recalculado en tiempo real
+- Al guardar con éxito: `window.open(recibo_url, '_blank')` + `window.location.reload()`
+- Al guardar con error: mensaje inline, modal no se cierra, botón se restaura
 
-Criterio de éxito:
-- El panel aparece automáticamente si hay una venta del usuario hoy
-- El modal se pre-llena con los productos y receptor originales
-- Al guardar, el panel actualiza el monto y muestra enlace al nuevo recibo
-- Si no hay venta elegible, el panel no se renderiza
+**JSON de `ultimaVenta()` — estructura final (los 3 módulos):**
+```json
+{
+  "venta": {"id": 42, "code": "SC-CO-000012", "monto_total": "150.00", ...},
+  "detalles": [{"stock_id": 3, "cantidad": 2, "precio_unitario": "25.00", "producto": "LECHE"}],
+  "receptor": {"tipo": "cliente", "id": 5, "nombre": "Juan Pérez"},
+  "productos_disponibles": [...],
+  "clientes": [{"id": 1, "nombre_completo": "...", "ci_nit": "..."}]
+}
+```
+
+Ver nota técnica `uk_detalle_stock` para el bug resuelto en el módulo tienda.
 
 ---
 
 ### Parte 5 — Vistas crédito (3 × ventasCredito.php)
-**Objetivo:** agregar el mismo panel y modal en los 3 POS de crédito, adaptado para receptor UTO/externo.
+**Estado: ✅ Completado (2026-04-28)**
 
-Tareas por cada vista (`ventas/ventasCredito.php`, `inventarios/ventasCredito.php`, `productosAgro/ventasCredito.php`):
-1. Mismo panel `#panelUltimaVenta` que en contado
-2. Modal adaptado: el receptor muestra buscador de personal UTO/externo (igual que el POS de crédito)
-3. JS: misma lógica que contado pero con `tipo_receptor` en el payload
+**Diferencias clave respecto a las vistas de contado:**
 
-Criterio de éxito: mismo que Parte 4 pero en las vistas de crédito
+- El receptor es `personal_uto_id` (tipo `uto`) o `cliente_externo_id` (tipo `externo`), nunca `cliente_id`
+- El buscador de receptor en el modal usa `fetch GET /[modulo]/buscarPersonalUto?dip=TERMINO` (mín. 3 caracteres), igual que el POS de crédito existente
+- Los resultados muestran badge azul para `uto` y badge amarillo para `externo`
+- Al seleccionar, se actualiza `#editReceptorId` y `#editTipoReceptor` (`'uto'` o `'externo'`)
+- El payload POST incluye `tipo_receptor` — el controller ya lo procesa correctamente
+- No es necesario incluir `clientes` en el JSON de `ultimaVenta()` para estas vistas
+- Receptor es obligatorio (validación antes de enviar: no existe "Consumidor Final" en crédito)
+
+**Implementación final en los 3 módulos:**
+
+| Módulo | `ENDPOINT_GET/POST` | `ENDPOINT_UTO` | `CAMPO_ID` | Stock en selector |
+|---|---|---|---|---|
+| ventas | `ventas/ultima...` | `ventas/buscarPersonalUto` | `stock_id` | `p.stock` |
+| inventarios | `inventarios/ultima...` | `inventarios/buscarPersonalUto` | `producto_id` | `p.stock_inve` |
+| productosAgro | `productosagro/ultima...` | `productosagro/buscarPersonalUto` | `producto_agro_id` | `p.cantidad_inve` |
 
 ---
 
 ## Notas técnicas importantes
 
-### Soft-delete en `detalle_venta`
-El modelo `DetalleModel` debe tener `useSoftDeletes = true` o la query de soft-delete debe hacerse
-directamente con `$db->query("UPDATE condoriri.detalle_venta SET deleted_at = NOW() WHERE venta_id = ?", [$ventaId])`.
-Verificar antes de implementar la Parte 1.
+### ⚠️ Constraint `uk_detalle_stock` en `condoriri.detalle_venta` (bug resuelto en módulo tienda)
 
-### Respuesta JSON de `ultimaVenta()`
-Estructura esperada:
+La tabla `condoriri.detalle_venta` tiene una constraint UNIQUE `uk_detalle_stock` sobre `(venta_id, stock_id)`
+**sin condición parcial** — es decir, incluye también las filas con `deleted_at IS NOT NULL`.
+
+Esto causaba que `updateUltimaVenta()` en `ventasController` fallara silenciosamente:
+1. El soft-delete dejaba los detalles originales en la tabla con `deleted_at` poblado
+2. Al reinsertar los nuevos detalles con el mismo `venta_id + stock_id`, PostgreSQL lanzaba:
+   `duplicate key value violates unique constraint "uk_detalle_stock"`
+3. La excepción era un `ErrorException` (no `\Exception`), por lo que el `catch` del controller
+   no la capturaba y el fetch recibía una respuesta de error 500 sin JSON — el modal no mostraba
+   nada porque el `.catch()` del JS solo ponía "Error de conexión" pero el error no llegaba
+   a mostrarse por un problema de timing en el render.
+
+**Solución aplicada:** reemplazar el soft-delete por hard-delete directo con SQL en el paso 4
+de la transacción de `ventasController::updateUltimaVenta()`:
+```php
+// Antes (fallaba):
+$this->detalleModel->delete($det->id);
+
+// Después (correcto):
+$db->query("DELETE FROM condoriri.detalle_venta WHERE id = ?", [$det->id]);
+```
+
+Los módulos `inventarios` y `productosagro` no tienen esta constraint sobre sus respectivos
+campos (`producto_id`, `producto_agro_id`), por eso funcionaban correctamente con soft-delete.
+
+### Soft-delete en `detalle_venta`
+El modelo `DetalleModel` tiene `useSoftDeletes = true`. Para el módulo tienda (`ventasController`)
+se usa hard-delete por la constraint `uk_detalle_stock` (ver nota anterior). Para los módulos
+`inventarios` y `productosagro` se puede usar `$this->detalleModel->delete($id)` sin problema.
+
+**Precaución para la Parte 5:** si en el futuro se agrega una constraint similar sobre
+`(venta_id, producto_id)` o `(venta_id, producto_agro_id)`, aplicar el mismo hard-delete.
+
+### Comportamiento post-guardado en las vistas
+Al guardar con éxito:
+1. `window.open(data.recibo_url, '_blank')` — abre el recibo actualizado en nueva pestaña
+2. `window.location.reload()` — recarga la página, actualizando stocks y `uvData`
+
+Al guardar con error:
+- Mensaje inline en `#editVentaError`, modal no se cierra, botón se restaura
+
+### Buscador de clientes en el modal (vistas contado — Parte 4)
+- Filtra sobre `uvData.clientes` (cargado en el GET, no requiere AJAX adicional)
+- Búsqueda por `nombre_completo` o `ci_nit`, máx. 8 resultados
+- Al seleccionar: actualiza `#editReceptorId` (hidden) y `#editClienteSeleccionado` (texto)
+- Al borrar el input: vuelve a "Consumidor Final" (id=0)
+- `#editTipoReceptor` siempre es `'cliente'` en las vistas de contado
+
+### Buscador de receptor en el modal (vistas crédito — Parte 5)
+- Endpoint AJAX: `GET /[modulo]/buscarPersonalUto?dip=TERMINO` (mín. 3 caracteres)
+- Devuelve array con `tipo: 'uto'` o `tipo: 'externo'`
+- Badge azul para UTO, badge amarillo para externo
+- Al seleccionar: actualiza `#editReceptorId` y `#editTipoReceptor`
+- No requiere `clientes` en el JSON del GET
+
+### Respuesta JSON de `ultimaVenta()` — estructura final
 ```json
 {
   "venta": {
-    "id": 42,
-    "code": "SC-CO-000012",
-    "monto_total": "150.00",
-    "tipo_pago": "contado",
-    "cliente_id": 5,
-    "personal_uto_id": null,
-    "cliente_externo_id": null
+    "id": 42, "code": "SC-CO-000012", "monto_total": "150.00",
+    "tipo_pago": "contado", "cliente_id": 5,
+    "personal_uto_id": null, "cliente_externo_id": null
   },
   "detalles": [
     {"id": 101, "stock_id": 3, "cantidad": 2, "precio_unitario": "25.00", "subtotal": "50.00", "producto": "LECHE"}
   ],
-  "receptor": {
-    "tipo": "cliente",
-    "id": 5,
-    "nombre": "Juan Pérez"
-  },
-  "productos_disponibles": [...]
+  "receptor": {"tipo": "cliente", "id": 5, "nombre": "Juan Pérez"},
+  "productos_disponibles": [...],
+  "clientes": [{"id": 1, "nombre_completo": "...", "ci_nit": "..."}]
 }
 ```
+`clientes` se incluye en los 3 módulos de contado. Para crédito (Parte 5) no es necesario.
 
 ### Payload de `updateUltimaVenta()`
 ```json
