@@ -116,6 +116,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('filtered', 'inventarios\inventariosController::filtered', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarPdf', 'inventarios\inventariosController::exportarPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarExcel', 'inventarios\inventariosController::exportarExcel', ['filter' => 'role:admin,almacen,contabilidad']);
+    $routes->get('exportarExcelLecheOtros', 'inventarios\inventariosController::exportarExcelLecheOtros', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarCalidadExcel', 'inventarios\inventariosController::exportarCalidadExcel', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('exportarCalidadPdf', 'inventarios\inventariosController::exportarCalidadPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('resumen', 'inventarios\inventariosController::getResumen', ['filter' => 'role:admin,almacen']);

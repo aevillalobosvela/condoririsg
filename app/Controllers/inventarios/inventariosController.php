@@ -1468,6 +1468,10 @@ class InventariosController extends BaseController
 
 
         $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventarios = $this->ordenarInventariosPorDiaYTurno($inventarios);
+        $inventarios = array_values(array_filter($inventarios, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) === 'LECHE';
+        }));
 
         $pdfGenerator = new ReporteLacteos();
 
@@ -1488,6 +1492,16 @@ class InventariosController extends BaseController
         // Usar el servicio de exportación
         $exportService = new \App\Services\Inventarios\ExportacionExcelService();
         $exportService->exportarReporteGeneral($nombre, $fecha_inicio, $fecha_fin);
+    }
+
+    public function exportarExcelLecheOtros()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $exportService = new \App\Services\Inventarios\ExportacionExcelService();
+        $exportService->exportarReporteLecheOtros($nombre, $fecha_inicio, $fecha_fin);
     }
 
     public function exportarExcelAntiguo()
@@ -2155,6 +2169,7 @@ class InventariosController extends BaseController
         $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
 
         $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventarios = $this->ordenarInventariosPorDiaYTurno($inventarios);
 
         // Agrupar inventarios por mes
         $inventariosPorMes = [];
@@ -2370,6 +2385,7 @@ class InventariosController extends BaseController
         $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
 
         $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventarios = $this->ordenarInventariosPorDiaYTurno($inventarios);
 
         $pdfGenerator = new ReporteControlCalidad([
             'nombre' => $nombre,
@@ -2378,6 +2394,35 @@ class InventariosController extends BaseController
         ]);
 
         $pdfGenerator->generarReporte($inventarios);
+    }
+
+    /**
+     * Ordenar por día (desc) y dentro del día: AM -> PM
+     */
+    private function ordenarInventariosPorDiaYTurno(array $inventarios): array
+    {
+        usort($inventarios, static function ($a, $b) {
+            $fechaA = date('Y-m-d', strtotime($a->created_at));
+            $fechaB = date('Y-m-d', strtotime($b->created_at));
+
+            if ($fechaA !== $fechaB) {
+                return strcmp($fechaB, $fechaA);
+            }
+
+            $turnoOrden = ['AM' => 0, 'PM' => 1];
+            $turnoA = strtoupper(trim($a->turno ?? 'AM'));
+            $turnoB = strtoupper(trim($b->turno ?? 'AM'));
+            $ordenA = $turnoOrden[$turnoA] ?? 99;
+            $ordenB = $turnoOrden[$turnoB] ?? 99;
+
+            if ($ordenA !== $ordenB) {
+                return $ordenA <=> $ordenB;
+            }
+
+            return strtotime($b->created_at) <=> strtotime($a->created_at);
+        });
+
+        return $inventarios;
     }
 
     public function exportarExcelVentas()

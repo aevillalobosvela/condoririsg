@@ -7,6 +7,9 @@ use App\Models\Producto\ProductoModel;
 
 class ExportacionExcelService
 {
+    private const ALTURA_FILA_DATOS = 18;
+    private const ALTURA_FILA_CIERRE = 18;
+
     protected $inventarioModel;
     protected $productoModel;
     protected $db;
@@ -23,8 +26,12 @@ class ExportacionExcelService
      */
     public function exportarReporteGeneral($nombre = '', $fecha_inicio = '', $fecha_fin = '')
     {
-        // Obtener inventarios filtrados
-        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        // Reporte general ahora solo contempla materia prima LECHE
+        $inventariosFiltrados = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventariosFiltrados = $this->ordenarPorDiaYTurno($inventariosFiltrados);
+        $inventarios = array_values(array_filter($inventariosFiltrados, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) === 'LECHE';
+        }));
 
         // Obtener todos los productos únicos de todos los inventarios
         $productosUnicos = $this->obtenerProductosUnicos($inventarios);
@@ -37,6 +44,38 @@ class ExportacionExcelService
 
         // Generar archivo Excel
         $this->generarArchivoExcel($datosConProductos, $productosUnicos, $inventariosPorDia, $fecha_inicio, $fecha_fin);
+    }
+
+    /**
+     * Exportar reporte separado de inventarios (solo SUERO y OTROS)
+     */
+    public function exportarReporteLecheOtros($nombre = '', $fecha_inicio = '', $fecha_fin = '')
+    {
+        $inventariosFiltrados = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventariosFiltrados = $this->ordenarPorDiaYTurno($inventariosFiltrados);
+        $inventariosOtros = array_values(array_filter($inventariosFiltrados, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) !== 'LECHE';
+        }));
+
+        $filename = 'reporte_suero_otros_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+
+        $this->definirEstilos();
+
+        $productosOtros = $this->obtenerProductosUnicos($inventariosOtros);
+        $datosOtros = $this->prepararDatosConProductos($inventariosOtros, $productosOtros);
+        $this->generarWorksheetReporteGeneral('SUERO Y OTROS', $datosOtros, $productosOtros, $fecha_inicio, $fecha_fin);
+
+        echo '</Workbook>';
+        exit;
     }
 
     /**
@@ -94,6 +133,35 @@ class ExportacionExcelService
         }
 
         return $inventariosPorDia;
+    }
+
+    /**
+     * Ordenar por día (desc) y dentro del día: AM -> PM
+     */
+    private function ordenarPorDiaYTurno(array $inventarios): array
+    {
+        usort($inventarios, static function ($a, $b) {
+            $fechaA = date('Y-m-d', strtotime($a->created_at));
+            $fechaB = date('Y-m-d', strtotime($b->created_at));
+
+            if ($fechaA !== $fechaB) {
+                return strcmp($fechaB, $fechaA);
+            }
+
+            $turnoOrden = ['AM' => 0, 'PM' => 1];
+            $turnoA = strtoupper(trim($a->turno ?? 'AM'));
+            $turnoB = strtoupper(trim($b->turno ?? 'AM'));
+            $ordenA = $turnoOrden[$turnoA] ?? 99;
+            $ordenB = $turnoOrden[$turnoB] ?? 99;
+
+            if ($ordenA !== $ordenB) {
+                return $ordenA <=> $ordenB;
+            }
+
+            return strtotime($b->created_at) <=> strtotime($a->created_at);
+        });
+
+        return $inventarios;
     }
 
     /**
@@ -170,42 +238,42 @@ class ExportacionExcelService
         // Definir estilos
         $this->definirEstilos();
 
-        // Iniciar hoja
-        echo '<Worksheet ss:Name="Reporte General">' . "\n";
+        $this->generarWorksheetReporteGeneral('Reporte General', $datosConProductos, $productosUnicos, $fecha_inicio, $fecha_fin);
+
+        echo '</Workbook>';
+        exit;
+    }
+
+    /**
+     * Generar una hoja con el formato del reporte general + resumen
+     */
+    private function generarWorksheetReporteGeneral($nombreHoja, $datosConProductos, $productosUnicos, $fecha_inicio, $fecha_fin)
+    {
+        echo '<Worksheet ss:Name="' . htmlspecialchars($nombreHoja, ENT_XML1) . '">' . "\n";
         echo '<Table>' . "\n";
 
-        // Definir anchos de columna
         $this->definirAnchos($productosUnicos);
 
-        // Título del reporte
         $totalColumnas = 7 + (count($productosUnicos) * 2) - 1;
         echo '<Row ss:Height="25">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="titulo"><Data ss:Type="String">REPORTE GENERAL</Data></Cell>';
         echo '</Row>' . "\n";
 
-        // Subtítulo con fechas
         $textoFechas = $this->obtenerTextoFechas($fecha_inicio, $fecha_fin);
         echo '<Row ss:Height="20">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="subtitulo"><Data ss:Type="String">' . htmlspecialchars($textoFechas, ENT_XML1) . '</Data></Cell>';
         echo '</Row>' . "\n";
 
-        echo '<Row></Row>' . "\n"; // Fila vacía
+        echo '<Row></Row>' . "\n";
 
-        // Datos (los encabezados se repiten por mes dentro de generarDatos)
         $this->generarDatos($datosConProductos, $productosUnicos);
 
-        echo '</Table></Worksheet>' . "\n";
+        echo '<Row></Row>' . "\n";
+        echo '<Row></Row>' . "\n";
 
-        // Hoja de resumen
-        echo '<Worksheet ss:Name="Resumen">' . "\n";
-        echo '<Table>' . "\n";
-        echo '<Column ss:Width="200"/>' . "\n";
-        echo '<Column ss:Width="100"/>' . "\n";
         $this->generarResumen($datosConProductos, $productosUnicos, $totalColumnas);
-        echo '</Table></Worksheet>' . "\n";
 
-        echo '</Workbook>';
-        exit;
+        echo '</Table></Worksheet>' . "\n";
     }
 
     /**
@@ -534,43 +602,7 @@ class ExportacionExcelService
         echo '</Borders>';
         echo '</Style>' . "\n";
 
-        echo '<Style ss:ID="promedio_mes_label">';
-        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E8F4FD" ss:Pattern="Solid"/>';
-        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
-        echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '</Borders>';
-        echo '</Style>' . "\n";
 
-        echo '<Style ss:ID="promedio_mes_numero">';
-        echo '<NumberFormat ss:Format="0.00"/>';
-        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E8F4FD" ss:Pattern="Solid"/>';
-        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
-        echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '</Borders>';
-        echo '</Style>' . "\n";
-
-        echo '<Style ss:ID="promedio_mes_numero_sep">';
-        echo '<NumberFormat ss:Format="0.00"/>';
-        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E8F4FD" ss:Pattern="Solid"/>';
-        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
-        echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
-        echo '</Borders>';
-        echo '</Style>' . "\n";
 
         // Título de sección resumen
         echo '<Style ss:ID="resumen_titulo">';
@@ -795,7 +827,7 @@ class ExportacionExcelService
                     $estiloNegrita = $esAmarillo ? 'numero_amarillo_dia_bold' : 'numero_azul_dia_bold';
                 }
 
-                echo '<Row ss:Height="20">' . "\n";
+                echo '<Row ss:Height="' . self::ALTURA_FILA_DATOS . '">' . "\n";
 
                 if ($esPrimerRegistroDelDia) {
                     $fecha = date('d-M-y', strtotime($inv->created_at));
@@ -854,7 +886,7 @@ class ExportacionExcelService
             }
 
             // Fila TOTAL MES
-            echo '<Row ss:Height="20">' . "\n";
+            echo '<Row ss:Height="' . self::ALTURA_FILA_CIERRE . '">' . "\n";
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String">TOTAL MES</Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
@@ -876,39 +908,6 @@ class ExportacionExcelService
             }
             echo '</Row>' . "\n";
 
-            // Fila PROMEDIO
-            $avgStock = $countFilasMes > 0 ? $sumStock / $countFilasMes : 0;
-            $avgReserva = $countFilasMes > 0 ? $sumReserva / $countFilasMes : 0;
-            $avgAgrega = $countFilasMes > 0 ? $sumAgrega / $countFilasMes : 0;
-            $avgMerma = $countFilasMes > 0 ? $sumMerma / $countFilasMes : 0;
-
-            echo '<Row ss:Height="20">' . "\n";
-            echo '<Cell ss:StyleID="promedio_mes_label"><Data ss:Type="String">PROMEDIO</Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_label"><Data ss:Type="String"></Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_label"><Data ss:Type="String"></Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_numero"><Data ss:Type="Number">' . number_format($avgStock, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_numero"><Data ss:Type="Number">' . number_format($avgReserva, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_numero"><Data ss:Type="Number">' . number_format($avgAgrega, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="promedio_mes_numero"><Data ss:Type="Number">' . number_format($avgMerma, 2, '.', '') . '</Data></Cell>';
-
-            $indiceProducto = 0;
-            foreach ($productosUnicos as $nombreProducto) {
-                $esUltimoProducto = ($indiceProducto === $totalProductosUnicos - 1);
-                $estiloStock = 'promedio_mes_numero';
-                $estiloCant = $esUltimoProducto ? 'promedio_mes_numero' : 'promedio_mes_numero_sep';
-
-                $avgProductoStock = $countProductos[$nombreProducto]['stock'] > 0
-                    ? $sumProductos[$nombreProducto]['stock'] / $countProductos[$nombreProducto]['stock']
-                    : 0;
-                $avgProductoCantidad = $countProductos[$nombreProducto]['cantidad_produccion'] > 0
-                    ? $sumProductos[$nombreProducto]['cantidad_produccion'] / $countProductos[$nombreProducto]['cantidad_produccion']
-                    : 0;
-
-                echo '<Cell ss:StyleID="' . $estiloStock . '"><Data ss:Type="Number">' . number_format($avgProductoStock, 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="' . $estiloCant . '"><Data ss:Type="Number">' . number_format($avgProductoCantidad, 2, '.', '') . '</Data></Cell>';
-                $indiceProducto++;
-            }
-            echo '</Row>' . "\n";
         }
     }
 

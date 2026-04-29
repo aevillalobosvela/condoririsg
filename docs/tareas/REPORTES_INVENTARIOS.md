@@ -8,6 +8,7 @@ Controller: `app/Controllers/inventarios/inventariosController.php`
 
 Los botones de reporte están en el encabezado de la tabla de inventarios:
 - **Reporte General** → dropdown con Excel y PDF
+- **Reporte Suero y Otros** → botón dedicado (Excel separado)
 - **Control de Calidad** → dropdown con Excel y PDF
 
 **Estrategia:** los cambios se hacen primero en Excel, se valida, luego se replica al PDF equivalente.
@@ -17,13 +18,11 @@ Los botones de reporte están en el encabezado de la tabla de inventarios:
 ## Archivos involucrados
 
 ```
-app/Services/Inventarios/ExportacionExcelService.php   ← Reporte General Excel (modificar)
-app/Libraries/ReporteInventario.php                    ← Reporte General PDF (modificar después)
-app/Controllers/inventarios/inventariosController.php  ← nueva ruta + nuevo servicio
-app/Views/inventarios/inventariosIndex.php             ← agregar botón nuevo reporte
-app/Config/Routes.php                                  ← nueva ruta
-# Crear:
-app/Services/Inventarios/ExcelSueroInventarioService.php  ← nuevo reporte separado Excel
+app/Services/Inventarios/ExportacionExcelService.php   ← Reporte General (solo LECHE) + Reporte Suero/Otros
+app/Libraries/ReporteInventario.php                    ← Reporte General PDF (pendiente)
+app/Controllers/inventarios/inventariosController.php  ← método nuevo para exportación separada
+app/Views/inventarios/inventariosIndex.php             ← botón "Reporte Suero y Otros"
+app/Config/Routes.php                                  ← ruta nueva
 ```
 
 ---
@@ -55,15 +54,13 @@ Actualmente cuando un campo numérico es `null` o `0` se escribe `0`. Se debe ca
 
 **Aplica a:** columnas dinámicas de productos (Stock y Cant.Prod) cuando el inventario no tiene ese producto.
 
-### Cambio 4 — Nuevo reporte Excel: separación LECHE vs otros
+### Cambio 4 — Reporte Excel separado: LECHE vs SUERO/OTROS
 
-En la columna NOMBRE del reporte general aparecen valores como `LECHE` y `SUERO LECHE` (y potencialmente otros). Se debe crear un **nuevo reporte separado** que divida:
-- **Reporte LECHE:** solo registros donde `nombre = 'LECHE'`
-- **Reporte OTROS (SUERO y demás):** todos los registros donde `nombre != 'LECHE'`
+El comportamiento final acordado es:
+- **Reporte General (Excel):** solo registros donde `nombre = 'LECHE'`
+- **Reporte Suero y Otros (Excel):** archivo separado, solo registros donde `nombre != 'LECHE'`
 
-Ambos sub-reportes en el mismo archivo Excel, en hojas separadas, con el mismo formato que el Reporte General (incluyendo los cambios 1, 2 y 3 ya aplicados).
-
-Se agrega un nuevo botón en la vista para acceder a este reporte.
+Ambos mantienen el mismo formato visual del reporte general (incluyendo los cambios 1, 2 y 3 ya aplicados).
 
 ---
 
@@ -107,18 +104,16 @@ Los valores `-` (productos sin dato) se excluyen del cálculo (no cuentan como `
 
 ---
 
-### Paso 4 — Nuevo reporte Excel: LECHE vs OTROS
+### Paso 4 — Reporte Excel separado: LECHE y SUERO/OTROS
 **Archivos a crear/modificar:**
-- Crear `app/Services/Inventarios/ExcelSueroInventarioService.php`
-- Modificar `app/Controllers/inventarios/inventariosController.php` → agregar método `exportarExcelSuero()`
-- Modificar `app/Config/Routes.php` → agregar ruta `GET inventarios/exportarExcelSuero`
-- Modificar `app/Views/inventarios/inventariosIndex.php` → agregar tercer botón de reporte
+- Modificar `app/Services/Inventarios/ExportacionExcelService.php`:
+  - `exportarReporteGeneral()` filtra solo `LECHE`
+  - `exportarReporteLecheOtros()` filtra solo `!= LECHE`
+- Modificar `app/Controllers/inventarios/inventariosController.php` → agregar método `exportarExcelLecheOtros()`
+- Modificar `app/Config/Routes.php` → agregar ruta `GET inventarios/exportarExcelLecheOtros`
+- Modificar `app/Views/inventarios/inventariosIndex.php` → agregar botón `Reporte Suero y Otros`
 
-El nuevo servicio reutiliza la lógica de `ExportacionExcelService` pero genera dos hojas:
-- Hoja 1 `"LECHE"`: solo registros con `nombre = 'LECHE'`, mismo formato (con cambios 1-3 ya aplicados)
-- Hoja 2 `"SUERO Y OTROS"`: registros con `nombre != 'LECHE'`, mismo formato
-
-**Validar:** el nuevo botón descarga el Excel con las dos hojas correctamente separadas y con el mismo formato visual.
+**Validar:** el botón de Reporte General descarga solo LECHE y el botón Reporte Suero y Otros descarga solo no-LECHE.
 
 ---
 
@@ -138,9 +133,20 @@ Solo después de validar el paso 4 en Excel.
 
 | Paso | Descripción | Estado |
 |---|---|---|
-| 1 | Cambio de colores — Excel | ⏳ Pendiente |
-| 2 | Valores vacíos con `-` — Excel | ⏳ Pendiente |
-| 3 | Fila SUMA + PROMEDIO por mes — Excel | ⏳ Pendiente |
-| 4 | Nuevo reporte LECHE vs OTROS — Excel | ⏳ Pendiente |
+| 1 | Cambio de colores — Excel | ✅ Completado |
+| 2 | Valores vacíos con `-` — Excel | ✅ Completado |
+| 3 | Fila SUMA + PROMEDIO por mes — Excel | ✅ Completado |
+| 4 | Separación Excel (General=LECHE, botón Suero y Otros=no-LECHE) | ✅ Completado |
 | 5 | Replicar cambios 1-3 al PDF | ⏳ Pendiente |
 | 6 | Replicar cambio 4 al PDF | ⏳ Pendiente |
+
+---
+
+## Implementación realizada (2026-04-29)
+
+- `ExportacionExcelService` actualizado con nueva paleta de colores suave y diferenciada, manteniendo separadores gruesos.
+- Columnas dinámicas ahora muestran `-` cuando el producto no existe en ese inventario (`null`), conservando `0.00` para ceros reales.
+- Se añadieron filas mensuales `TOTAL MES` y `PROMEDIO` con estilos propios y cálculo correcto excluyendo celdas sin dato en promedios dinámicos.
+- Se compactaron alturas de filas de datos/cierre para mejorar legibilidad.
+- `Reporte General` (`inventarios/exportarExcel`) ahora exporta solo `LECHE`.
+- Nuevo botón `Reporte Suero y Otros` (`inventarios/exportarExcelLecheOtros`) exporta archivo separado con registros `nombre != 'LECHE'`.

@@ -207,6 +207,10 @@
                       </li>
                     </ul>
                   </div>
+
+                  <a class="btn btn-soft-warning me-1" href="<?= base_url('inventarios/exportarExcelLecheOtros?' . http_build_query($filters)) ?>">
+                    <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Reporte Suero y Otros
+                  </a>
                   
                   <!-- Dropdown Control de Calidad -->
                   <div class="btn-group" role="group">
