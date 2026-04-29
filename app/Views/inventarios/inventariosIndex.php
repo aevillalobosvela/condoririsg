@@ -208,9 +208,23 @@
                     </ul>
                   </div>
 
-                  <a class="btn btn-soft-warning me-1" href="<?= base_url('inventarios/exportarExcelLecheOtros?' . http_build_query($filters)) ?>">
-                    <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Reporte Suero y Otros
-                  </a>
+                  <div class="btn-group me-1" role="group">
+                    <button type="button" class="btn btn-soft-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-file-list-3-line align-bottom me-1"></i> Reporte Suero y Otros
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarExcelLecheOtros?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-excel-2-line align-bottom me-1 text-success"></i> Excel
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="<?= base_url('inventarios/exportarPdfLecheOtros?' . http_build_query($filters)) ?>">
+                          <i class="ri-file-pdf-line align-bottom me-1 text-danger"></i> PDF
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                   
                   <!-- Dropdown Control de Calidad -->
                   <div class="btn-group" role="group">

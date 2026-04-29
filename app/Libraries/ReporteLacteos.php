@@ -11,6 +11,11 @@ class ReporteLacteos extends FPDF
 {
     protected $reporteTitle = 'REPORTE GENERAL';
 
+    public function setReporteTitle(string $title): void
+    {
+        $this->reporteTitle = $title;
+    }
+
     // Anchos de columna calculados dinámicamente
     protected $wFecha   = 22;
     protected $wTurno   = 12;
@@ -129,6 +134,14 @@ class ReporteLacteos extends FPDF
                 array_values($meses_es),
                 date('F Y', strtotime($mes . '-01'))
             ));
+
+            // Evitar encabezados "huerfanos" al final de pagina:
+            // titulo de mes + encabezado de tabla + al menos 1 fila de datos.
+            $altoEncabezado = $this->calcularAlturaEncabezado($productosUnicos);
+            $altoMinimoBloque = 7 + $altoEncabezado + $this->hRow;
+            if ($this->GetY() + $altoMinimoBloque > $this->GetPageHeight() - 15) {
+                $this->AddPage();
+            }
 
             $this->filasMes($mesTexto, $productosUnicos);
             $this->filasEncabezados($productosUnicos);
@@ -366,6 +379,23 @@ class ReporteLacteos extends FPDF
         // Avanzar al final de la fila de encabezados
         $this->SetXY($xInicio, $yInicio + $this->hHeader);
         $this->Ln(0);
+    }
+
+    private function calcularAlturaEncabezado(array $productosUnicos): float
+    {
+        $this->SetFont('Arial', 'B', 7);
+        $maxLineas = 1;
+        foreach ($productosUnicos as $nombre) {
+            $etiquetas = [utf8_decode($nombre) . ' Stk', utf8_decode($nombre) . ' Prod'];
+            foreach ($etiquetas as $etiqueta) {
+                $lineas = $this->contarLineas($etiqueta, $this->wProd);
+                if ($lineas > $maxLineas) {
+                    $maxLineas = $lineas;
+                }
+            }
+        }
+
+        return max(5 * $this->hHeaderLine + 4, $maxLineas * $this->hHeaderLine + 4);
     }
 
     /**

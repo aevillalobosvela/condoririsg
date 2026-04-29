@@ -7,6 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]s
 
+## 2026-04-29
+
+### Changed
+- **Inventarios — Reporte General Excel/PDF (solo LECHE):** ambos reportes ahora consideran exclusivamente registros con `nombre = 'LECHE'`.
+- **Inventarios — Reporte Suero y Otros (Excel/PDF):** se añadió exportación separada para `nombre != 'LECHE'` con dropdown dedicado en la interfaz (`Excel` y `PDF`).
+- **Inventarios — orden por turno en reportes:** en Reporte General, Reporte Suero y Otros y Control de Calidad se mantiene la agrupación por día y, dentro del día, se ordena `AM` antes de `PM`.
+- **Inventarios — Reporte General Excel:** nueva paleta visual suave, columnas dinámicas con `-` cuando no hay dato del producto, separación de stock por `LECHE` vs no `LECHE`, y cierre mensual con `TOTAL MES` (sin promedio en ajuste final).
+- **Inventarios — Reporte General PDF:** se alineó el formato visual con el Excel (paleta suave), se añadió `TOTAL MES`, soporte de `-` en columnas dinámicas sin producto y corrección de paginación para evitar encabezados huérfanos al pie de página.
+
 ## 2026-04-17
 
 ### Fixed

@@ -1504,6 +1504,27 @@ class InventariosController extends BaseController
         $exportService->exportarReporteLecheOtros($nombre, $fecha_inicio, $fecha_fin);
     }
 
+    public function exportarPdfLecheOtros()
+    {
+        $nombre = $this->request->getGet('nombre') ?? '';
+        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+
+        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventarios = $this->ordenarInventariosPorDiaYTurno($inventarios);
+        $inventarios = array_values(array_filter($inventarios, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) !== 'LECHE';
+        }));
+
+        $pdfGenerator = new ReporteLacteos();
+        $pdfGenerator->setReporteTitle('REPORTE SUERO Y OTROS');
+        $pdfGenerator->generarReporte($inventarios, [
+            'nombre' => $nombre,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin
+        ]);
+    }
+
     public function exportarExcelAntiguo()
     {
         // Método antiguo mantenido como respaldo

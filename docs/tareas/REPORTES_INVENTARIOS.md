@@ -8,10 +8,10 @@ Controller: `app/Controllers/inventarios/inventariosController.php`
 
 Los botones de reporte están en el encabezado de la tabla de inventarios:
 - **Reporte General** → dropdown con Excel y PDF
-- **Reporte Suero y Otros** → botón dedicado (Excel separado)
+- **Reporte Suero y Otros** → dropdown con Excel y PDF (archivo separado)
 - **Control de Calidad** → dropdown con Excel y PDF
 
-**Estrategia:** los cambios se hacen primero en Excel, se valida, luego se replica al PDF equivalente.
+**Estado actual:** tarea completada y validada en fecha **2026-04-29**.
 
 ---
 
@@ -19,10 +19,10 @@ Los botones de reporte están en el encabezado de la tabla de inventarios:
 
 ```
 app/Services/Inventarios/ExportacionExcelService.php   ← Reporte General (solo LECHE) + Reporte Suero/Otros
-app/Libraries/ReporteInventario.php                    ← Reporte General PDF (pendiente)
-app/Controllers/inventarios/inventariosController.php  ← método nuevo para exportación separada
-app/Views/inventarios/inventariosIndex.php             ← botón "Reporte Suero y Otros"
-app/Config/Routes.php                                  ← ruta nueva
+app/Libraries/ReporteLacteos.php                       ← Reporte General PDF + Reporte Suero/Otros PDF
+app/Controllers/inventarios/inventariosController.php  ← métodos exportación Excel/PDF separados
+app/Views/inventarios/inventariosIndex.php             ← dropdown "Reporte Suero y Otros"
+app/Config/Routes.php                                  ← rutas nuevas
 ```
 
 ---
@@ -117,15 +117,23 @@ Los valores `-` (productos sin dato) se excluyen del cálculo (no cuentan como `
 
 ---
 
-### Paso 5 — Replicar cambios 1, 2 y 3 al Reporte General PDF
-**Archivo:** `app/Libraries/ReporteInventario.php`  
-Solo después de validar los pasos 1-3 en Excel.
+### Paso 5 — Replicar cambios 1, 2 y 3 al Reporte General PDF ✅
+**Archivo:** `app/Libraries/ReporteLacteos.php`
+- Se aplicó paleta visual suave.
+- Se aplicó `-` para columnas dinámicas sin producto.
+- Se añadió `TOTAL MES` al cierre de cada mes.
+- Se eliminó `PROMEDIO` mensual (ajuste final solicitado).
+- Se corrigió paginación para evitar encabezados huérfanos al pie de página.
 
 ---
 
-### Paso 6 — Replicar cambio 4 al PDF (nuevo reporte LECHE vs OTROS en PDF)
-**Archivo a crear:** `app/Libraries/PdfSueroInventarioLib.php` (o similar)  
-Solo después de validar el paso 4 en Excel.
+### Paso 6 — Replicar cambio 4 al PDF (separación LECHE vs OTROS) ✅
+- `Reporte General PDF` ahora exporta solo `LECHE`.
+- Se agregó `Reporte Suero y Otros PDF` como salida separada usando `ReporteLacteos`.
+- Se agregó dropdown para `Reporte Suero y Otros` con opción Excel y PDF.
+- Rutas/métodos:
+  - `inventarios/exportarPdf` → solo LECHE
+  - `inventarios/exportarPdfLecheOtros` → solo `nombre != 'LECHE'`
 
 ---
 
@@ -137,8 +145,8 @@ Solo después de validar el paso 4 en Excel.
 | 2 | Valores vacíos con `-` — Excel | ✅ Completado |
 | 3 | Fila SUMA + PROMEDIO por mes — Excel | ✅ Completado |
 | 4 | Separación Excel (General=LECHE, botón Suero y Otros=no-LECHE) | ✅ Completado |
-| 5 | Replicar cambios 1-3 al PDF | ⏳ Pendiente |
-| 6 | Replicar cambio 4 al PDF | ⏳ Pendiente |
+| 5 | Replicar cambios 1-3 al PDF | ✅ Completado |
+| 6 | Replicar cambio 4 al PDF | ✅ Completado |
 
 ---
 
@@ -146,7 +154,18 @@ Solo después de validar el paso 4 en Excel.
 
 - `ExportacionExcelService` actualizado con nueva paleta de colores suave y diferenciada, manteniendo separadores gruesos.
 - Columnas dinámicas ahora muestran `-` cuando el producto no existe en ese inventario (`null`), conservando `0.00` para ceros reales.
-- Se añadieron filas mensuales `TOTAL MES` y `PROMEDIO` con estilos propios y cálculo correcto excluyendo celdas sin dato en promedios dinámicos.
+- Se añadieron filas mensuales `TOTAL MES` y `PROMEDIO` en Excel; en ajuste final se removió `PROMEDIO` del Reporte General por decisión funcional.
 - Se compactaron alturas de filas de datos/cierre para mejorar legibilidad.
 - `Reporte General` (`inventarios/exportarExcel`) ahora exporta solo `LECHE`.
-- Nuevo botón `Reporte Suero y Otros` (`inventarios/exportarExcelLecheOtros`) exporta archivo separado con registros `nombre != 'LECHE'`.
+- Se corrigió orden en reportes por día y suborden por turno (`AM` antes de `PM`) manteniendo agrupación diaria.
+- `Reporte General PDF` (`inventarios/exportarPdf`) quedó alineado con la lógica de solo LECHE y cierre mensual por total.
+- `Reporte Suero y Otros` ahora es dropdown con:
+  - `inventarios/exportarExcelLecheOtros` (Excel)
+  - `inventarios/exportarPdfLecheOtros` (PDF)
+
+---
+
+## Cierre de tarea
+
+**Estado final:** ✅ **COMPLETADO**  
+**Fecha de cierre:** **2026-04-29**
