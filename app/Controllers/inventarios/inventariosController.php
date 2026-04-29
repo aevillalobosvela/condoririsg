@@ -1319,6 +1319,7 @@ class InventariosController extends BaseController
         $builder->select("{$detalleTableName}.*, {$stockAlias}.nombre");
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.producto_id");
         $builder->where('venta_id', $ventaId);
+        $builder->where("{$detalleTableName}.deleted_at IS NULL");
 
         $query = $builder->get();
         if ($query === false) {
@@ -1392,11 +1393,233 @@ class InventariosController extends BaseController
 
 
 
+    /**
+     * Devuelve JSON con la última venta del usuario hoy (módulo lácteos planta, sucursal_id=4).
+     */
+    public function ultimaVenta()
+    {
+        $userId     = (int)session()->get('id');
+        $sucursalId = 4;
+        $db         = \Config\Database::connect();
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY v.id DESC
+            LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['venta' => null]);
+        }
+
+        $detalles = $db->query("
+            SELECT dv.id, dv.producto_id, dv.cantidad, dv.precio_unitario, dv.subtotal, p.nombre AS producto
+            FROM condoriri.detalle_venta dv
+            JOIN condoriri.productos p ON p.id = dv.producto_id
+            WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+        ", [$venta->id])->getResult();
+
+        $receptor = ['tipo' => 'cliente', 'id' => null, 'nombre' => 'Consumidor Final'];
+        if (!empty($venta->personal_uto_id)) {
+            $p = $db->query("
+                SELECT id_persona AS id, nombre FROM public.personas WHERE id_persona = ?
+            ", [$venta->personal_uto_id])->getRow();
+            if ($p) $receptor = ['tipo' => 'uto', 'id' => $p->id, 'nombre' => $p->nombre];
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $ce = $db->query("
+                SELECT id, nombre, dip, segmento FROM condoriri.clientes_externos WHERE id = ?
+            ", [$venta->cliente_externo_id])->getRow();
+            if ($ce) $receptor = ['tipo' => 'externo', 'id' => $ce->id, 'nombre' => $ce->nombre, 'dip' => $ce->dip, 'segmento' => $ce->segmento];
+        } elseif (!empty($venta->cliente_id)) {
+            $c = $db->query("
+                SELECT id, nombre_completo AS nombre FROM condoriri.clientes WHERE id = ?
+            ", [$venta->cliente_id])->getRow();
+            if ($c) $receptor = ['tipo' => 'cliente', 'id' => $c->id, 'nombre' => $c->nombre];
+        }
+
+        $productosDisponibles = $this->productoModel->where('stock_inve >', 0)->findAll();
+        $clientes = $this->clienteModel->findAll();
+
+        return $this->response->setJSON([
+            'venta'                => $venta,
+            'detalles'             => $detalles,
+            'receptor'             => $receptor,
+            'productos_disponibles' => $productosDisponibles,
+            'clientes'             => $clientes,
+        ]);
+    }
+
+    /**
+     * Actualiza la última venta del usuario hoy (módulo lácteos planta).
+     */
+    public function updateUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = 4;
+        $db         = \Config\Database::connect();
+
+        $ventaId      = (int)$this->request->getPost('venta_id');
+        $receptorId   = (int)$this->request->getPost('receptor_id');
+        $tipoReceptor = $this->request->getPost('tipo_receptor');
+        $carritoJson  = $this->request->getPost('carrito');
+
+        if ($ventaId <= 0 || empty($carritoJson)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Datos incompletos.']);
+        }
+
+        $carrito = json_decode($carritoJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE || empty($carrito)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Carrito inválido.']);
+        }
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no editable.']);
+        }
+
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detallesOriginales = $db->query("
+                SELECT dv.id, dv.producto_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver stock_inve original
+            foreach ($detallesOriginales as $det) {
+                $db->query("
+                    UPDATE condoriri.productos SET stock_inve = stock_inve + ? WHERE id = ?
+                ", [$det->cantidad, $det->producto_id]);
+            }
+
+            // 3. Validar nuevo carrito
+            $itemsNuevos = [];
+            $nuevoTotal  = 0;
+            foreach ($carrito as $item) {
+                $productoId     = (int)($item['id'] ?? 0);
+                $cantidad       = (int)($item['cantidad'] ?? 0);
+                $precioUnitario = (float)($item['precio_unitario'] ?? 0);
+
+                if ($productoId <= 0 || $cantidad <= 0 || $precioUnitario <= 0) {
+                    throw new \Exception('Datos inválidos en el carrito.');
+                }
+
+                $producto = $this->productoModel->find($productoId);
+                if (!$producto) {
+                    throw new \Exception("Producto ID {$productoId} no encontrado.");
+                }
+                if ($producto->stock_inve < $cantidad) {
+                    throw new \Exception("Stock insuficiente para: {$producto->nombre}. Disponible: {$producto->stock_inve}.");
+                }
+
+                $subtotal    = $precioUnitario * $cantidad;
+                $nuevoTotal += $subtotal;
+                $itemsNuevos[] = [
+                    'producto_id'     => $productoId,
+                    'cantidad'        => $cantidad,
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal'        => $subtotal,
+                ];
+            }
+
+            // 4. Soft-delete detalles originales
+            foreach ($detallesOriginales as $det) {
+                $this->detalleModel->delete($det->id);
+            }
+
+            // 5. Insertar nuevos detalles y descontar stock_inve
+            foreach ($itemsNuevos as $item) {
+                $this->detalleModel->insert([
+                    'venta_id'        => $ventaId,
+                    'producto_id'     => $item['producto_id'],
+                    'cantidad'        => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal'        => $item['subtotal'],
+                    'observaciones'   => '',
+                ]);
+
+                $db->query("
+                    UPDATE condoriri.productos SET stock_inve = stock_inve - ? WHERE id = ?
+                ", [$item['cantidad'], $item['producto_id']]);
+            }
+
+            // 6. Actualizar receptor y monto
+            $updateVenta = ['monto_total' => $nuevoTotal];
+            if ($tipoReceptor === 'uto') {
+                $updateVenta['personal_uto_id']    = $receptorId ?: null;
+                $updateVenta['cliente_externo_id'] = null;
+                $updateVenta['cliente_id']         = null;
+            } elseif ($tipoReceptor === 'externo') {
+                $updateVenta['cliente_externo_id'] = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_id']         = null;
+            } else {
+                $updateVenta['cliente_id']         = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_externo_id'] = null;
+            }
+            $this->ventaModel->update($ventaId, $updateVenta);
+
+            $db->transCommit();
+
+            return $this->response->setJSON([
+                'success'     => true,
+                'nuevo_monto' => $nuevoTotal,
+                'recibo_url'  => base_url('inventarios/recibo/' . $ventaId),
+            ]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     public function exportarPdfVentas()
     {
         $fecha_inicio = $this->request->getGet('fecha_inicio');
         $fecha_fin    = $this->request->getGet('fecha_fin');
-        $tipo         = $this->request->getGet('tipo'); // 'contado', 'credito', o 'general'
+        $tipo         = $this->request->getGet('tipo');
 
         $hoy = date('Y-m-d');
         $fecha_inicio = $fecha_inicio ?: $hoy;
