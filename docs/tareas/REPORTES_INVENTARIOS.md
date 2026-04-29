@@ -10,175 +10,137 @@ Los botones de reporte están en el encabezado de la tabla de inventarios:
 - **Reporte General** → dropdown con Excel y PDF
 - **Control de Calidad** → dropdown con Excel y PDF
 
----
-
-## Resumen de cambios solicitados
-
-| # | Reporte | Formato | Cambio |
-|---|---|---|---|
-| 1 | Reporte General | Excel | Separar datos de productos (hoja "Productos") a un nuevo reporte independiente |
-| 2 | Reporte General | Excel | El reporte general queda solo con datos de inventario (sin hoja de productos) |
-| 3 | Reporte General | PDF | Revisar y mejorar (pendiente de definir detalles — ver sección abajo) |
-| 4 | Control de Calidad | Excel | Revisar y mejorar (pendiente de definir detalles — ver sección abajo) |
-| 5 | Control de Calidad | PDF | Revisar y mejorar (pendiente de definir detalles — ver sección abajo) |
-| 6 | Nuevo reporte | Excel/PDF | "Reporte de Productos" separado, con los datos que se extraen del Reporte General |
+**Estrategia:** los cambios se hacen primero en Excel, se valida, luego se replica al PDF equivalente.
 
 ---
 
-## Estado actual de cada reporte
+## Archivos involucrados
 
-### Reporte General — Excel
+```
+app/Services/Inventarios/ExportacionExcelService.php   ← Reporte General Excel (modificar)
+app/Libraries/ReporteInventario.php                    ← Reporte General PDF (modificar después)
+app/Controllers/inventarios/inventariosController.php  ← nueva ruta + nuevo servicio
+app/Views/inventarios/inventariosIndex.php             ← agregar botón nuevo reporte
+app/Config/Routes.php                                  ← nueva ruta
+# Crear:
+app/Services/Inventarios/ExcelSueroInventarioService.php  ← nuevo reporte separado Excel
+```
+
+---
+
+## Cambios definidos
+
+### Cambio 1 — Reporte General Excel: fila de totales/promedios por mes
+
+El reporte agrupa registros por mes. Al final de cada mes se debe agregar una fila de cierre con:
+- **SUMA** de las columnas numéricas: STOCK (L), RESERVA, AGREGA, MERMA, y columnas dinámicas de productos (Stock + Cant.Prod)
+- **PROMEDIO** de esas mismas columnas
+
+La fila de suma y la fila de promedio deben ser visualmente distinguibles del resto (estilo propio).
+
+### Cambio 2 — Reporte General Excel: cambio de esquema de colores
+
+El esquema actual usa rojo `#DC143C` como color dominante en bordes y encabezados, con fondos amarillo `#FFF9E6` y azul `#E6F2FF` para filas alternas. Es visualmente agresivo.
+
+Se debe reemplazar por un esquema más suave pero igualmente distintivo:
+- Encabezados: azul institucional suave (ej. `#2E5090` o similar)
+- Filas alternas día par: fondo verde muy suave (ej. `#F0F7F0`)
+- Filas alternas día impar: fondo gris muy suave (ej. `#F5F5F5`)
+- Bordes: gris claro (ej. `#CCCCCC`) en lugar de rojo
+- Filas de suma/promedio: fondo diferenciado (ej. amarillo pálido `#FFFDE7` para suma, azul pálido `#E8F4FD` para promedio)
+
+### Cambio 3 — Reporte General Excel: valores vacíos muestran `-` en lugar de `0`
+
+Actualmente cuando un campo numérico es `null` o `0` se escribe `0`. Se debe cambiar para que cuando el valor sea `null` (sin dato registrado) se muestre el carácter `-` como texto, indicando ausencia de dato. Si el valor es genuinamente `0` (dato registrado como cero), se mantiene `0`.
+
+**Aplica a:** columnas dinámicas de productos (Stock y Cant.Prod) cuando el inventario no tiene ese producto.
+
+### Cambio 4 — Nuevo reporte Excel: separación LECHE vs otros
+
+En la columna NOMBRE del reporte general aparecen valores como `LECHE` y `SUERO LECHE` (y potencialmente otros). Se debe crear un **nuevo reporte separado** que divida:
+- **Reporte LECHE:** solo registros donde `nombre = 'LECHE'`
+- **Reporte OTROS (SUERO y demás):** todos los registros donde `nombre != 'LECHE'`
+
+Ambos sub-reportes en el mismo archivo Excel, en hojas separadas, con el mismo formato que el Reporte General (incluyendo los cambios 1, 2 y 3 ya aplicados).
+
+Se agrega un nuevo botón en la vista para acceder a este reporte.
+
+---
+
+## Plan de implementación (Excel primero, PDF después de validar)
+
+### Paso 1 — Cambio de colores en Reporte General Excel
 **Archivo:** `app/Services/Inventarios/ExportacionExcelService.php`  
-**Método:** `exportarReporteGeneral()`  
-**Ruta:** `GET /inventarios/exportarExcel`
+**Método:** `definirEstilos()`
 
-**Estructura actual (2 hojas):**
-- Hoja 1 `"Reporte General"` — tabla matricial con columnas:
-  - FECHA, TURNO, NOMBRE, STOCK (L), RESERVA, AGREGA, MERMA
-  - Columnas dinámicas por producto: `{PRODUCTO} Stock` + `{PRODUCTO} Cant.Prod`
-  - Agrupado por mes, colores alternados por día (amarillo/azul)
-  - Hoja de resumen al final
-- Hoja 2 `"Resumen"` — totales globales + resumen por tipo de producto
+Reemplazar el esquema de colores agresivo (rojo dominante) por el esquema suave definido en Cambio 2.
+También actualizar los estilos de encabezados de mes (`titulo_mes`) y título principal (`titulo`).
 
-**Problema identificado:** la hoja de productos dinámicos (columnas por producto) mezcla datos de inventario con datos de producción de productos. El cliente quiere separar esto.
+**Validar:** descargar el Excel desde el botón Reporte General → Excel y confirmar que los colores son correctos y la tabla sigue siendo legible.
 
 ---
 
-### Reporte General — PDF
+### Paso 2 — Valores vacíos muestran `-` en Reporte General Excel
+**Archivo:** `app/Services/Inventarios/ExportacionExcelService.php`  
+**Método:** `generarDatos()`
+
+En las columnas dinámicas de productos, cuando `$datosProducto['stock'] === 0` y el inventario no tiene ese producto (es decir, el valor proviene del inicializador en `prepararDatosConProductos` y no de un producto real), mostrar `-` como texto en lugar de `0.00`.
+
+**Estrategia:** en `prepararDatosConProductos()`, marcar con `null` los productos que no existen en ese inventario (en lugar de `0`). En `generarDatos()`, si el valor es `null` → celda de texto con `-`; si es numérico (incluso `0`) → celda numérica normal.
+
+**Validar:** en el Excel, los inventarios que no tienen ciertos productos deben mostrar `-` en esas columnas, no `0.00`.
+
+---
+
+### Paso 3 — Fila de SUMA y PROMEDIO al final de cada mes en Reporte General Excel
+**Archivo:** `app/Services/Inventarios/ExportacionExcelService.php`  
+**Métodos:** `generarDatos()` + `definirEstilos()` (agregar estilos de fila totales)
+
+Al terminar de renderizar los registros de cada mes, agregar dos filas:
+1. Fila **SUMA**: etiqueta "TOTAL MES" en columna FECHA, suma de STOCK(L), RESERVA, AGREGA, MERMA y cada columna de producto
+2. Fila **PROMEDIO**: etiqueta "PROMEDIO" en columna FECHA, promedio de las mismas columnas
+
+Las columnas TURNO y NOMBRE quedan vacías en estas filas.  
+Los valores `-` (productos sin dato) se excluyen del cálculo (no cuentan como `0` en el promedio).
+
+**Validar:** al final de cada bloque de mes en el Excel deben aparecer las dos filas con los totales correctos.
+
+---
+
+### Paso 4 — Nuevo reporte Excel: LECHE vs OTROS
+**Archivos a crear/modificar:**
+- Crear `app/Services/Inventarios/ExcelSueroInventarioService.php`
+- Modificar `app/Controllers/inventarios/inventariosController.php` → agregar método `exportarExcelSuero()`
+- Modificar `app/Config/Routes.php` → agregar ruta `GET inventarios/exportarExcelSuero`
+- Modificar `app/Views/inventarios/inventariosIndex.php` → agregar tercer botón de reporte
+
+El nuevo servicio reutiliza la lógica de `ExportacionExcelService` pero genera dos hojas:
+- Hoja 1 `"LECHE"`: solo registros con `nombre = 'LECHE'`, mismo formato (con cambios 1-3 ya aplicados)
+- Hoja 2 `"SUERO Y OTROS"`: registros con `nombre != 'LECHE'`, mismo formato
+
+**Validar:** el nuevo botón descarga el Excel con las dos hojas correctamente separadas y con el mismo formato visual.
+
+---
+
+### Paso 5 — Replicar cambios 1, 2 y 3 al Reporte General PDF
 **Archivo:** `app/Libraries/ReporteInventario.php`  
-**Clase:** `ReporteInventario extends FPDF`  
-**Método:** `generarReporte(array $inventarios, array $filters)`  
-**Ruta:** `GET /inventarios/exportarPdf`  
-**Controller:** `exportarPdf()` → usa `getFilteredInventarios()` + `getResumenPorNombre()`
-
-**Estructura actual:**
-- Orientación: Portrait A4
-- Tabla con 3 columnas: Producto | Total Producido | Stock Actual
-- Datos de `$inventarios['lista_productos']` y `$inventarios['totales_generales']`
-- Muestra filtros aplicados y usuario generador
+Solo después de validar los pasos 1-3 en Excel.
 
 ---
 
-### Control de Calidad — Excel
-**Archivo:** `app/Controllers/inventarios/inventariosController.php`  
-**Método:** `exportarCalidadExcel()` (inline, ~200 líneas de XML)  
-**Ruta:** `GET /inventarios/exportarCalidadExcel`
-
-**Estructura actual:**
-- 1 hoja `"Control de Calidad"`
-- Agrupado por mes (título de mes en rojo oscuro)
-- Encabezados por mes: FECHA, NOMBRE, TURNO, GRASA, SNG, DENSIDAD, LACTOSA, SOLIDOS, PROTEINA, AGUA, TEMP, PUNTO CON, pH, OBSERVACION
-- Colores alternados por día (amarillo `#FFF9E6` / azul `#E6F2FF`)
-- Borde superior grueso para separar días
-- Punto de congelación con formato `-0.000`
-- Columna OBSERVACION siempre vacía (sin datos en BD)
-
----
-
-### Control de Calidad — PDF
-**Archivo:** `app/Libraries/ReporteControlCalidad.php`  
-**Clase:** `ReporteControlCalidad extends FPDF`  
-**Método:** `generarReporte(array $inventarios)`  
-**Ruta:** `GET /inventarios/exportarCalidadPdf`
-
-**Estructura actual:**
-- Orientación: Landscape LEGAL
-- Agrupado por mes con título en rojo
-- Columnas: FECHA, NOMBRE, TURNO, GRASA, SNG, DENSIDAD, LACTOSA, SOLIDOS, PROTEINA, AGUA, TEMP, PUNTO CON, pH, OBSERVACION
-- Colores alternados por día (amarillo/azul)
-- Columna OBSERVACION siempre vacía
-
----
-
-## Decisiones pendientes de confirmar con el cliente
-
-### 1. Separación del Reporte General Excel
-
-**Propuesta:**
-- El **Reporte General Excel** queda con las columnas fijas: FECHA, TURNO, NOMBRE, STOCK (L), RESERVA, AGREGA, MERMA — sin columnas dinámicas de productos
-- Se crea un **nuevo reporte "Reporte de Productos"** con las columnas dinámicas por producto (Stock y Cant.Prod por nombre de producto), manteniendo el mismo formato visual (colores, agrupación por mes)
-
-**Preguntas abiertas:**
-- ¿El nuevo reporte de productos debe tener también las columnas FECHA, TURNO, NOMBRE, STOCK (L)?
-- ¿O solo las columnas de productos dinámicos?
-- ¿El nuevo reporte se accede desde un tercer botón en la vista, o reemplaza algo?
-
-### 2. Mejoras al Reporte General PDF
-
-**Preguntas abiertas:**
-- ¿Qué datos específicos debe mostrar? ¿La misma tabla matricial que el Excel (por día/turno)?
-- ¿O mantener el formato actual (resumen por producto: Total Producido / Stock Actual)?
-- ¿Orientación Portrait o Landscape?
-
-### 3. Mejoras al Control de Calidad Excel
-
-**Preguntas abiertas:**
-- ¿Qué cambios específicos se requieren? ¿Agregar datos de OBSERVACION?
-- ¿Cambiar el orden de columnas?
-- ¿Agregar columna de usuario que registró la calidad (`user_cali`)?
-
-### 4. Mejoras al Control de Calidad PDF
-
-**Preguntas abiertas:**
-- ¿Qué cambios específicos se requieren?
-- ¿Agregar columna de usuario que registró la calidad?
-- ¿Cambiar orientación o tamaño de página?
-
----
-
-## Archivos a modificar / crear
-
-```
-# Modificar
-app/Services/Inventarios/ExportacionExcelService.php   ← quitar columnas dinámicas de productos
-app/Libraries/ReporteInventario.php                    ← mejoras al PDF general (pendiente definir)
-app/Libraries/ReporteControlCalidad.php                ← mejoras al PDF calidad (pendiente definir)
-app/Controllers/inventarios/inventariosController.php  ← exportarCalidadExcel() + nueva ruta
-app/Views/inventarios/inventariosIndex.php             ← agregar botón nuevo reporte productos
-app/Config/Routes.php                                  ← nueva ruta reporte productos
-
-# Crear
-app/Services/Inventarios/ExcelProductosInventarioService.php  ← nuevo reporte productos Excel
-```
-
----
-
-## Datos disponibles en BD por inventario
-
-### Tabla `condoriri.inventarios` (campos de calidad)
-`grasa`, `sng`, `densidad`, `lactosa`, `solidos`, `proteina`, `agua`, `temperatura`, `congelacion`, `ph`, `fecha_calidad`, `user_cali`
-
-### Tabla `condoriri.inventarios` (campos generales)
-`code`, `nombre`, `stock`, `reserva`, `turno`, `estado`, `sucursal_id`, `user_id`, `created_at`
-
-### Tabla `condoriri.productos` (vinculada por `inventario_id`)
-`nombre`, `stock`, `stock_inve`, `cantidad_produccion`, `agrega`, `merma`, `litros`, `precio_contado`, `precio_credito`, `categoria_id`, `unidad_id`
-
----
-
-## Rutas actuales relevantes
-
-```php
-// Grupo inventarios en Routes.php
-GET  inventarios/exportarExcel          → exportarExcel()          → ExportacionExcelService
-GET  inventarios/exportarPdf            → exportarPdf()            → ReporteInventario (PDF)
-GET  inventarios/exportarCalidadExcel   → exportarCalidadExcel()   → inline XML en controller
-GET  inventarios/exportarCalidadPdf     → exportarCalidadPdf()     → ReporteControlCalidad (PDF)
-GET  inventarios/reporteInventario      → reporteInventario()      → ReporteInventario (PDF, desde tab Estadísticos)
-```
+### Paso 6 — Replicar cambio 4 al PDF (nuevo reporte LECHE vs OTROS en PDF)
+**Archivo a crear:** `app/Libraries/PdfSueroInventarioLib.php` (o similar)  
+Solo después de validar el paso 4 en Excel.
 
 ---
 
 ## Estado
 
-| Subtarea | Estado |
-|---|---|
-| Análisis y documentación | ✅ Completado |
-| Definir detalles con cliente | ⏳ Pendiente |
-| Separar Reporte General Excel (quitar productos) | ⏳ Pendiente |
-| Crear nuevo servicio ExcelProductosInventarioService | ⏳ Pendiente |
-| Agregar botón en vista para nuevo reporte | ⏳ Pendiente |
-| Mejoras Reporte General PDF | ⏳ Pendiente |
-| Mejoras Control de Calidad Excel | ⏳ Pendiente |
-| Mejoras Control de Calidad PDF | ⏳ Pendiente |
-| Registrar nueva ruta en Routes.php | ⏳ Pendiente |
+| Paso | Descripción | Estado |
+|---|---|---|
+| 1 | Cambio de colores — Excel | ⏳ Pendiente |
+| 2 | Valores vacíos con `-` — Excel | ⏳ Pendiente |
+| 3 | Fila SUMA + PROMEDIO por mes — Excel | ⏳ Pendiente |
+| 4 | Nuevo reporte LECHE vs OTROS — Excel | ⏳ Pendiente |
+| 5 | Replicar cambios 1-3 al PDF | ⏳ Pendiente |
+| 6 | Replicar cambio 4 al PDF | ⏳ Pendiente |

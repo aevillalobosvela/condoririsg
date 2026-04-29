@@ -34,7 +34,7 @@ Se trabaja de menor a mayor complejidad/riesgo:
 | 🟢 Baja | Catálogos (categorías, unidades, sucursales) | Ya tiene edición implementada | ⏭️ Omitido (ya existe) |
 | 🟡 Media | Inventarios de leche | Afecta reserva acumulativa | ✅ Completado |
 | 🟡 Media | Productos lácteos / agro (stock) | `stock_inve`/`cantidad_inve` vinculado a ventas | ✅ Completado (ayudas visuales) |
-| 🔴 Alta | Ventas (3 módulos) | Requiere revertir stock + recalcular totales | ⏳ Pendiente |
+| 🔴 Alta | Ventas (3 módulos) | Requiere revertir stock + recalcular totales | ✅ Completado |
 | 🔴 Alta | Envíos confirmados | Requiere revertir stock de `stock_sucursales` | ⏳ Postergado (fuera de esta etapa) |
 
 ---
@@ -322,10 +322,10 @@ $routes->post('updateUltimaVenta', 'productosAgro\ventasAgroController::updateUl
 |---|---|
 | Decisiones de negocio definidas | ✅ Completado |
 | Dudas técnicas resueltas | ✅ Completado |
-| Controllers (3 × 2 métodos) | ⏳ Pendiente |
-| Routes.php (6 rutas) | ⏳ Pendiente |
-| Vistas contado (3 × ventasIndex.php) | ⏳ Pendiente |
-| Vistas crédito (3 × ventasCredito.php) | ⏳ Pendiente |
+| Controllers (3 × 2 métodos) | ✅ Completado |
+| Routes.php (6 rutas) | ✅ Completado |
+| Vistas contado (3 × ventasIndex.php) | ✅ Completado |
+| Vistas crédito (3 × ventasCredito.php) | ✅ Completado |
 
 ---
 

@@ -1,4 +1,4 @@
-# Edición del Último Registro — Módulo Ventas (3 módulos)
+# Edición del Último Registro — Módulo Ventas (3 módulos) ✅ COMPLETADO
 
 ## Contexto general
 
@@ -156,109 +156,49 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 - `guardarVenta()` — usa `stock_sucursales`, campo `stock`, detalle con `stock_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
 - `buscarPersonalUto()` — devuelve uto + externos con `user_id` y `created_at` ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado
+- `updateUltimaVenta()` — ✅ Implementado
 
 **`inventariosController`** (`app/Controllers/inventarios/inventariosController.php`):
 - `guardarVenta()` — usa `condoriri.productos`, campo `stock_inve`, detalle con `producto_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
 - `updateCantidad()` / `updateCalidad()` — ya implementados (inventarios de leche) ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado
+- `updateUltimaVenta()` — ✅ Implementado
 
 **`ventasAgroController`** (`app/Controllers/productosAgro/ventasAgroController.php`):
 - `guardarVenta()` — usa `condoriri.productos_agro`, campo `cantidad_inve`, detalle con `producto_agro_id` ✅
 - `guardarCreditoVenta()` — soporta `tipo_receptor` uto/externo ✅
-- `ultimaVenta()` — **NO EXISTE** ❌
-- `updateUltimaVenta()` — **NO EXISTE** ❌
+- `ultimaVenta()` — ✅ Implementado
+- `updateUltimaVenta()` — ✅ Implementado
 
 ### Vistas — estado real
 
 | Vista | Panel "Última venta" | Modal edición |
 |---|---|---|
-| `ventas/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `inventarios/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `productosAgro/ventasIndex.php` | ❌ No existe | ❌ No existe |
-| `ventas/ventasCredito.php` | ❌ No existe | ❌ No existe |
-| `inventarios/ventasCredito.php` | ❌ No existe | ❌ No existe |
-| `productosAgro/ventasCredito.php` | ❌ No existe | ❌ No existe |
+| `ventas/ventasIndex.php` | ✅ Implementado | ✅ Implementado |
+| `inventarios/ventasIndex.php` | ✅ Implementado | ✅ Implementado |
+| `productosAgro/ventasIndex.php` | ✅ Implementado | ✅ Implementado |
+| `ventas/ventasCredito.php` | ✅ Implementado | ✅ Implementado |
+| `inventarios/ventasCredito.php` | ✅ Implementado | ✅ Implementado |
+| `productosAgro/ventasCredito.php` | ✅ Implementado | ✅ Implementado |
 
 ### Routes.php — estado real
-- Las 6 rutas nuevas (`ultimaVenta` + `updateUltimaVenta` × 3 grupos) **NO EXISTEN** ❌
+- Las 6 rutas nuevas (`ultimaVenta` + `updateUltimaVenta` × 3 grupos) ✅ Implementadas
 
 ---
 
 ## Plan de acción por partes
 
-### Parte 1 — Controller `ventasController` + Routes (lácteos tienda)
-**Objetivo:** implementar y probar el backend del módulo más simple antes de tocar vistas.
+### Parte 1 — Controller `ventasController` + Routes (lácteos tienda) ✅
 
-Tareas:
-1. Agregar `ultimaVenta()` en `ventasController` — query con `sucursal_id=2` + filtro no-agro
-2. Agregar `updateUltimaVenta()` en `ventasController` — transacción completa con `stock_sucursales`
-3. Agregar las 2 rutas en `Routes.php` (grupo `ventas`)
+### Parte 2 — Controller `inventariosController` + Routes (lácteos planta) ✅
 
-Criterio de éxito:
-- `GET /ventas/ultimaVenta` devuelve JSON con `{venta, detalles, productos_disponibles}` o `{venta: null}`
-- `POST /ventas/updateUltimaVenta` con carrito válido actualiza stock y monto, devuelve `{success: true, nueva_venta}`
-- `POST /ventas/updateUltimaVenta` con stock insuficiente devuelve `{success: false, error: "..."}` y no modifica nada
+### Parte 3 — Controller `ventasAgroController` + Routes (agropecuario) ✅
 
----
+### Parte 4 — Vistas contado (3 × ventasIndex.php) ✅
 
-### Parte 2 — Controller `inventariosController` + Routes (lácteos planta)
-**Objetivo:** replicar la lógica de la Parte 1 para el módulo planta.
-
-Tareas:
-1. Agregar `ultimaVenta()` en `inventariosController` — query con `sucursal_id=4` + filtro no-agro
-2. Agregar `updateUltimaVenta()` en `inventariosController` — transacción con `condoriri.productos` (`stock_inve`)
-3. Agregar las 2 rutas en `Routes.php` (grupo `inventarios`)
-
-Criterio de éxito: mismo que Parte 1 pero en `/inventarios/ultimaVenta` y `/inventarios/updateUltimaVenta`
-
----
-
-### Parte 3 — Controller `ventasAgroController` + Routes (agropecuario)
-**Objetivo:** replicar para el módulo agro, con la diferencia de `productos_agro` y filtro EXISTS.
-
-Tareas:
-1. Agregar `ultimaVenta()` en `ventasAgroController` — query con `EXISTS (producto_agro_id)` + `sucursal_id` de sesión
-2. Agregar `updateUltimaVenta()` en `ventasAgroController` — transacción con `condoriri.productos_agro` (`cantidad_inve`)
-3. Agregar las 2 rutas en `Routes.php` (grupo `productosagro`)
-
-Criterio de éxito: mismo que Parte 1 pero en `/productosagro/ultimaVenta` y `/productosagro/updateUltimaVenta`
-
----
-
-### Parte 4 — Vistas contado (3 × ventasIndex.php)
-**Objetivo:** agregar el panel "Última venta" y el modal de edición en los 3 POS de contado.
-
-Tareas por cada vista (`ventas/ventasIndex.php`, `inventarios/ventasIndex.php`, `productosAgro/ventasIndex.php`):
-1. Reemplazar la sección "Ventas del día" por el panel `#panelUltimaVenta`
-2. Agregar el modal `#modalEditarVenta` con carrito editable y buscador de productos
-3. Agregar JS: `cargarUltimaVenta()` al cargar la página, listener del botón "Corregir", `fetch POST updateUltimaVenta`
-
-Diferencias entre módulos en la vista:
-- Lácteos tienda: productos de `stock_sucursales`, campo `stock_id` en carrito
-- Lácteos planta: productos de `condoriri.productos`, campo `producto_id` en carrito
-- Agropecuario: productos de `condoriri.productos_agro`, campo `producto_agro_id` en carrito
-
-Criterio de éxito:
-- El panel aparece automáticamente si hay una venta del usuario hoy
-- El modal se pre-llena con los productos y receptor originales
-- Al guardar, el panel actualiza el monto y muestra enlace al nuevo recibo
-- Si no hay venta elegible, el panel no se renderiza
-
----
-
-### Parte 5 — Vistas crédito (3 × ventasCredito.php)
-**Objetivo:** agregar el mismo panel y modal en los 3 POS de crédito, adaptado para receptor UTO/externo.
-
-Tareas por cada vista (`ventas/ventasCredito.php`, `inventarios/ventasCredito.php`, `productosAgro/ventasCredito.php`):
-1. Mismo panel `#panelUltimaVenta` que en contado
-2. Modal adaptado: el receptor muestra buscador de personal UTO/externo (igual que el POS de crédito)
-3. JS: misma lógica que contado pero con `tipo_receptor` en el payload
-
-Criterio de éxito: mismo que Parte 4 pero en las vistas de crédito
+### Parte 5 — Vistas crédito (3 × ventasCredito.php) ✅
 
 ---
 
