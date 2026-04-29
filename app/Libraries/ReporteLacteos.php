@@ -11,6 +11,11 @@ class ReporteLacteos extends FPDF
 {
     protected $reporteTitle = 'REPORTE GENERAL';
 
+    public function setReporteTitle(string $title): void
+    {
+        $this->reporteTitle = $title;
+    }
+
     // Anchos de columna calculados dinámicamente
     protected $wFecha   = 22;
     protected $wTurno   = 12;
@@ -130,11 +135,30 @@ class ReporteLacteos extends FPDF
                 date('F Y', strtotime($mes . '-01'))
             ));
 
+            // Evitar encabezados "huerfanos" al final de pagina:
+            // titulo de mes + encabezado de tabla + al menos 1 fila de datos.
+            $altoEncabezado = $this->calcularAlturaEncabezado($productosUnicos);
+            $altoMinimoBloque = 7 + $altoEncabezado + $this->hRow;
+            if ($this->GetY() + $altoMinimoBloque > $this->GetPageHeight() - 15) {
+                $this->AddPage();
+            }
+
             $this->filasMes($mesTexto, $productosUnicos);
             $this->filasEncabezados($productosUnicos);
 
             $indiceDia  = 0;
             $diaAnterior = null;
+            $sumStock = 0.0;
+            $sumReserva = 0.0;
+            $sumAgrega = 0.0;
+            $sumMerma = 0.0;
+            $sumProductos = [];
+            foreach ($productosUnicos as $nombreProducto) {
+                $sumProductos[$nombreProducto] = [
+                    'stock' => 0.0,
+                    'cantidad_produccion' => 0.0,
+                ];
+            }
 
             foreach ($datosDelMes as $dato) {
                 $inv      = $dato['inventario'];
@@ -160,9 +184,19 @@ class ReporteLacteos extends FPDF
 
                 $this->filasDatos($inv, $productos, $productosUnicos, $esAmarillo, $bordeTop, $esPrimerDelDia, $dato['agrega'], $dato['merma']);
 
+                $sumStock += (float)($inv->stock ?? 0);
+                $sumReserva += (float)($inv->reserva ?? 0);
+                $sumAgrega += (float)($dato['agrega'] ?? 0);
+                $sumMerma += (float)($dato['merma'] ?? 0);
+                foreach ($productosUnicos as $nombreProducto) {
+                    $sumProductos[$nombreProducto]['stock'] += (float)($productos[$nombreProducto]['stock'] ?? 0);
+                    $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)($productos[$nombreProducto]['cantidad_produccion'] ?? 0);
+                }
+
                 $diaAnterior = $diaActual;
             }
 
+            $this->filaTotalMes($sumStock, $sumReserva, $sumAgrega, $sumMerma, $sumProductos, $productosUnicos);
             $this->Ln(4);
         }
 
@@ -207,7 +241,7 @@ class ReporteLacteos extends FPDF
 
             $agrupados = [];
             foreach ($productosUnicos as $nombre) {
-                $agrupados[$nombre] = ['stock' => 0, 'cantidad_produccion' => 0];
+                $agrupados[$nombre] = ['stock' => null, 'cantidad_produccion' => null];
             }
 
             $totalAgrega = 0;
@@ -216,6 +250,12 @@ class ReporteLacteos extends FPDF
             foreach ($productos as $prod) {
                 $nombre = $this->normalizarNombre(trim($prod->nombre ?? ''));
                 if (isset($agrupados[$nombre])) {
+                    if ($agrupados[$nombre]['stock'] === null) {
+                        $agrupados[$nombre]['stock'] = 0;
+                    }
+                    if ($agrupados[$nombre]['cantidad_produccion'] === null) {
+                        $agrupados[$nombre]['cantidad_produccion'] = 0;
+                    }
                     $agrupados[$nombre]['stock']              += ($prod->stock ?? 0);
                     $agrupados[$nombre]['cantidad_produccion'] += ($prod->cantidad_produccion ?? 0);
                 }
@@ -277,7 +317,7 @@ class ReporteLacteos extends FPDF
     {
         $w = $this->anchoTotal(count($productosUnicos));
         $this->SetFont('Arial', 'B', 10);
-        $this->SetFillColor(139, 0, 0);   // rojo oscuro
+        $this->SetFillColor(106, 127, 168);
         $this->SetTextColor(255, 255, 255);
         $this->Cell($w, 7, utf8_decode($mesTexto), 1, 1, 'C', true);
         $this->SetTextColor(0, 0, 0);
@@ -304,7 +344,7 @@ class ReporteLacteos extends FPDF
         $xInicio = $this->GetX();
 
         // --- Columnas fijas (Cell normal, centrado vertical manual) ---
-        $this->SetFillColor(220, 20, 60);
+        $this->SetFillColor(74, 111, 165);
         $this->SetTextColor(255, 255, 255);
 
         $fijas = [
@@ -326,12 +366,12 @@ class ReporteLacteos extends FPDF
             $this->celdaMultilineaCentrada(
                 utf8_decode($nombre) . ' Stk',
                 $this->wProd, $this->hHeader, $this->hHeaderLine,
-                68, 114, 196
+                93, 138, 138
             );
             $this->celdaMultilineaCentrada(
                 utf8_decode($nombre) . ' Prod',
                 $this->wProd, $this->hHeader, $this->hHeaderLine,
-                143, 170, 220
+                123, 164, 164
             );
         }
 
@@ -339,6 +379,23 @@ class ReporteLacteos extends FPDF
         // Avanzar al final de la fila de encabezados
         $this->SetXY($xInicio, $yInicio + $this->hHeader);
         $this->Ln(0);
+    }
+
+    private function calcularAlturaEncabezado(array $productosUnicos): float
+    {
+        $this->SetFont('Arial', 'B', 7);
+        $maxLineas = 1;
+        foreach ($productosUnicos as $nombre) {
+            $etiquetas = [utf8_decode($nombre) . ' Stk', utf8_decode($nombre) . ' Prod'];
+            foreach ($etiquetas as $etiqueta) {
+                $lineas = $this->contarLineas($etiqueta, $this->wProd);
+                if ($lineas > $maxLineas) {
+                    $maxLineas = $lineas;
+                }
+            }
+        }
+
+        return max(5 * $this->hHeaderLine + 4, $maxLineas * $this->hHeaderLine + 4);
     }
 
     /**
@@ -395,9 +452,9 @@ class ReporteLacteos extends FPDF
     private function filasDatos($inv, array $productos, array $productosUnicos, bool $esAmarillo, bool $bordeTop, bool $esPrimerDelDia, float $agrega, float $merma): void
     {
         if ($esAmarillo) {
-            $this->SetFillColor(255, 249, 230);
+            $this->SetFillColor(240, 247, 240);
         } else {
-            $this->SetFillColor(230, 242, 255);
+            $this->SetFillColor(245, 245, 245);
         }
 
         // Línea separadora de día más gruesa
@@ -428,9 +485,11 @@ class ReporteLacteos extends FPDF
 
         $this->SetFont('Arial', '', 7);
         foreach ($productosUnicos as $nombre) {
-            $datoProd = $productos[$nombre] ?? ['stock' => 0, 'cantidad_produccion' => 0];
-            $this->Cell($this->wProd, $this->hRow, number_format($datoProd['stock'],              2), 1, 0, 'C', true);
-            $this->Cell($this->wProd, $this->hRow, number_format($datoProd['cantidad_produccion'], 2), 1, 0, 'C', true);
+            $datoProd = $productos[$nombre] ?? ['stock' => null, 'cantidad_produccion' => null];
+            $textoStock = $datoProd['stock'] === null ? '-' : number_format($datoProd['stock'], 2);
+            $textoProd = $datoProd['cantidad_produccion'] === null ? '-' : number_format($datoProd['cantidad_produccion'], 2);
+            $this->Cell($this->wProd, $this->hRow, $textoStock, 1, 0, 'C', true);
+            $this->Cell($this->wProd, $this->hRow, $textoProd, 1, 0, 'C', true);
         }
 
         $this->Ln();
@@ -519,6 +578,36 @@ class ReporteLacteos extends FPDF
             $this->Cell($wVal,   7, number_format($stockProd, 2), 1, 1, 'C', true);
             $par = !$par;
         }
+    }
+
+    private function filaTotalMes(
+        float $sumStock,
+        float $sumReserva,
+        float $sumAgrega,
+        float $sumMerma,
+        array $sumProductos,
+        array $productosUnicos
+    ): void {
+        if ($this->GetY() + $this->hRow > $this->GetPageHeight() - 15) {
+            $this->AddPage();
+        }
+
+        $this->SetFillColor(255, 253, 231);
+        $this->SetFont('Arial', 'B', 7);
+        $this->Cell($this->wFecha, $this->hRow, utf8_decode('TOTAL MES'), 1, 0, 'C', true);
+        $this->Cell($this->wTurno, $this->hRow, '', 1, 0, 'C', true);
+        $this->Cell($this->wNombre, $this->hRow, '', 1, 0, 'C', true);
+        $this->Cell($this->wStock, $this->hRow, number_format($sumStock, 2), 1, 0, 'C', true);
+        $this->Cell($this->wReserva, $this->hRow, number_format($sumReserva, 2), 1, 0, 'C', true);
+        $this->Cell($this->wAgrega, $this->hRow, number_format($sumAgrega, 2), 1, 0, 'C', true);
+        $this->Cell($this->wMerma, $this->hRow, number_format($sumMerma, 2), 1, 0, 'C', true);
+
+        foreach ($productosUnicos as $nombre) {
+            $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['stock'] ?? 0, 2), 1, 0, 'C', true);
+            $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['cantidad_produccion'] ?? 0, 2), 1, 0, 'C', true);
+        }
+
+        $this->Ln();
     }
 
     // -------------------------------------------------------------------------

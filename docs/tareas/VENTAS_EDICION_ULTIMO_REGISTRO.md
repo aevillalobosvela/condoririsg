@@ -1,4 +1,4 @@
-# Edición del Último Registro — Módulo Ventas (3 módulos)
+# Edición del Último Registro — Módulo Ventas (3 módulos) ✅ COMPLETADO
 
 ## Contexto general
 
@@ -192,18 +192,11 @@ app/Views/productosAgro/ventasCredito.php             ← panel + modal crédito
 
 ## Plan de acción por partes
 
-### Parte 1 — Controller `ventasController` + Routes (lácteos tienda)
-**Objetivo:** implementar y probar el backend del módulo más simple antes de tocar vistas.
+### Parte 1 — Controller `ventasController` + Routes (lácteos tienda) ✅
 
-Tareas:
-1. Agregar `ultimaVenta()` en `ventasController` — query con `sucursal_id=2` + filtro no-agro
-2. Agregar `updateUltimaVenta()` en `ventasController` — transacción completa con `stock_sucursales`
-3. Agregar las 2 rutas en `Routes.php` (grupo `ventas`)
+### Parte 2 — Controller `inventariosController` + Routes (lácteos planta) ✅
 
-Criterio de éxito:
-- `GET /ventas/ultimaVenta` devuelve JSON con `{venta, detalles, productos_disponibles}` o `{venta: null}`
-- `POST /ventas/updateUltimaVenta` con carrito válido actualiza stock y monto, devuelve `{success: true, nueva_venta}`
-- `POST /ventas/updateUltimaVenta` con stock insuficiente devuelve `{success: false, error: "..."}` y no modifica nada
+### Parte 3 — Controller `ventasAgroController` + Routes (agropecuario) ✅
 
 ---
 
