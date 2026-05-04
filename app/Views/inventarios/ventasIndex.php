@@ -229,6 +229,30 @@
             </button>
           </div>
          <div id="clientResults" class="list-group"></div>
+          <!-- Panel de edición inline -->
+          <div id="clientEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
+            <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
+              <i class="ri-information-line me-1"></i>
+              Puede editar el último cliente registrado por usted hoy.
+            </div>
+            <div class="row g-2">
+              <div class="col-sm-5">
+                <input type="text" class="form-control form-control-sm" id="editNombre" placeholder="Nombre completo">
+              </div>
+              <div class="col-sm-3">
+                <input type="text" class="form-control form-control-sm" id="editCi" placeholder="CI / NIT">
+              </div>
+              <div class="col-sm-4 d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-warning flex-grow-1" id="btnGuardarEdit">
+                  <i class="ri-save-line me-1"></i> Guardar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelarEdit">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+            <div id="editClientError" class="text-danger mt-1" style="font-size:0.8rem; display:none;"></div>
+          </div>
         </div>
       </div>
 
@@ -342,19 +366,32 @@
       </form>
 
       <!-- Sales of the Day -->
-      <div class="sales-of-day-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h3 class="h5 mb-0 text-success">Ventas del Día</h3>
-          <span class="badge bg-light text-success" id="salesCount">0 ventas</span>
+      <div id="panelUltimaVenta" style="display:none" class="sales-of-day-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="h5 mb-0 text-warning"><i class="ri-edit-line me-1"></i>Última Venta</h3>
+          <span class="badge bg-warning text-dark" id="uvCode"></span>
         </div>
-        <div class="chart-placeholder rounded text-center py-3">
-          <i class="ri-bar-chart-2-line display-5 text-success"></i>
+        <p class="text-muted small mb-2" style="font-size:0.78rem;">
+          <i class="ri-information-line me-1"></i>
+          ¿Cometió un error en la última venta? Puede corregir los productos o el cliente antes de cerrar el día. Solo aplica a su última venta registrada hoy.
+        </p>
+        <div class="mb-2 pb-2 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Cliente:</span>
+            <strong class="small" id="uvCliente"></strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Monto:</span>
+            <strong class="text-success" id="uvMonto"></strong>
+          </div>
         </div>
-        <div class="text-center mt-3">
-          <a href="<?= base_url('inventarios/reportes') ?>" class="text-success text-decoration-none">
-            <i class="ri-file-list-line me-1"></i> Ver reporte completo
-          </a>
+        <div class="mb-2">
+          <span class="text-muted small d-block mb-1">Productos:</span>
+          <div id="uvProductos" class="small" style="max-height:80px;overflow-y:auto;"></div>
         </div>
+        <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
+          <i class="ri-pencil-line me-1"></i> Corregir esta venta
+        </button>
       </div>
     </div>
   </div>
@@ -442,6 +479,8 @@
 
     // Datos iniciales
     const allProducts = <?= json_encode($productos) ?>;
+    const SESSION_USER_ID = <?= (int)session()->get('id') ?>;
+    const TODAY = '<?= date('Y-m-d') ?>';
     let itemsPerPage = 9;
     let currentPage = 1;
     let selectedClient = null;
@@ -742,7 +781,12 @@
         `;
       } else {
         clientResults.innerHTML = filtered.map(c => `
-          <a href="#" class="list-group-item list-group-item-action client-item" data-id="${c.id}" data-name="${c.nombre_completo}" data-ci="${c.ci_nit}">
+          <a href="#" class="list-group-item list-group-item-action client-item"
+             data-id="${c.id}"
+             data-name="${c.nombre_completo}"
+             data-ci="${c.ci_nit}"
+             data-user-id="${c.user_id}"
+             data-created-at="${c.created_at || ''}">
             ${c.nombre_completo} - CI: ${c.ci_nit}
           </a>
         `).join('');
@@ -755,6 +799,17 @@
       clientSearch.value = client.name;
       clienteIdInput.value = client.id;
       document.getElementById('clientResults').style.display = 'none';
+
+      const panel = document.getElementById('clientEditPanel');
+      const clientDate = client.created_at ? client.created_at.substring(0, 10) : '';
+      if (parseInt(client.user_id) === SESSION_USER_ID && clientDate === TODAY) {
+        document.getElementById('editNombre').value = client.name;
+        document.getElementById('editCi').value = client.ci || '';
+        document.getElementById('editClientError').style.display = 'none';
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
     }
     
     /**
@@ -865,7 +920,9 @@
         selectClient({
           id: target.dataset.id,
           name: target.dataset.name,
-          ci: target.dataset.ci
+          ci: target.dataset.ci,
+          user_id: target.dataset.userId,
+          created_at: target.dataset.createdAt,
         });
       } else if (target.classList.contains('client-add-new')) {
         newClientModal.show();
@@ -957,6 +1014,49 @@
       updateSummary();
     });
 
+    // Edición inline de cliente
+    document.getElementById('btnGuardarEdit').addEventListener('click', function () {
+      const nombre = document.getElementById('editNombre').value.trim();
+      const ci     = document.getElementById('editCi').value.trim();
+      const errDiv = document.getElementById('editClientError');
+
+      if (!nombre || !ci) {
+        errDiv.textContent = 'Nombre y CI/NIT son obligatorios.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      fetch('<?= base_url('cliente/update') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          id: clienteIdInput.value,
+          nombre_completo: nombre,
+          ci_nit: ci,
+        }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            clientSearch.value = res.nombre_completo;
+            selectedClient.name = res.nombre_completo;
+            selectedClient.ci   = res.ci_nit;
+            document.getElementById('clientEditPanel').style.display = 'none';
+          } else {
+            errDiv.textContent = res.error;
+            errDiv.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errDiv.textContent = 'Error de conexión. Intente nuevamente.';
+          errDiv.style.display = 'block';
+        });
+    });
+
+    document.getElementById('btnCancelarEdit').addEventListener('click', function () {
+      document.getElementById('clientEditPanel').style.display = 'none';
+    });
+
     montoRecibidoInput.addEventListener('input', updateChange);
 
     // Inicializar
@@ -967,4 +1067,224 @@
     });
   });
 </script>
+
+<!-- MODAL EDITAR ÚLTIMA VENTA -->
+<div class="modal fade" id="modalEditarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="ri-edit-line me-1"></i>Corregir Última Venta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="editVentaError" class="alert alert-danger d-none"></div>
+        <input type="hidden" id="editVentaId">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Cliente</label>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="editClienteSearch" placeholder="Buscar por nombre o CI..." autocomplete="off">
+            <div id="editClienteResults" class="list-group" style="position:absolute;z-index:1050;width:100%;max-height:180px;overflow-y:auto;display:none;"></div>
+          </div>
+          <input type="hidden" id="editReceptorId" value="0">
+          <input type="hidden" id="editTipoReceptor" value="cliente">
+          <small class="text-muted" id="editClienteSeleccionado">Consumidor Final</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Productos</label>
+          <div id="editCarritoContainer"></div>
+          <div class="mt-2">
+            <select class="form-select form-select-sm" id="editAgregarProducto">
+              <option value="">+ Agregar producto...</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+          <span class="fw-bold">Total:</span>
+          <strong class="text-success fs-5" id="editTotal">Bs. 0.00</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning" id="btnGuardarCorreccion">
+          <i class="ri-save-line me-1"></i>Guardar corrección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ENDPOINT_GET  = '<?= base_url('inventarios/ultimaVenta') ?>';
+  const ENDPOINT_POST = '<?= base_url('inventarios/updateUltimaVenta') ?>';
+  const CAMPO_ID      = 'producto_id';
+
+  let uvData = null;
+  let editCarrito = [];
+
+  function cargarUltimaVenta() {
+    fetch(ENDPOINT_GET)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.venta) return;
+        uvData = data;
+        document.getElementById('uvCode').textContent  = data.venta.code;
+        document.getElementById('uvMonto').textContent = 'Bs. ' + parseFloat(data.venta.monto_total).toFixed(2);
+        document.getElementById('uvCliente').textContent = data.receptor && data.receptor.id
+          ? data.receptor.nombre
+          : 'Consumidor Final';
+        document.getElementById('uvProductos').innerHTML = (data.detalles || []).map(d =>
+          `<div class="d-flex justify-content-between">
+            <span class="text-truncate me-2">${d.producto ?? d.nombre}</span>
+            <span class="text-nowrap text-muted">${d.cantidad} &times; Bs.${parseFloat(d.precio_unitario).toFixed(2)}</span>
+          </div>`
+        ).join('');
+        document.getElementById('panelUltimaVenta').style.display = 'block';
+      })
+      .catch(() => {});
+  }
+
+  document.getElementById('btnCorregirVenta').addEventListener('click', function() {
+    if (!uvData) return;
+    document.getElementById('editVentaId').value = uvData.venta.id;
+    document.getElementById('editVentaError').classList.add('d-none');
+    editCarrito = uvData.detalles.map(d => ({
+      id: d[CAMPO_ID] ?? d.producto_id,
+      nombre: d.producto ?? d.nombre,
+      cantidad: parseInt(d.cantidad),
+      precio_unitario: parseFloat(d.precio_unitario)
+    }));
+    renderEditCarrito();
+    const sel = document.getElementById('editAgregarProducto');
+    sel.innerHTML = '<option value="">+ Agregar producto...</option>';
+    (uvData.productos_disponibles || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.dataset.nombre = p.nombre;
+      opt.dataset.precio = p.precio_contado ?? p.precio ?? 0;
+      opt.textContent = p.nombre + ' (stock: ' + (p.stock_inve ?? 0) + ')';
+      sel.appendChild(opt);
+    });
+    // Pre-llenar receptor
+    const receptor = uvData.receptor;
+    document.getElementById('editReceptorId').value = receptor && receptor.id ? receptor.id : 0;
+    document.getElementById('editTipoReceptor').value = 'cliente';
+    document.getElementById('editClienteSearch').value = receptor && receptor.id ? receptor.nombre : '';
+    document.getElementById('editClienteSeleccionado').textContent = receptor && receptor.id ? receptor.nombre : 'Consumidor Final';
+    new bootstrap.Modal(document.getElementById('modalEditarVenta')).show();
+  });
+
+  // --- Buscador de clientes en el modal ---
+  document.getElementById('editClienteSearch').addEventListener('input', function() {
+    const termino = this.value.trim().toLowerCase();
+    const results = document.getElementById('editClienteResults');
+    if (!termino) {
+      document.getElementById('editReceptorId').value = 0;
+      document.getElementById('editClienteSeleccionado').textContent = 'Consumidor Final';
+      results.style.display = 'none';
+      return;
+    }
+    const clientes = uvData.clientes || [];
+    const filtered = clientes.filter(c =>
+      c.nombre_completo.toLowerCase().includes(termino) ||
+      (c.ci_nit && c.ci_nit.toString().includes(termino))
+    ).slice(0, 8);
+    results.innerHTML = filtered.length
+      ? filtered.map(c =>
+          `<a href="#" class="list-group-item list-group-item-action small py-1"
+              data-id="${c.id}" data-nombre="${c.nombre_completo}">
+            ${c.nombre_completo} <span class="text-muted">&mdash; ${c.ci_nit}</span>
+          </a>`
+        ).join('')
+      : '<a class="list-group-item list-group-item-action text-muted small">Sin resultados</a>';
+    results.style.display = 'block';
+  });
+
+  document.getElementById('editClienteResults').addEventListener('click', function(e) {
+    e.preventDefault();
+    const a = e.target.closest('a[data-id]');
+    if (!a) return;
+    document.getElementById('editReceptorId').value = a.dataset.id;
+    document.getElementById('editClienteSearch').value = a.dataset.nombre;
+    document.getElementById('editClienteSeleccionado').textContent = a.dataset.nombre;
+    this.style.display = 'none';
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#editClienteSearch') && !e.target.closest('#editClienteResults')) {
+      const r = document.getElementById('editClienteResults');
+      if (r) r.style.display = 'none';
+    }
+  });
+
+  document.getElementById('editAgregarProducto').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (!opt.value) return;
+    const existe = editCarrito.find(i => i.id == opt.value);
+    if (existe) { existe.cantidad++; }
+    else { editCarrito.push({id: parseInt(opt.value), nombre: opt.dataset.nombre, cantidad: 1, precio_unitario: parseFloat(opt.dataset.precio) || 0}); }
+    this.value = '';
+    renderEditCarrito();
+  });
+
+  function renderEditCarrito() {
+    const cont = document.getElementById('editCarritoContainer');
+    if (!editCarrito.length) { cont.innerHTML = '<p class="text-muted small">Sin productos.</p>'; document.getElementById('editTotal').textContent = 'Bs. 0.00'; return; }
+    let total = 0;
+    cont.innerHTML = editCarrito.map((item, i) => {
+      const sub = item.cantidad * item.precio_unitario; total += sub;
+      return `<div class="d-flex align-items-center gap-2 mb-2 border-bottom pb-2">
+        <span class="flex-grow-1 small">${item.nombre}</span>
+        <input type="number" min="1" value="${item.cantidad}" class="form-control form-control-sm" style="width:65px" onchange="editCantidad(${i}, this.value)">
+        <span class="small text-muted" style="width:55px">Bs.${item.precio_unitario.toFixed(2)}</span>
+        <span class="small fw-bold" style="width:60px">Bs.${sub.toFixed(2)}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="editEliminar(${i})"><i class="ri-delete-bin-line"></i></button>
+      </div>`;
+    }).join('');
+    document.getElementById('editTotal').textContent = 'Bs. ' + total.toFixed(2);
+  }
+
+  window.editCantidad = function(i, val) { editCarrito[i].cantidad = Math.max(1, parseInt(val) || 1); renderEditCarrito(); };
+  window.editEliminar = function(i) { editCarrito.splice(i, 1); renderEditCarrito(); };
+
+  document.getElementById('btnGuardarCorreccion').addEventListener('click', function() {
+    if (!editCarrito.length) { document.getElementById('editVentaError').textContent = 'El carrito no puede estar vacío.'; document.getElementById('editVentaError').classList.remove('d-none'); return; }
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+    fetch(ENDPOINT_POST, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        venta_id: document.getElementById('editVentaId').value,
+        receptor_id: document.getElementById('editReceptorId').value,
+        tipo_receptor: document.getElementById('editTipoReceptor').value,
+        carrito: JSON.stringify(editCarrito.map(i => ({id: i.id, cantidad: i.cantidad, precio_unitario: i.precio_unitario})))
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEditarVenta')).hide();
+        window.open(data.recibo_url, '_blank');
+        window.location.reload();
+      } else {
+        document.getElementById('editVentaError').textContent = data.error;
+        document.getElementById('editVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+      }
+    })
+    .catch(() => {
+      document.getElementById('editVentaError').textContent = 'Error de conexión.';
+      document.getElementById('editVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', cargarUltimaVenta);
+})();
+</script>
+
 <?= $this->endSection() ?>

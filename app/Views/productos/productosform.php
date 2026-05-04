@@ -36,11 +36,38 @@
     margin-top: 1rem;
     display: none;
   }
+  .calculation-result.alerta-alta {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+  }
+  .calculation-result.alerta-critica {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+  }
 
   .result-highlight {
     font-weight: 600;
     color: #28a745;
   }
+  .result-highlight.text-warning { color: #856404 !important; }
+  .result-highlight.text-danger  { color: #721c24 !important; }
+
+  /* Barra de uso de reserva */
+  .reserva-bar-wrap {
+    background: #e9ecef;
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .reserva-bar {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s, background-color 0.3s;
+    background-color: #28a745;
+  }
+  .reserva-bar.warn  { background-color: #ffc107; }
+  .reserva-bar.crit  { background-color: #dc3545; }
 
   /* Stock info */
   .stock-info {
@@ -271,13 +298,20 @@
                       <input type="hidden" name="inventario_id" value="<?= esc($inventario_seleccionado->id) ?>">
                       <div class="input-group">
                         <input type="text" class="form-control"
-                          value="<?= esc($inventario_seleccionado->nombre) ?> - Stock total: <?= esc(number_format($stockTotal, 2)) ?> L" readonly>
+                          value="<?= esc($inventario_seleccionado->nombre) ?> — Código: <?= esc($inventario_seleccionado->code) ?>" readonly>
                         <span class="input-group-text"><i class="ri-check-line text-success"></i></span>
                       </div>
-                      <!-- ✅ Atributo data-stock para JS -->
-                      <div class="stock-info">
-                        Límite máximo: <span id="stock-disponible" class="stock-available" data-stock="<?= esc($stockTotal) ?>"><?= esc(number_format($stockTotal, 2)) ?></span> L
+                      <div class="mt-2 p-2 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <span style="font-size:0.82rem;">Reserva disponible:</span>
+                          <strong id="reserva-label" style="font-size:0.9rem;"><?= esc(number_format($stockTotal, 2)) ?> L</strong>
+                        </div>
+                        <div class="reserva-bar-wrap mt-1">
+                          <div class="reserva-bar" id="reservaBar" style="width:0%"></div>
+                        </div>
+                        <div id="reservaBarTexto" style="font-size:0.75rem; color:#6c757d; margin-top:3px;">Ingrese los litros a utilizar para ver el impacto.</div>
                       </div>
+                      <div id="stock-disponible" data-stock="<?= esc($stockTotal) ?>" style="display:none;"></div>
                     <?php else: ?>
                       <select class="form-select <?= (session('validation') && session('validation')->hasError('inventario_id')) ? 'is-invalid' : '' ?>"
                         id="inventario_id" name="inventario_id" required>
@@ -339,18 +373,33 @@
                   <!-- Resultados - Solo en modo creación -->
                   <?php if (!isset($producto->id)): ?>
                   <div id="calculationResult" class="calculation-result">
-                    <h6 class="text-primary mb-3"><i class="ri-calculator-fill me-2"></i> Resultados</h6>
-                    <div class="result-item">
-                      <span>Productos calculados:</span>
-                      <span id="calculatedStock" class="result-highlight">0</span> unidades
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6 class="mb-0"><i class="ri-calculator-fill me-1"></i> Resumen del cálculo</h6>
+                      <span id="resultBadge" class="badge"></span>
                     </div>
-                    <div class="result-item">
-                      <span>Litros utilizados:</span>
-                      <span id="litrosUtilizados" class="result-highlight">0.00</span> L
+                    <div class="row g-2" style="font-size:0.88rem;">
+                      <div class="col-6">
+                        <div class="p-2 rounded" style="background:rgba(0,0,0,0.04);">
+                          <div class="text-muted" style="font-size:0.75rem;">Unidades a producir</div>
+                          <div class="fw-bold fs-5" id="calculatedStock">0</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="p-2 rounded" style="background:rgba(0,0,0,0.04);">
+                          <div class="text-muted" style="font-size:0.75rem;">Litros realmente usados</div>
+                          <div class="fw-bold" id="litrosUtilizados">0.00 L</div>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <div class="p-2 rounded" style="background:rgba(0,0,0,0.04);">
+                          <div class="text-muted" style="font-size:0.75rem;">Reserva que quedará en el inventario</div>
+                          <div class="fw-bold" id="reservaLeche">0.00 L</div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="result-item">
-                      <span>Reserva final:</span>
-                      <span id="reservaLeche" class="result-highlight">0.00</span> L
+                    <div id="alertaCero" class="alert alert-danger py-2 mt-2 mb-0" style="display:none; font-size:0.82rem;">
+                      <i class="ri-error-warning-line me-1"></i>
+                      Con estos valores se producirían <strong>0 unidades</strong>. Revise los litros a utilizar y los litros por unidad.
                     </div>
                   </div>
                   <?php endif; ?>
@@ -377,18 +426,23 @@
                     <small class="form-text text-muted">Stock total − litros realmente utilizados</small>
                   </div>
                   <?php else: ?>
-                  <!-- En modo edición, mostrar stock actual como información -->
-                  <div class="alert alert-warning">
-                    <h6 class="alert-heading"><i class="ri-information-line me-2"></i> Información del Producto</h6>
-                    <div class="row">
-                      <div class="col-md-6">
-                        <strong>Stock Actual:</strong> <?= esc($producto->stock_inve ?? 0) ?> unidades
+                  <!-- En modo edición: panel informativo claro -->
+                  <div class="rounded p-3 mt-2" style="background:#fff8e1; border:1px solid #ffe082;">
+                    <div class="fw-bold mb-2" style="color:#7c5c00;"><i class="ri-shield-check-line me-1"></i> Campos protegidos</div>
+                    <div class="row g-2" style="font-size:0.85rem;">
+                      <div class="col-6">
+                        <div class="text-muted">Stock original</div>
+                        <div class="fw-bold"><?= esc($producto->stock ?? 0) ?> unidades</div>
                       </div>
-                      <div class="col-md-6">
-                        <strong>Stock Original:</strong> <?= esc($producto->stock ?? 0) ?> unidades
+                      <div class="col-6">
+                        <div class="text-muted">Stock disponible actual</div>
+                        <div class="fw-bold"><?= esc($producto->stock_inve ?? 0) ?> unidades</div>
                       </div>
                     </div>
-                    <small class="text-muted">Los valores de stock no pueden modificarse en productos existentes</small>
+                    <div class="mt-2" style="font-size:0.78rem; color:#7c5c00;">
+                      El inventario, el stock original y el stock disponible no pueden modificarse aquí.
+                      Solo puede actualizar nombre, precios, categoría, unidad y datos de calidad.
+                    </div>
                   </div>
                   <?php endif; ?>
                   <!-- <div class="row">
@@ -558,14 +612,18 @@
 
             <!-- Botones -->
             <div class="hstack gap-2 justify-content-end mt-4">
-              <!-- ✅ Corregido: ir a productos, no inventarios -->
               <a href="<?= base_url('inventarios') ?>" class="btn btn-secondary">
                 <i class="ri-arrow-left-line align-bottom me-1"></i> Cancelar
               </a>
-              <button type="submit" class="btn btn-success">
-                <i class="ri-save-line align-bottom me-1"></i>
-                <?= isset($producto->id) ? 'Actualizar' : 'Crear' ?> Producto
+              <?php if (!isset($producto->id)): ?>
+              <button type="button" class="btn btn-success" id="btnAbrirConfirmacion" disabled>
+                <i class="ri-save-line align-bottom me-1"></i> Crear Producto
               </button>
+              <?php else: ?>
+              <button type="submit" class="btn btn-success">
+                <i class="ri-save-line align-bottom me-1"></i> Actualizar Producto
+              </button>
+              <?php endif; ?>
             </div>
           </form>
         </div>
@@ -573,133 +631,217 @@
     </div>
   </div>
 </div>
+
+<?php if (!isset($producto->id)): ?>
+<!-- MODAL DE CONFIRMACIÓN DE CREACIÓN -->
+<div class="modal fade" id="modalConfirmarCreacion" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#f0fdf4; border-bottom:1px solid #bbf7d0;">
+        <h5 class="modal-title" style="color:#16a34a;"><i class="ri-checkbox-circle-line me-1"></i> Confirmar creación de producto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3" style="font-size:0.88rem;">Revise el resumen antes de guardar. Esta acción descontará litros de la reserva del inventario.</p>
+        <table class="table table-sm table-borderless mb-0" style="font-size:0.88rem;">
+          <tbody>
+            <tr><td class="text-muted">Producto</td><td class="fw-bold" id="conf_nombre">—</td></tr>
+            <tr><td class="text-muted">Categoría</td><td id="conf_categoria">—</td></tr>
+            <tr><td class="text-muted">Precios</td><td id="conf_precios">—</td></tr>
+            <tr><td class="text-muted">Litros a usar</td><td id="conf_litros">—</td></tr>
+            <tr><td class="text-muted">Litros por unidad</td><td id="conf_litros_unidad">—</td></tr>
+            <tr><td class="text-muted">Unidades a producir</td><td class="fw-bold fs-5" id="conf_stock">—</td></tr>
+            <tr><td class="text-muted">Reserva restante</td><td id="conf_reserva">—</td></tr>
+          </tbody>
+        </table>
+        <div id="conf_alerta_cero" class="alert alert-danger py-2 mt-3 mb-0" style="display:none; font-size:0.82rem;">
+          <i class="ri-error-warning-line me-1"></i> El cálculo produce <strong>0 unidades</strong>. No se puede guardar.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Revisar</button>
+        <button type="button" class="btn btn-success" id="btnConfirmarGuardar">
+          <i class="ri-check-line me-1"></i> Sí, crear producto
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si estamos en modo edición
     const isEditMode = <?= isset($producto->id) ? 'true' : 'false' ?>;
-    
-    // Solo ejecutar lógica de cálculo en modo creación
+
     if (!isEditMode) {
-      const inventarioSelect = document.getElementById('inventario_id');
-      const cantidadProduccionInput = document.getElementById('cantidad_produccion');
-      const cantidadUnidadInput = document.getElementById('cantidad_unidad');
-      const stockInput = document.getElementById('stock');
-      const reservaInput = document.getElementById('reserva');
-      const calculationResultDiv = document.getElementById('calculationResult');
+      const inventarioSelect    = document.getElementById('inventario_id');
+      const cantidadProduccion  = document.getElementById('cantidad_produccion');
+      const cantidadUnidad      = document.getElementById('cantidad_unidad');
+      const stockInput          = document.getElementById('stock');
+      const reservaInput        = document.getElementById('reserva');
+      const resultDiv           = document.getElementById('calculationResult');
+      const stockDisponible     = document.getElementById('stock-disponible');
+      const maxLitrosSpan       = document.getElementById('max-litros');
+      const calcStock           = document.getElementById('calculatedStock');
+      const calcLitros          = document.getElementById('litrosUtilizados');
+      const calcReserva         = document.getElementById('reservaLeche');
+      const reservaBar          = document.getElementById('reservaBar');
+      const reservaBarTexto     = document.getElementById('reservaBarTexto');
+      const alertaCero          = document.getElementById('alertaCero');
+      const resultBadge         = document.getElementById('resultBadge');
+      const btnAbrir            = document.getElementById('btnAbrirConfirmacion');
+      const productoForm        = document.getElementById('productoForm');
 
-      const stockDisponibleSpan = document.getElementById('stock-disponible');
-      const maxLitrosSpan = document.getElementById('max-litros');
-      const calculatedStockSpan = document.getElementById('calculatedStock');
-      const litrosUtilizadosSpan = document.getElementById('litrosUtilizados');
-      const reservaLecheSpan = document.getElementById('reservaLeche');
-      const productoForm = document.getElementById('productoForm');
-
-      // ✅ Obtener stock total desde data-stock
       function getStockTotal() {
-        const stockStr = stockDisponibleSpan.getAttribute('data-stock');
-        return parseFloat(stockStr) || 0;
+        return parseFloat(stockDisponible.getAttribute('data-stock')) || 0;
       }
 
-      function calcularProduccion() {
-        const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
-        const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
-        const stockTotal = getStockTotal();
+      function calcular() {
+        const litros      = parseFloat(cantidadProduccion.value) || 0;
+        const porUnidad   = parseFloat(cantidadUnidad.value) || 0;
+        const stockTotal  = getStockTotal();
 
-        if (litrosAUsar > stockTotal) {
-          cantidadProduccionInput.classList.add('is-invalid');
+        // Validar exceso
+        if (litros > stockTotal) {
+          cantidadProduccion.classList.add('is-invalid');
         } else {
-          cantidadProduccionInput.classList.remove('is-invalid');
+          cantidadProduccion.classList.remove('is-invalid');
         }
 
-        let productos = 0;
-        let litrosUtilizados = 0;
-        let reservaFinal = stockTotal;
-
-        if (litrosAUsar > 0 && litrosPorUnidad > 0) {
-          productos = Math.floor(litrosAUsar / litrosPorUnidad); // ✅ Entero
-          litrosUtilizados = productos * litrosPorUnidad;
-          reservaFinal = stockTotal - litrosUtilizados; // ✅ Reserva = stock - utilizados
+        let unidades = 0, litrosUsados = 0, reservaFinal = stockTotal;
+        if (litros > 0 && porUnidad > 0) {
+          unidades      = Math.floor(litros / porUnidad);
+          litrosUsados  = unidades * porUnidad;
+          reservaFinal  = stockTotal - litrosUsados;
         }
 
-        stockInput.value = productos;
+        stockInput.value  = unidades;
         reservaInput.value = reservaFinal.toFixed(2);
 
-        calculatedStockSpan.textContent = productos;
-        litrosUtilizadosSpan.textContent = litrosUtilizados.toFixed(2);
-        reservaLecheSpan.textContent = reservaFinal.toFixed(2);
+        // Actualizar panel de resultados
+        calcStock.textContent   = unidades;
+        calcLitros.textContent  = litrosUsados.toFixed(2) + ' L';
+        calcReserva.textContent = reservaFinal.toFixed(2) + ' L';
 
-        calculationResultDiv.style.display = (litrosAUsar > 0 || litrosPorUnidad > 0) ? 'block' : 'none';
+        // Barra de uso
+        const pct = stockTotal > 0 ? Math.min((litrosUsados / stockTotal) * 100, 100) : 0;
+        reservaBar.style.width = pct.toFixed(1) + '%';
 
-        cantidadProduccionInput.setAttribute('max', stockTotal);
+        if (pct >= 100) {
+          reservaBar.className = 'reserva-bar crit';
+          reservaBarTexto.textContent = 'Se usará toda la reserva disponible.';
+          reservaBarTexto.style.color = '#dc3545';
+        } else if (pct >= 90) {
+          reservaBar.className = 'reserva-bar warn';
+          reservaBarTexto.textContent = 'Se usará el ' + pct.toFixed(0) + '% de la reserva. Quedarán ' + reservaFinal.toFixed(2) + ' L.';
+          reservaBarTexto.style.color = '#856404';
+        } else if (pct > 0) {
+          reservaBar.className = 'reserva-bar';
+          reservaBarTexto.textContent = 'Se usará el ' + pct.toFixed(0) + '% de la reserva. Quedarán ' + reservaFinal.toFixed(2) + ' L.';
+          reservaBarTexto.style.color = '#6c757d';
+        } else {
+          reservaBar.className = 'reserva-bar';
+          reservaBarTexto.textContent = 'Ingrese los litros a utilizar para ver el impacto.';
+          reservaBarTexto.style.color = '#6c757d';
+        }
+
+        // Colorear panel de resultados
+        resultDiv.className = 'calculation-result' + (pct >= 100 ? ' alerta-critica' : pct >= 90 ? ' alerta-alta' : '');
+
+        // Badge
+        if (unidades === 0 && (litros > 0 || porUnidad > 0)) {
+          resultBadge.textContent = '0 unidades — revise los valores';
+          resultBadge.className = 'badge bg-danger';
+        } else if (pct >= 90) {
+          resultBadge.textContent = 'Uso alto de reserva';
+          resultBadge.className = 'badge bg-warning text-dark';
+        } else if (unidades > 0) {
+          resultBadge.textContent = 'Listo para guardar';
+          resultBadge.className = 'badge bg-success';
+        } else {
+          resultBadge.textContent = '';
+          resultBadge.className = 'badge';
+        }
+
+        // Alerta de cero unidades
+        alertaCero.style.display = (unidades === 0 && (litros > 0 || porUnidad > 0)) ? 'block' : 'none';
+
+        // Mostrar panel
+        resultDiv.style.display = (litros > 0 || porUnidad > 0) ? 'block' : 'none';
+
+        // Habilitar botón solo si hay unidades válidas y litros no exceden reserva
+        btnAbrir.disabled = (unidades <= 0 || litros > stockTotal);
       }
 
       function actualizarStockInfo() {
         const stockTotal = getStockTotal();
-        stockDisponibleSpan.textContent = stockTotal.toFixed(2);
-        maxLitrosSpan.textContent = stockTotal.toFixed(2);
-        calcularProduccion();
+        if (maxLitrosSpan) maxLitrosSpan.textContent = stockTotal.toFixed(2);
+        calcular();
       }
 
       if (inventarioSelect && inventarioSelect.tagName === 'SELECT') {
         inventarioSelect.addEventListener('change', function() {
-          const selectedOption = inventarioSelect.options[inventarioSelect.selectedIndex];
-          const stock = selectedOption ? (selectedOption.dataset.stock || 0) : 0;
-          stockDisponibleSpan.setAttribute('data-stock', stock);
+          const opt = inventarioSelect.options[inventarioSelect.selectedIndex];
+          stockDisponible.setAttribute('data-stock', opt ? (opt.dataset.stock || 0) : 0);
           actualizarStockInfo();
         });
       }
 
-      cantidadProduccionInput.addEventListener('input', calcularProduccion);
-      cantidadUnidadInput.addEventListener('input', calcularProduccion);
-
-      // ✅ Inicializar después de que el DOM esté listo
+      cantidadProduccion.addEventListener('input', calcular);
+      cantidadUnidad.addEventListener('input', calcular);
       actualizarStockInfo();
 
-      productoForm.addEventListener('submit', function(e) {
-        calcularProduccion();
-        const litrosAUsar = parseFloat(cantidadProduccionInput.value) || 0;
-        const litrosPorUnidad = parseFloat(cantidadUnidadInput.value) || 0;
-        const stockTotal = getStockTotal();
+      // Abrir modal de confirmación
+      btnAbrir.addEventListener('click', function() {
+        const litros    = parseFloat(cantidadProduccion.value) || 0;
+        const porUnidad = parseFloat(cantidadUnidad.value) || 0;
+        const unidades  = parseInt(stockInput.value) || 0;
+        const reserva   = parseFloat(reservaInput.value) || 0;
 
-        if (litrosAUsar > stockTotal) {
-          alert('La cantidad de litros a usar no puede exceder el stock total del inventario.');
-          e.preventDefault();
-          return;
-        }
+        const nombreEl    = document.getElementById('nombre');
+        const categoriaEl = document.getElementById('categoria_id');
+        const pcEl        = document.getElementById('precio_contado');
+        const pcrEl       = document.getElementById('precio_credito');
 
-        if (litrosAUsar > 0 && litrosPorUnidad <= 0) {
-          alert('Debe especificar los litros por unidad.');
-          e.preventDefault();
-          return;
-        }
+        document.getElementById('conf_nombre').textContent         = nombreEl.value.trim() || '—';
+        document.getElementById('conf_categoria').textContent      = categoriaEl.options[categoriaEl.selectedIndex]?.text || '—';
+        document.getElementById('conf_precios').textContent        = 'Contado: Bs. ' + parseFloat(pcEl.value || 0).toFixed(2) + ' — Crédito: Bs. ' + parseFloat(pcrEl.value || 0).toFixed(2);
+        document.getElementById('conf_litros').textContent         = litros.toFixed(2) + ' L';
+        document.getElementById('conf_litros_unidad').textContent  = porUnidad.toFixed(2) + ' L/unidad';
+        document.getElementById('conf_stock').textContent          = unidades + ' unidades';
+        document.getElementById('conf_reserva').textContent        = reserva.toFixed(2) + ' L quedarán en el inventario';
+        document.getElementById('conf_alerta_cero').style.display  = unidades <= 0 ? 'block' : 'none';
+        document.getElementById('btnConfirmarGuardar').disabled    = unidades <= 0;
+
+        new bootstrap.Modal(document.getElementById('modalConfirmarCreacion')).show();
+      });
+
+      // Confirmar y enviar
+      document.getElementById('btnConfirmarGuardar').addEventListener('click', function() {
+        productoForm.submit();
       });
     }
 
-    // Lógica del toggle de calidad (funciona en ambos modos)
-    const toggleCalidadBtn = document.getElementById('toggleCalidadBtn');
-    const calidadFieldsDiv = document.getElementById('calidadFields');
-
-    if (toggleCalidadBtn && calidadFieldsDiv) {
-      toggleCalidadBtn.addEventListener('change', function() {
-        calidadFieldsDiv.classList.toggle('disabled', !this.checked);
+    // Toggle calidad (ambos modos)
+    const toggleCalidad = document.getElementById('toggleCalidadBtn');
+    const calidadFields = document.getElementById('calidadFields');
+    if (toggleCalidad && calidadFields) {
+      toggleCalidad.addEventListener('change', function() {
+        calidadFields.classList.toggle('disabled', !this.checked);
       });
     }
 
-    // Preview de imagen cuando se selecciona un archivo
-    const imagenInput = document.getElementById('imagen');
+    // Preview imagen
+    const imagenInput   = document.getElementById('imagen');
     const imagenPreview = document.getElementById('imagen-preview');
-    
     if (imagenInput && imagenPreview) {
       imagenInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file && file.type.startsWith('image/')) {
           const reader = new FileReader();
-          reader.onload = function(e) {
-            imagenPreview.src = e.target.result;
-          };
+          reader.onload = e => { imagenPreview.src = e.target.result; };
           reader.readAsDataURL(file);
         }
       });

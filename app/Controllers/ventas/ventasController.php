@@ -192,7 +192,7 @@ class ventasController extends BaseController
             SELECT 
                 v.*,
                 COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente_nombre,
-                p.nombre_completo AS nombre_personal,
+                p.nombre AS nombre_personal,
                 p.dip,
                 cargos.cargo,
                 secciones.seccion,
@@ -517,7 +517,7 @@ class ventasController extends BaseController
         $sqlUto = "
             SELECT
                 p.id_persona,
-                p.nombre_completo AS nombre,
+                p.nombre AS nombre,
                 p.dip,
                 p.telefono,
                 p.celular,
@@ -530,7 +530,7 @@ class ventasController extends BaseController
             LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
             WHERE p.\"id_estado\" = true
               AND e.\"id_estado\" = true
-              AND (p.dip ILIKE ? OR p.nombre_completo ILIKE ?)
+              AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
             LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
@@ -545,6 +545,8 @@ class ventasController extends BaseController
                 NULL AS celular,
                 segmento AS cargo,
                 NULL AS seccion,
+                user_id,
+                created_at,
                 'externo' AS tipo
             FROM condoriri.clientes_externos
             WHERE deleted_at IS NULL
@@ -882,7 +884,7 @@ class ventasController extends BaseController
             }
         } else {
             $receptor = $db->table('public.personas p')
-                ->select('p.id_persona, p.nombre_completo AS nombre')
+                ->select('p.id_persona, p.nombre AS nombre')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona AND e."id_estado" = true', 'inner')
                 ->where('p.id_persona', $receptorId)
                 ->where('p."id_estado"', true)
@@ -1029,6 +1031,7 @@ class ventasController extends BaseController
         $builder->select("{$detalleTableName}.*, {$stockAlias}.producto");
         $builder->join("{$stockTableName} AS {$stockAlias}", "{$stockAlias}.id = {$detalleTableName}.stock_id");
         $builder->where('venta_id', $ventaId);
+        $builder->where("{$detalleTableName}.deleted_at IS NULL");
 
         $query = $builder->get();
         if ($query === false) {
@@ -1048,7 +1051,7 @@ class ventasController extends BaseController
 
         if (!empty($venta->personal_uto_id)) {
             $personal = $db->table('public.personas p')
-                ->select('p.nombre_completo, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
@@ -1101,6 +1104,246 @@ class ventasController extends BaseController
 
 
 
+
+    /**
+     * Devuelve JSON con la última venta del usuario hoy (módulo lácteos tienda, sucursal_id=2).
+     * Incluye detalles originales y lista de productos disponibles con stock.
+     */
+    public function ultimaVenta()
+    {
+        $userId     = (int)session()->get('id');
+        $sucursalId = 2;
+        $db         = \Config\Database::connect();
+
+        // Última venta del usuario hoy en este módulo (excluye agro)
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY v.id DESC
+            LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['venta' => null]);
+        }
+
+        // Detalles originales con nombre del producto
+        $detalles = $db->query("
+            SELECT dv.id, dv.stock_id, dv.cantidad, dv.precio_unitario, dv.subtotal, ss.producto
+            FROM condoriri.detalle_venta dv
+            JOIN condoriri.stock_sucursales ss ON ss.id = dv.stock_id
+            WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+        ", [$venta->id])->getResult();
+
+        // Receptor actual
+        $receptor = ['tipo' => 'cliente', 'id' => null, 'nombre' => 'Consumidor Final'];
+        if (!empty($venta->personal_uto_id)) {
+            $p = $db->query("
+                SELECT p.id_persona AS id, p.nombre
+                FROM public.personas p WHERE p.id_persona = ?
+            ", [$venta->personal_uto_id])->getRow();
+            if ($p) $receptor = ['tipo' => 'uto', 'id' => $p->id, 'nombre' => $p->nombre];
+        } elseif (!empty($venta->cliente_externo_id)) {
+            $ce = $db->query("
+                SELECT id, nombre, dip, segmento
+                FROM condoriri.clientes_externos WHERE id = ?
+            ", [$venta->cliente_externo_id])->getRow();
+            if ($ce) $receptor = ['tipo' => 'externo', 'id' => $ce->id, 'nombre' => $ce->nombre, 'dip' => $ce->dip, 'segmento' => $ce->segmento];
+        } elseif (!empty($venta->cliente_id)) {
+            $c = $db->query("
+                SELECT id, nombre_completo AS nombre
+                FROM condoriri.clientes WHERE id = ?
+            ", [$venta->cliente_id])->getRow();
+            if ($c) $receptor = ['tipo' => 'cliente', 'id' => $c->id, 'nombre' => $c->nombre];
+        }
+
+        // Productos disponibles con stock (para agregar al carrito)
+        $productosDisponibles = $this->stockSucursalModel->where('stock >', 0)->findAll();
+
+        // Lista de clientes para el selector del modal
+        $clientes = $this->clienteModel->findAll();
+
+        return $this->response->setJSON([
+            'venta'                => $venta,
+            'detalles'             => $detalles,
+            'receptor'             => $receptor,
+            'productos_disponibles' => $productosDisponibles,
+            'clientes'             => $clientes,
+        ]);
+    }
+
+    /**
+     * Actualiza la última venta del usuario hoy (módulo lácteos tienda).
+     * Revierte stock original, valida nuevo carrito, reemplaza detalles y actualiza monto.
+     */
+    public function updateUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = 2;
+        $db         = \Config\Database::connect();
+
+        $ventaId      = (int)$this->request->getPost('venta_id');
+        $receptorId   = (int)$this->request->getPost('receptor_id');
+        $tipoReceptor = $this->request->getPost('tipo_receptor'); // 'cliente' | 'uto' | 'externo'
+        $carritoJson  = $this->request->getPost('carrito');
+
+        if ($ventaId <= 0 || empty($carritoJson)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Datos incompletos.']);
+        }
+
+        $carrito = json_decode($carritoJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE || empty($carrito)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Carrito inválido.']);
+        }
+
+        // Verificar que la venta pertenece al usuario, es de hoy y es de este módulo
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no editable.']);
+        }
+
+        // Verificar que sea la última venta del usuario hoy
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede editar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detallesOriginales = $db->query("
+                SELECT dv.id, dv.stock_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver stock original
+            foreach ($detallesOriginales as $det) {
+                $db->query("
+                    UPDATE condoriri.stock_sucursales
+                    SET stock = stock + ?
+                    WHERE id = ?
+                ", [$det->cantidad, $det->stock_id]);
+            }
+
+            // 3. Validar nuevo carrito (stock suficiente en todos antes de descontar)
+            $itemsNuevos = [];
+            $nuevoTotal  = 0;
+            foreach ($carrito as $item) {
+                $stockId        = (int)($item['id'] ?? 0);
+                $cantidad       = (int)($item['cantidad'] ?? 0);
+                $precioUnitario = (float)($item['precio_unitario'] ?? 0);
+
+                if ($stockId <= 0 || $cantidad <= 0 || $precioUnitario <= 0) {
+                    throw new \Exception('Datos inválidos en el carrito.');
+                }
+
+                $stockItem = $this->stockSucursalModel->find($stockId);
+                if (!$stockItem) {
+                    throw new \Exception("Producto ID {$stockId} no encontrado.");
+                }
+                if ($stockItem['stock'] < $cantidad) {
+                    throw new \Exception("Stock insuficiente para: {$stockItem['producto']}. Disponible: {$stockItem['stock']}.");
+                }
+
+                $subtotal     = $precioUnitario * $cantidad;
+                $nuevoTotal  += $subtotal;
+                $itemsNuevos[] = [
+                    'stock_id'        => $stockId,
+                    'cantidad'        => $cantidad,
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal'        => $subtotal,
+                    'stock_actual'    => $stockItem['stock'],
+                ];
+            }
+
+            // 4. Hard-delete de detalles originales (uk_detalle_stock impide soft-delete + reinsert)
+            foreach ($detallesOriginales as $det) {
+                $db->query("DELETE FROM condoriri.detalle_venta WHERE id = ?", [$det->id]);
+            }
+
+            // 5. Insertar nuevos detalles y descontar stock
+            foreach ($itemsNuevos as $item) {
+                $this->detalleModel->insert([
+                    'venta_id'        => $ventaId,
+                    'stock_id'        => $item['stock_id'],
+                    'cantidad'        => $item['cantidad'],
+                    'precio_unitario' => $item['precio_unitario'],
+                    'subtotal'        => $item['subtotal'],
+                    'observaciones'   => '',
+                ]);
+
+                $db->query("
+                    UPDATE condoriri.stock_sucursales
+                    SET stock = stock - ?
+                    WHERE id = ?
+                ", [$item['cantidad'], $item['stock_id']]);
+            }
+
+            // 6. Actualizar receptor y monto en la venta
+            $updateVenta = ['monto_total' => $nuevoTotal];
+            if ($tipoReceptor === 'uto') {
+                $updateVenta['personal_uto_id']    = $receptorId ?: null;
+                $updateVenta['cliente_externo_id'] = null;
+                $updateVenta['cliente_id']         = null;
+            } elseif ($tipoReceptor === 'externo') {
+                $updateVenta['cliente_externo_id'] = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_id']         = null;
+            } else {
+                $updateVenta['cliente_id']         = $receptorId ?: null;
+                $updateVenta['personal_uto_id']    = null;
+                $updateVenta['cliente_externo_id'] = null;
+            }
+            $this->ventaModel->update($ventaId, $updateVenta);
+
+            $db->transCommit();
+
+            return $this->response->setJSON([
+                'success'     => true,
+                'nuevo_monto' => $nuevoTotal,
+                'recibo_url'  => base_url('ventas/recibo/' . $ventaId),
+            ]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
 
     public function exportarPdfVentas()
     {

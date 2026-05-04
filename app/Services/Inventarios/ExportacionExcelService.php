@@ -7,6 +7,9 @@ use App\Models\Producto\ProductoModel;
 
 class ExportacionExcelService
 {
+    private const ALTURA_FILA_DATOS = 18;
+    private const ALTURA_FILA_CIERRE = 18;
+
     protected $inventarioModel;
     protected $productoModel;
     protected $db;
@@ -23,8 +26,12 @@ class ExportacionExcelService
      */
     public function exportarReporteGeneral($nombre = '', $fecha_inicio = '', $fecha_fin = '')
     {
-        // Obtener inventarios filtrados
-        $inventarios = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        // Reporte general ahora solo contempla materia prima LECHE
+        $inventariosFiltrados = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventariosFiltrados = $this->ordenarPorDiaYTurno($inventariosFiltrados);
+        $inventarios = array_values(array_filter($inventariosFiltrados, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) === 'LECHE';
+        }));
 
         // Obtener todos los productos únicos de todos los inventarios
         $productosUnicos = $this->obtenerProductosUnicos($inventarios);
@@ -37,6 +44,38 @@ class ExportacionExcelService
 
         // Generar archivo Excel
         $this->generarArchivoExcel($datosConProductos, $productosUnicos, $inventariosPorDia, $fecha_inicio, $fecha_fin);
+    }
+
+    /**
+     * Exportar reporte separado de inventarios (solo SUERO y OTROS)
+     */
+    public function exportarReporteLecheOtros($nombre = '', $fecha_inicio = '', $fecha_fin = '')
+    {
+        $inventariosFiltrados = $this->inventarioModel->getFilteredInventarios($nombre, $fecha_inicio, $fecha_fin);
+        $inventariosFiltrados = $this->ordenarPorDiaYTurno($inventariosFiltrados);
+        $inventariosOtros = array_values(array_filter($inventariosFiltrados, static function ($inv) {
+            return strtoupper(trim($inv->nombre ?? '')) !== 'LECHE';
+        }));
+
+        $filename = 'reporte_suero_otros_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+
+        $this->definirEstilos();
+
+        $productosOtros = $this->obtenerProductosUnicos($inventariosOtros);
+        $datosOtros = $this->prepararDatosConProductos($inventariosOtros, $productosOtros);
+        $this->generarWorksheetReporteGeneral('SUERO Y OTROS', $datosOtros, $productosOtros, $fecha_inicio, $fecha_fin);
+
+        echo '</Workbook>';
+        exit;
     }
 
     /**
@@ -97,6 +136,35 @@ class ExportacionExcelService
     }
 
     /**
+     * Ordenar por día (desc) y dentro del día: AM -> PM
+     */
+    private function ordenarPorDiaYTurno(array $inventarios): array
+    {
+        usort($inventarios, static function ($a, $b) {
+            $fechaA = date('Y-m-d', strtotime($a->created_at));
+            $fechaB = date('Y-m-d', strtotime($b->created_at));
+
+            if ($fechaA !== $fechaB) {
+                return strcmp($fechaB, $fechaA);
+            }
+
+            $turnoOrden = ['AM' => 0, 'PM' => 1];
+            $turnoA = strtoupper(trim($a->turno ?? 'AM'));
+            $turnoB = strtoupper(trim($b->turno ?? 'AM'));
+            $ordenA = $turnoOrden[$turnoA] ?? 99;
+            $ordenB = $turnoOrden[$turnoB] ?? 99;
+
+            if ($ordenA !== $ordenB) {
+                return $ordenA <=> $ordenB;
+            }
+
+            return strtotime($b->created_at) <=> strtotime($a->created_at);
+        });
+
+        return $inventarios;
+    }
+
+    /**
      * Preparar datos con productos agrupados por nombre
      */
     private function prepararDatosConProductos($inventarios, $productosUnicos)
@@ -113,8 +181,9 @@ class ExportacionExcelService
             $productosAgrupados = [];
             foreach ($productosUnicos as $nombreProducto) {
                 $productosAgrupados[$nombreProducto] = [
-                    'stock' => 0,
-                    'cantidad_produccion' => 0
+                    // null = el inventario no tiene este producto (se mostrara "-")
+                    'stock' => null,
+                    'cantidad_produccion' => null
                 ];
             }
 
@@ -125,6 +194,12 @@ class ExportacionExcelService
             foreach ($productos as $prod) {
                 $nombreProducto = $this->normalizarNombreProducto(trim($prod->nombre ?? ''));
                 if (isset($productosAgrupados[$nombreProducto])) {
+                    if ($productosAgrupados[$nombreProducto]['stock'] === null) {
+                        $productosAgrupados[$nombreProducto]['stock'] = 0;
+                    }
+                    if ($productosAgrupados[$nombreProducto]['cantidad_produccion'] === null) {
+                        $productosAgrupados[$nombreProducto]['cantidad_produccion'] = 0;
+                    }
                     $productosAgrupados[$nombreProducto]['stock'] += ($prod->stock ?? 0);
                     $productosAgrupados[$nombreProducto]['cantidad_produccion'] += ($prod->cantidad_produccion ?? 0);
                 }
@@ -163,42 +238,42 @@ class ExportacionExcelService
         // Definir estilos
         $this->definirEstilos();
 
-        // Iniciar hoja
-        echo '<Worksheet ss:Name="Reporte General">' . "\n";
+        $this->generarWorksheetReporteGeneral('Reporte General', $datosConProductos, $productosUnicos, $fecha_inicio, $fecha_fin);
+
+        echo '</Workbook>';
+        exit;
+    }
+
+    /**
+     * Generar una hoja con el formato del reporte general + resumen
+     */
+    private function generarWorksheetReporteGeneral($nombreHoja, $datosConProductos, $productosUnicos, $fecha_inicio, $fecha_fin)
+    {
+        echo '<Worksheet ss:Name="' . htmlspecialchars($nombreHoja, ENT_XML1) . '">' . "\n";
         echo '<Table>' . "\n";
 
-        // Definir anchos de columna
         $this->definirAnchos($productosUnicos);
 
-        // Título del reporte
         $totalColumnas = 7 + (count($productosUnicos) * 2) - 1;
         echo '<Row ss:Height="25">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="titulo"><Data ss:Type="String">REPORTE GENERAL</Data></Cell>';
         echo '</Row>' . "\n";
 
-        // Subtítulo con fechas
         $textoFechas = $this->obtenerTextoFechas($fecha_inicio, $fecha_fin);
         echo '<Row ss:Height="20">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="subtitulo"><Data ss:Type="String">' . htmlspecialchars($textoFechas, ENT_XML1) . '</Data></Cell>';
         echo '</Row>' . "\n";
 
-        echo '<Row></Row>' . "\n"; // Fila vacía
+        echo '<Row></Row>' . "\n";
 
-        // Datos (los encabezados se repiten por mes dentro de generarDatos)
         $this->generarDatos($datosConProductos, $productosUnicos);
 
-        echo '</Table></Worksheet>' . "\n";
+        echo '<Row></Row>' . "\n";
+        echo '<Row></Row>' . "\n";
 
-        // Hoja de resumen
-        echo '<Worksheet ss:Name="Resumen">' . "\n";
-        echo '<Table>' . "\n";
-        echo '<Column ss:Width="200"/>' . "\n";
-        echo '<Column ss:Width="100"/>' . "\n";
         $this->generarResumen($datosConProductos, $productosUnicos, $totalColumnas);
-        echo '</Table></Worksheet>' . "\n";
 
-        echo '</Workbook>';
-        exit;
+        echo '</Table></Worksheet>' . "\n";
     }
 
     /**
@@ -211,105 +286,105 @@ class ExportacionExcelService
         // Título principal
         echo '<Style ss:ID="titulo">';
         echo '<Font ss:Bold="1" ss:Size="16" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#DC143C" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#2E5090" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '</Style>' . "\n";
 
         // Subtítulo
         echo '<Style ss:ID="subtitulo">';
         echo '<Font ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#8B0000" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#3D6BA8" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '</Style>' . "\n";
 
         // Encabezado columnas fijas
         echo '<Style ss:ID="header">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#DC143C" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#4A6FA5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Encabezado productos dinámicos
         echo '<Style ss:ID="header_producto">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#4472C4" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#5D8A8A" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Encabezado productos con separador derecho
         echo '<Style ss:ID="header_producto_sep">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#4472C4" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#5D8A8A" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#4472C4"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Celdas amarillas (día par)
         echo '<Style ss:ID="celda_amarilla">';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Celdas azules (día impar)
         echo '<Style ss:ID="celda_azul">';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Celdas amarillas con borde superior grueso (separador de día)
         echo '<Style ss:ID="celda_amarilla_dia">';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Celdas azules con borde superior grueso (separador de día)
         echo '<Style ss:ID="celda_azul_dia">';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -317,13 +392,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -331,13 +406,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo_sep">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -345,13 +420,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -359,13 +434,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul_sep">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -373,13 +448,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo_dia">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -387,13 +462,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo_dia_sep">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -401,13 +476,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul_dia">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -415,13 +490,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul_dia_sep">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -429,13 +504,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo_bold">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -443,13 +518,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_amarillo_dia_bold">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#FFF9E6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -457,13 +532,13 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul_bold">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
@@ -471,34 +546,75 @@ class ExportacionExcelService
         echo '<Style ss:ID="numero_azul_dia_bold">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#E6F2FF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders>';
-        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
-        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
-        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DC143C"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
         echo '</Borders>';
         echo '</Style>' . "\n";
 
         // Título de mes
         echo '<Style ss:ID="titulo_mes">';
         echo '<Font ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#8B0000" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#6A7FA8" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '</Style>' . "\n";
+
+        // Filas de cierre mensual (total y promedio)
+        echo '<Style ss:ID="total_mes_label">';
+        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#FFFDE7" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="total_mes_numero">';
+        echo '<NumberFormat ss:Format="0.00"/>';
+        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#FFFDE7" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="total_mes_numero_sep">';
+        echo '<NumberFormat ss:Format="0.00"/>';
+        echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#FFFDE7" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+
 
         // Título de sección resumen
         echo '<Style ss:ID="resumen_titulo">';
         echo '<Font ss:Bold="1" ss:Size="13" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#1F4E79" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#4D6A83" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '</Style>' . "\n";
 
         // Encabezado tabla resumen
         echo '<Style ss:ID="resumen_header">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#2E75B6" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#6E8EA3" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
         echo '</Style>' . "\n";
@@ -507,7 +623,7 @@ class ExportacionExcelService
         echo '<Style ss:ID="resumen_par">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#DEEAF1" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#EEF4F1" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
         echo '</Style>' . "\n";
@@ -516,7 +632,7 @@ class ExportacionExcelService
         echo '<Style ss:ID="resumen_impar">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#F5FBFF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F4F5F7" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
         echo '</Style>' . "\n";
@@ -524,14 +640,14 @@ class ExportacionExcelService
         // Celda nombre producto en resumen
         echo '<Style ss:ID="resumen_nombre">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#DEEAF1" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#EEF4F1" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Left" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
         echo '</Style>' . "\n";
 
         echo '<Style ss:ID="resumen_nombre_impar">';
         echo '<Font ss:Bold="1" ss:Size="10" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#F5FBFF" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#F4F5F7" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Left" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
         echo '</Style>' . "\n";
@@ -540,14 +656,14 @@ class ExportacionExcelService
         echo '<Style ss:ID="resumen_total">';
         echo '<NumberFormat ss:Format="0.00"/>';
         echo '<Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#1F4E79" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#4D6A83" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/></Borders>';
         echo '</Style>' . "\n";
 
         echo '<Style ss:ID="resumen_total_label">';
         echo '<Font ss:Bold="1" ss:Size="11" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
-        echo '<Interior ss:Color="#1F4E79" ss:Pattern="Solid"/>';
+        echo '<Interior ss:Color="#4D6A83" ss:Pattern="Solid"/>';
         echo '<Alignment ss:Horizontal="Left" ss:Vertical="Center"/>';
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/></Borders>';
         echo '</Style>' . "\n";
@@ -670,6 +786,25 @@ class ExportacionExcelService
             $indiceDia = 0;
             $diaAnterior = null;
 
+            $sumStock = 0.0;
+            $sumReserva = 0.0;
+            $sumAgrega = 0.0;
+            $sumMerma = 0.0;
+            $countFilasMes = 0;
+
+            $sumProductos = [];
+            $countProductos = [];
+            foreach ($productosUnicos as $nombreProducto) {
+                $sumProductos[$nombreProducto] = [
+                    'stock' => 0.0,
+                    'cantidad_produccion' => 0.0,
+                ];
+                $countProductos[$nombreProducto] = [
+                    'stock' => 0,
+                    'cantidad_produccion' => 0,
+                ];
+            }
+
             foreach ($datosDelMes as $dato) {
                 $inv = $dato['inventario'];
                 $productos = $dato['productos'];
@@ -692,7 +827,7 @@ class ExportacionExcelService
                     $estiloNegrita = $esAmarillo ? 'numero_amarillo_dia_bold' : 'numero_azul_dia_bold';
                 }
 
-                echo '<Row ss:Height="20">' . "\n";
+                echo '<Row ss:Height="' . self::ALTURA_FILA_DATOS . '">' . "\n";
 
                 if ($esPrimerRegistroDelDia) {
                     $fecha = date('d-M-y', strtotime($inv->created_at));
@@ -709,11 +844,23 @@ class ExportacionExcelService
                 echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($dato['agrega'], 2, '.', '') . '</Data></Cell>';
                 echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($dato['merma'], 2, '.', '') . '</Data></Cell>';
 
+                $sumStock += (float)($inv->stock ?? 0);
+                $sumReserva += (float)($inv->reserva ?? 0);
+                $sumAgrega += (float)($dato['agrega'] ?? 0);
+                $sumMerma += (float)($dato['merma'] ?? 0);
+                $countFilasMes++;
+
                 $totalProductos = count($productos);
                 $indice = 0;
-                foreach ($productos as $datosProducto) {
+                foreach ($productos as $nombreProducto => $datosProducto) {
                     $esUltimoProducto = ($indice === $totalProductos - 1);
-                    echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
+                    if ($datosProducto['stock'] === null) {
+                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                    } else {
+                        $sumProductos[$nombreProducto]['stock'] += (float)$datosProducto['stock'];
+                        $countProductos[$nombreProducto]['stock']++;
+                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
+                    }
 
                     $estiloSegundaColumna = $estiloNumero;
                     if (!$esUltimoProducto) {
@@ -723,7 +870,13 @@ class ExportacionExcelService
                             $estiloSegundaColumna = $esAmarillo ? 'numero_amarillo_sep' : 'numero_azul_sep';
                         }
                     }
-                    echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                    if ($datosProducto['cantidad_produccion'] === null) {
+                        echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="String">-</Data></Cell>';
+                    } else {
+                        $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
+                        $countProductos[$nombreProducto]['cantidad_produccion']++;
+                        echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                    }
 
                     $indice++;
                 }
@@ -731,6 +884,30 @@ class ExportacionExcelService
                 echo '</Row>' . "\n";
                 $diaAnterior = $diaActual;
             }
+
+            // Fila TOTAL MES
+            echo '<Row ss:Height="' . self::ALTURA_FILA_CIERRE . '">' . "\n";
+            echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String">TOTAL MES</Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumStock, 2, '.', '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumReserva, 2, '.', '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumAgrega, 2, '.', '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumMerma, 2, '.', '') . '</Data></Cell>';
+
+            $totalProductosUnicos = count($productosUnicos);
+            $indiceProducto = 0;
+            foreach ($productosUnicos as $nombreProducto) {
+                $esUltimoProducto = ($indiceProducto === $totalProductosUnicos - 1);
+                $estiloStock = 'total_mes_numero';
+                $estiloCant = $esUltimoProducto ? 'total_mes_numero' : 'total_mes_numero_sep';
+
+                echo '<Cell ss:StyleID="' . $estiloStock . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $estiloCant . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                $indiceProducto++;
+            }
+            echo '</Row>' . "\n";
+
         }
     }
 

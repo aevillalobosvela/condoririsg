@@ -206,6 +206,37 @@
           </button>
         </div>
         <div id="personalInfo" class="mt-3"></div>
+        <!-- Panel de edición inline cliente externo -->
+        <div id="clienteExternoEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
+          <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
+            <i class="ri-information-line me-1"></i>
+            Puede editar el último cliente externo registrado por usted hoy.
+          </div>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <input type="text" class="form-control form-control-sm" id="editExtNombre" placeholder="Nombre">
+            </div>
+            <div class="col-sm-3">
+              <input type="text" class="form-control form-control-sm" id="editExtDip" placeholder="DIP / CI">
+            </div>
+            <div class="col-sm-2">
+              <select class="form-select form-select-sm" id="editExtSegmento">
+                <option value="SEGURO_UNIV">Seguro Univ.</option>
+                <option value="SPECTROLAB">Spectrolab</option>
+                <option value="OTROS">Otros</option>
+              </select>
+            </div>
+            <div class="col-sm-3 d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-warning flex-grow-1" id="btnGuardarEditExterno">
+                <i class="ri-save-line me-1"></i> Guardar
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelarEditExterno">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+          <div id="editExternoError" class="text-danger mt-1" style="font-size:0.8rem; display:none;"></div>
+        </div>
       </div>
 
       <!-- Popular Products -->
@@ -377,20 +408,33 @@
         </div>
       </form>
 
-      <!-- Sales of the Day -->
-      <div class="sales-of-day-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h3 class="h5 mb-0 text-success">Ventas del Día</h3>
-          <span class="badge bg-light text-success" id="salesCount">0 ventas</span>
+      <!-- Panel Última Venta -->
+      <div id="panelUltimaVenta" style="display:none" class="sales-of-day-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="h5 mb-0 text-warning"><i class="ri-edit-line me-1"></i>Última Venta</h3>
+          <span class="badge bg-warning text-dark" id="uvCode"></span>
         </div>
-        <div class="chart-placeholder rounded text-center py-3">
-          <i class="ri-bar-chart-2-line display-5 text-success"></i>
+        <p class="text-muted small mb-2" style="font-size:0.78rem;">
+          <i class="ri-information-line me-1"></i>
+          ¿Cometió un error en la última venta? Puede corregir los productos o el receptor antes de cerrar el día. Solo aplica a su última venta registrada hoy.
+        </p>
+        <div class="mb-2 pb-2 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Receptor:</span>
+            <strong class="small" id="uvCliente"></strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Monto:</span>
+            <strong class="text-success" id="uvMonto"></strong>
+          </div>
         </div>
-        <div class="text-center mt-3">
-          <a href="<?= base_url('ventas/reportes') ?>" class="text-success text-decoration-none">
-            <i class="ri-file-list-line me-1"></i> Ver reporte completo
-          </a>
+        <div class="mb-2">
+          <span class="text-muted small d-block mb-1">Productos:</span>
+          <div id="uvProductos" class="small" style="max-height:80px;overflow-y:auto;"></div>
         </div>
+        <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
+          <i class="ri-pencil-line me-1"></i> Corregir esta venta
+        </button>
       </div>
     </div>
   </div>
@@ -489,6 +533,8 @@
             'unidad' => $p->unidad ?? 'und'
         ];
     }, $productos)) ?>;
+    const SESSION_USER_ID = <?= (int)session()->get('id') ?>;
+    const TODAY = '<?= date('Y-m-d') ?>';
 
     let itemsPerPage = 9;
     let currentPage = 1;
@@ -546,7 +592,8 @@
               const idVal = esExterno ? p.id : p.id_persona;
               return `
                 <div class="card border-success mb-2 resultado-persona" style="cursor:pointer;"
-                     data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}" data-dip="${p.dip}">
+                     data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}" data-dip="${p.dip}"
+                     data-user-id="${p.user_id || ''}" data-created-at="${p.created_at || ''}" data-segmento="${p.cargo || ''}">
                   <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
                     <div>
                       <strong>${p.nombre}</strong> — DIP: ${p.dip}<br>
@@ -563,6 +610,24 @@
                 selectedPersonal = { nombre: el.dataset.nombre, dip: el.dataset.dip, tipo: el.dataset.tipo };
                 clienteIdInput.value    = el.dataset.id;
                 tipoReceptorInput.value = el.dataset.tipo;
+
+                const panel = document.getElementById('clienteExternoEditPanel');
+                if (el.dataset.tipo === 'externo') {
+                  const createdAt = el.dataset.createdAt || '';
+                  const userId    = el.dataset.userId    || '';
+                  if (parseInt(userId) === SESSION_USER_ID && createdAt.substring(0, 10) === TODAY) {
+                    document.getElementById('editExtNombre').value   = el.dataset.nombre;
+                    document.getElementById('editExtDip').value      = el.dataset.dip;
+                    document.getElementById('editExtSegmento').value = el.dataset.segmento || '';
+                    document.getElementById('editExternoError').style.display = 'none';
+                    panel.style.display = 'block';
+                  } else {
+                    panel.style.display = 'none';
+                  }
+                } else {
+                  panel.style.display = 'none';
+                }
+
                 personalInfo.innerHTML  = `
                   <div class="alert alert-success py-2">
                     <strong>Seleccionado:</strong> ${el.dataset.nombre} — DIP: ${el.dataset.dip}
@@ -608,6 +673,13 @@
         selectedPersonal = { nombre: c.nombre, dip: c.dip, tipo: 'externo' };
         clienteIdInput.value    = c.id;
         tipoReceptorInput.value = 'externo';
+
+        document.getElementById('editExtNombre').value   = c.nombre;
+        document.getElementById('editExtDip').value      = c.dip;
+        document.getElementById('editExtSegmento').value = c.segmento || '';
+        document.getElementById('editExternoError').style.display = 'none';
+        document.getElementById('clienteExternoEditPanel').style.display = 'block';
+
         personalInfo.innerHTML  = `
           <div class="alert alert-success py-2">
             <strong>Seleccionado:</strong> ${c.nombre} — DIP: ${c.dip}
@@ -965,10 +1037,285 @@
       updateSummary();
     });
 
+    // Edición inline cliente externo
+    document.getElementById('btnGuardarEditExterno').addEventListener('click', function () {
+      const nombre   = document.getElementById('editExtNombre').value.trim();
+      const dip      = document.getElementById('editExtDip').value.trim();
+      const segmento = document.getElementById('editExtSegmento').value;
+      const errDiv   = document.getElementById('editExternoError');
+
+      if (!nombre || !dip || !segmento) {
+        errDiv.textContent = 'Nombre, DIP y segmento son obligatorios.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      fetch('<?= base_url('cliente/updateExterno') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ id: clienteIdInput.value, nombre, dip, segmento }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            selectedPersonal.nombre = res.nombre;
+            selectedPersonal.dip    = res.dip;
+            personalInfo.querySelector('.alert-success').innerHTML =
+              `<strong>Seleccionado:</strong> ${res.nombre} — DIP: ${res.dip}
+               <span class="badge bg-warning text-dark ms-2">Externo</span>`;
+            document.getElementById('clienteExternoEditPanel').style.display = 'none';
+          } else {
+            errDiv.textContent = res.error;
+            errDiv.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errDiv.textContent = 'Error de conexión. Intente nuevamente.';
+          errDiv.style.display = 'block';
+        });
+    });
+
+    document.getElementById('btnCancelarEditExterno').addEventListener('click', function () {
+      document.getElementById('clienteExternoEditPanel').style.display = 'none';
+    });
+
     montoRecibidoInput.addEventListener('input', updateChange);
     renderProducts();
     tipoPagoSelect.dispatchEvent(new Event('change'));
     document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
   });
 </script>
+
+<!-- MODAL EDITAR ÚLTIMA VENTA -->
+<div class="modal fade" id="modalEditarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="ri-edit-line me-1"></i>Corregir Última Venta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="editVentaError" class="alert alert-danger d-none"></div>
+        <input type="hidden" id="editVentaId">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Receptor</label>
+          <input type="text" class="form-control" id="editReceptorSearch"
+                 placeholder="Buscar por CI o nombre (mín. 3 caracteres)" autocomplete="off">
+          <div id="editReceptorResults" class="list-group mt-1"
+               style="position:absolute;z-index:1050;width:calc(100% - 3rem);max-height:180px;overflow-y:auto;display:none;"></div>
+          <input type="hidden" id="editReceptorId" value="">
+          <input type="hidden" id="editTipoReceptor" value="">
+          <small class="text-muted" id="editReceptorSeleccionado"></small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Productos</label>
+          <div id="editCarritoContainer"></div>
+          <div class="mt-2">
+            <select class="form-select form-select-sm" id="editAgregarProducto">
+              <option value="">+ Agregar producto...</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+          <span class="fw-bold">Total:</span>
+          <strong class="text-success fs-5" id="editTotal">Bs. 0.00</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning" id="btnGuardarCorreccion">
+          <i class="ri-save-line me-1"></i>Guardar corrección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ENDPOINT_GET  = '<?= base_url('inventarios/ultimaVenta') ?>';
+  const ENDPOINT_POST = '<?= base_url('inventarios/updateUltimaVenta') ?>';
+  const ENDPOINT_UTO  = '<?= base_url('inventarios/buscarPersonalUto') ?>';
+  const CAMPO_ID      = 'producto_id';
+
+  let uvData = null;
+  let editCarrito = [];
+  let searchUtoTimeout;
+
+  function cargarUltimaVenta() {
+    fetch(ENDPOINT_GET)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.venta) return;
+        uvData = data;
+        document.getElementById('uvCode').textContent  = data.venta.code;
+        document.getElementById('uvMonto').textContent = 'Bs. ' + parseFloat(data.venta.monto_total).toFixed(2);
+        document.getElementById('uvCliente').textContent = data.receptor && data.receptor.id
+          ? data.receptor.nombre : '(sin receptor)';
+        document.getElementById('uvProductos').innerHTML = (data.detalles || []).map(d =>
+          `<div class="d-flex justify-content-between">
+            <span class="text-truncate me-2">${d.producto ?? d.nombre}</span>
+            <span class="text-nowrap text-muted">${d.cantidad} &times; Bs.${parseFloat(d.precio_unitario).toFixed(2)}</span>
+          </div>`
+        ).join('');
+        document.getElementById('panelUltimaVenta').style.display = 'block';
+      })
+      .catch(() => {});
+  }
+
+  document.getElementById('btnCorregirVenta').addEventListener('click', function() {
+    if (!uvData) return;
+    document.getElementById('editVentaId').value = uvData.venta.id;
+    document.getElementById('editVentaError').classList.add('d-none');
+    const receptor = uvData.receptor;
+    document.getElementById('editReceptorId').value     = receptor && receptor.id ? receptor.id : '';
+    document.getElementById('editTipoReceptor').value   = receptor ? receptor.tipo : '';
+    document.getElementById('editReceptorSearch').value = receptor && receptor.id ? receptor.nombre : '';
+    document.getElementById('editReceptorSeleccionado').textContent = receptor && receptor.id
+      ? receptor.nombre + (receptor.tipo === 'externo' ? ' (Externo)' : ' (Personal UTO)') : 'Sin receptor seleccionado';
+    editCarrito = uvData.detalles.map(d => ({
+      id: d[CAMPO_ID],
+      nombre: d.producto ?? d.nombre,
+      cantidad: parseInt(d.cantidad),
+      precio_unitario: parseFloat(d.precio_unitario)
+    }));
+    renderEditCarrito();
+    const sel = document.getElementById('editAgregarProducto');
+    sel.innerHTML = '<option value="">+ Agregar producto...</option>';
+    (uvData.productos_disponibles || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.dataset.nombre = p.nombre;
+      opt.dataset.precio = p.precio_contado ?? 0;
+      opt.textContent = p.nombre + ' (stock: ' + (p.stock_inve ?? 0) + ')';
+      sel.appendChild(opt);
+    });
+    document.getElementById('editReceptorResults').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('modalEditarVenta')).show();
+  });
+
+  document.getElementById('editReceptorSearch').addEventListener('input', function() {
+    clearTimeout(searchUtoTimeout);
+    const termino = this.value.trim();
+    const results = document.getElementById('editReceptorResults');
+    if (termino.length < 3) { results.style.display = 'none'; return; }
+    searchUtoTimeout = setTimeout(() => {
+      fetch(ENDPOINT_UTO + '?dip=' + encodeURIComponent(termino))
+        .then(r => r.json())
+        .then(data => {
+          results.innerHTML = data.length
+            ? data.map(p => {
+                const esExterno = p.tipo === 'externo';
+                const idVal = esExterno ? p.id : p.id_persona;
+                const badge = esExterno
+                  ? `<span class="badge bg-warning text-dark ms-1">${p.cargo || 'Externo'}</span>`
+                  : `<span class="badge bg-info text-dark ms-1">${p.cargo || 'Personal UTO'}</span>`;
+                return `<a href="#" class="list-group-item list-group-item-action small py-1"
+                    data-id="${idVal}" data-tipo="${p.tipo}" data-nombre="${p.nombre}">
+                  ${p.nombre} &mdash; ${p.dip} ${badge}</a>`;
+              }).join('')
+            : '<a class="list-group-item list-group-item-action text-muted small">Sin resultados</a>';
+          results.style.display = 'block';
+        }).catch(() => {});
+    }, 400);
+  });
+
+  document.getElementById('editReceptorResults').addEventListener('click', function(e) {
+    e.preventDefault();
+    const a = e.target.closest('a[data-id]');
+    if (!a) return;
+    document.getElementById('editReceptorId').value    = a.dataset.id;
+    document.getElementById('editTipoReceptor').value  = a.dataset.tipo;
+    document.getElementById('editReceptorSearch').value = a.dataset.nombre;
+    document.getElementById('editReceptorSeleccionado').textContent =
+      a.dataset.nombre + (a.dataset.tipo === 'externo' ? ' (Externo)' : ' (Personal UTO)');
+    this.style.display = 'none';
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#editReceptorSearch') && !e.target.closest('#editReceptorResults')) {
+      const r = document.getElementById('editReceptorResults');
+      if (r) r.style.display = 'none';
+    }
+  });
+
+  document.getElementById('editAgregarProducto').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (!opt.value) return;
+    const existe = editCarrito.find(i => i.id == opt.value);
+    if (existe) { existe.cantidad++; }
+    else { editCarrito.push({id: parseInt(opt.value), nombre: opt.dataset.nombre, cantidad: 1, precio_unitario: parseFloat(opt.dataset.precio) || 0}); }
+    this.value = '';
+    renderEditCarrito();
+  });
+
+  function renderEditCarrito() {
+    const cont = document.getElementById('editCarritoContainer');
+    if (!editCarrito.length) { cont.innerHTML = '<p class="text-muted small">Sin productos.</p>'; document.getElementById('editTotal').textContent = 'Bs. 0.00'; return; }
+    let total = 0;
+    cont.innerHTML = editCarrito.map((item, i) => {
+      const sub = item.cantidad * item.precio_unitario; total += sub;
+      return `<div class="d-flex align-items-center gap-2 mb-2 border-bottom pb-2">
+        <span class="flex-grow-1 small">${item.nombre}</span>
+        <input type="number" min="1" value="${item.cantidad}" class="form-control form-control-sm" style="width:65px"
+          onchange="editCantidadCredito(${i}, this.value)">
+        <span class="small text-muted" style="width:55px">Bs.${item.precio_unitario.toFixed(2)}</span>
+        <span class="small fw-bold" style="width:60px">Bs.${sub.toFixed(2)}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="editEliminarCredito(${i})">
+          <i class="ri-delete-bin-line"></i></button>
+      </div>`;
+    }).join('');
+    document.getElementById('editTotal').textContent = 'Bs. ' + total.toFixed(2);
+  }
+
+  window.editCantidadCredito = function(i, val) { editCarrito[i].cantidad = Math.max(1, parseInt(val) || 1); renderEditCarrito(); };
+  window.editEliminarCredito = function(i) { editCarrito.splice(i, 1); renderEditCarrito(); };
+
+  document.getElementById('btnGuardarCorreccion').addEventListener('click', function() {
+    if (!editCarrito.length) {
+      document.getElementById('editVentaError').textContent = 'El carrito no puede estar vacío.';
+      document.getElementById('editVentaError').classList.remove('d-none'); return;
+    }
+    if (!document.getElementById('editReceptorId').value) {
+      document.getElementById('editVentaError').textContent = 'Debe seleccionar un receptor.';
+      document.getElementById('editVentaError').classList.remove('d-none'); return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+    fetch(ENDPOINT_POST, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({
+        venta_id:      document.getElementById('editVentaId').value,
+        receptor_id:   document.getElementById('editReceptorId').value,
+        tipo_receptor: document.getElementById('editTipoReceptor').value,
+        carrito:       JSON.stringify(editCarrito.map(i => ({id: i.id, cantidad: i.cantidad, precio_unitario: i.precio_unitario})))
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEditarVenta')).hide();
+        window.open(data.recibo_url, '_blank');
+        window.location.reload();
+      } else {
+        document.getElementById('editVentaError').textContent = data.error;
+        document.getElementById('editVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+      }
+    })
+    .catch(() => {
+      document.getElementById('editVentaError').textContent = 'Error de conexión.';
+      document.getElementById('editVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-save-line me-1"></i>Guardar corrección';
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', cargarUltimaVenta);
+})();
+</script>
+
 <?= $this->endSection() ?>

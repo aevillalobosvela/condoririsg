@@ -7,6 +7,51 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-04-29
+
+### Changed
+- **Inventarios — Reporte General Excel/PDF (solo LECHE):** ambos reportes ahora consideran exclusivamente registros con `nombre = 'LECHE'`.
+- **Inventarios — Reporte Suero y Otros (Excel/PDF):** se añadió exportación separada para `nombre != 'LECHE'` con dropdown dedicado en la interfaz (`Excel` y `PDF`).
+- **Inventarios — orden por turno en reportes:** en Reporte General, Reporte Suero y Otros y Control de Calidad se mantiene la agrupación por día y, dentro del día, se ordena `AM` antes de `PM`.
+- **Inventarios — Reporte General Excel:** nueva paleta visual suave, columnas dinámicas con `-` cuando no hay dato del producto, separación de stock por `LECHE` vs no `LECHE`, y cierre mensual con `TOTAL MES` (sin promedio en ajuste final).
+- **Inventarios — Reporte General PDF:** se alineó el formato visual con el Excel (paleta suave), se añadió `TOTAL MES`, soporte de `-` en columnas dinámicas sin producto y corrección de paginación para evitar encabezados huérfanos al pie de página.
+
+## 2026-04-28
+
+### Added
+- **Docs — estructura de tareas**: creada carpeta `docs/tareas/` con archivos de seguimiento por tarea (`EDICION_ULTIMO_REGISTRO.md`, `VENTAS_EDICION_ULTIMO_REGISTRO.md`, `REPORTES_INVENTARIOS.md`) para documentar decisiones, reglas de negocio y estado de implementación.
+
+---
+
+## 2026-04-27
+
+### Added
+- **Edición último registro — Ventas a crédito (3 módulos)**: panel "Última venta" y modal de edición implementados en las 3 vistas de crédito (`ventas/ventasCredito.php`, `inventarios/ventasCredito.php`, `productosAgro/ventasCredito.php`). Soporta cambio de receptor entre tipo `uto` y tipo `externo`; al cambiar tipo el campo que no aplica se pone en `null`.
+- **Edición último registro — Clientes externos**: método `updateExterno()` en `clienteController` con validación de último registro del usuario hoy. Panel `#clienteExternoEditPanel` en las 3 vistas de crédito con campos `nombre`, `dip`, `segmento`. Aparece automáticamente al crear un externo nuevo.
+- **Edición último registro — Inventarios de leche**: métodos `updateCantidad()` y `updateCalidad()` en `inventariosController`. Formularios inline en `inventariosShow.php`. Recalcula `reserva` al editar cantidad. Edición de calidad restringida a `rol_id` 1 y 3 sin restricción de día.
+- **Edición último registro — Productos (mejora de creación)**: en `productosform.php` se agregó panel de reserva con barra de progreso visual (verde/amarillo ≥90%/rojo=100%), badge de estado del cálculo, botón "Crear Producto" deshabilitado hasta cálculo válido, y modal de confirmación con resumen completo antes del POST.
+
+### Changed
+- **`buscarPersonalUto()` (3 controllers)**: ahora incluye `user_id` y `created_at` en los resultados de `clientes_externos`, necesarios para la evaluación de condiciones de edición en el JS.
+- **Edición último registro — Ventas a contado (3 módulos)**: panel "Última venta" y modal de edición ya implementados en las 3 vistas de contado (`ventasIndex.php` × 3) con soporte completo de transacción (devolver stock → validar → soft-delete detalles → insertar nuevos → descontar stock → actualizar monto).
+- **`Routes.php`**: rutas `POST cliente/updateExterno`, `POST inventarios/update-cantidad/(:num)`, `POST inventarios/update-calidad/(:num)` registradas con filtros de rol correspondientes.
+
+---
+
+## 2026-04-17
+
+### Fixed
+- **Campo de nombre personal UTO — inconsistencia en 3 módulos**: el campo `p.nombre_completo` de `public.personas` (formato `NOMBRES PATERNO MATERNO`) fue reemplazado por `p.nombre` (formato `PATERNO MATERNO NOMBRES`) en todas las queries que referencian personal UTO. El campo `nombre_completo` tenía orden incorrecto; `nombre` es la concatenación con el orden deseado.
+- **`ventasAgroController::generarRecibo()` — nombre truncado**: el SELECT usaba `p.nombre` (nombres de pila solamente, campo `nombres`) en lugar de `p.nombre_completo`. Corregido a `p.nombre` (la concatenación completa con apellidos primero). El recibo de agro mostraba solo los nombres de pila del personal UTO.
+
+### Changed
+- **`buscarPersonalUto()` — los 3 módulos** (`ventasController`, `inventariosController`, `ventasAgroController`): SELECT cambiado de `p.nombre_completo AS nombre` a `p.nombre AS nombre`; cláusula WHERE cambiada de `p.nombre_completo ILIKE ?` a `p.nombre ILIKE ?`. La barra de búsqueda ahora devuelve y busca por el formato `PATERNO MATERNO NOMBRES`.
+- **`guardarCreditoVenta()` validación receptor — los 3 módulos**: SELECT cambiado de `p.nombre_completo AS nombre` a `p.nombre AS nombre`.
+- **`generarRecibo()` — los 3 módulos**: SELECT cambiado de `p.nombre_completo` a `p.nombre` en la query de datos del personal UTO.
+- **Vistas de recibo** (`ventas/recibo_print.php`, `inventarios/recibo_print.php`, `productosAgro/recibo_print.php`): `$personal['nombre_completo']` → `$personal['nombre']`.
+- **Listado de ventas — los 3 módulos**: query principal cambiada de `p.nombre_completo AS nombre_personal` a `p.nombre AS nombre_personal`.
+- **`VentaModel::getDailySalesReportData()` y `getDailySalesReportDataInve()`**: COALESCE de `cliente_nombre` y `personal_nombre` actualizados de `p.nombre_completo` a `p.nombre`.
+
 ## 2026-04-02
 
 ### Added
