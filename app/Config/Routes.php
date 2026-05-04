@@ -168,6 +168,7 @@ $routes->group('productos', ['filter' => 'auth'], function ($routes) {
     $routes->post('agregar/(:num)', 'productos\productosController::agregar/$1', ['filter' => 'role:admin,almacen']);
     $routes->post('subproducto', 'productos\productosController::subproducto', ['filter' => 'role:admin,almacen']);
     $routes->post('createSuero', 'productos\productosController::createSuero', ['filter' => 'role:admin,almacen']);
+    $routes->post('deleteUltimo', 'productos\productosController::deleteUltimo', ['filter' => 'role:admin,almacen']);
 });
 
 // ============================================================================

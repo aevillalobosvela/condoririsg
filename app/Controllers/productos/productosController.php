@@ -302,17 +302,101 @@ class ProductosController extends BaseController
         // Si no se subió nueva imagen, mantener la existente (no agregar al array)
 
         if ($this->productoModel->update($id, $datosSegurosPorActualizar)) {
-            // Redirigir a la URL anterior o a productos por defecto
-            $previousUrl = session()->get('_ci_previous_url') ?? previous_url();
-            
-            // Si la URL anterior es la misma página de edición, ir a productos
-            if (strpos($previousUrl, 'productos/edit') !== false) {
-                return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
+            $inventarioId = (int)($productoExistente->inventario_id ?? 0);
+            if ($inventarioId) {
+                return redirect()->to('/inventarios/show/' . $inventarioId)
+                    ->with('message', 'Producto actualizado con éxito.');
             }
-            
-            return redirect()->to($previousUrl)->with('message', 'Producto actualizado con éxito.');
+            return redirect()->to('/productos')->with('message', 'Producto actualizado con éxito.');
         } else {
             return redirect()->back()->withInput()->with('errors', $this->productoModel->errors());
+        }
+    }
+
+    /**
+     * Elimina (soft-delete) el último producto registrado por el usuario hoy
+     * en un inventario dado, siempre que no tenga subproductos ni ventas asociadas.
+     * Restaura la cantidad_unidad del producto a la reserva del inventario.
+     */
+    public function deleteUltimo(): RedirectResponse
+    {
+        $userId    = session()->get('id');
+        $productoId = (int)$this->request->getPost('producto_id');
+
+        if (!$productoId) {
+            return redirect()->back()->with('error', 'Solicitud inválida.');
+        }
+
+        $producto = $this->productoModel->find($productoId);
+        if (!$producto) {
+            return redirect()->back()->with('error', 'Producto no encontrado.');
+        }
+
+        $inventarioId = (int)$producto->inventario_id;
+
+        // Verificar que sea el último producto del usuario en este inventario
+        $ultimo = $this->productoModel
+            ->where('inventario_id', $inventarioId)
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo->id !== $productoId) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar el último producto que usted registró en este inventario.');
+        }
+
+        if (date('Y-m-d', strtotime($ultimo->created_at)) !== date('Y-m-d')) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar productos registrados el día de hoy.');
+        }
+
+        // Sin subproductos
+        $tieneSubproductos = $this->productoModel
+            ->where('parent_id', $productoId)
+            ->where('deleted_at', null)
+            ->countAllResults() > 0;
+
+        if ($tieneSubproductos) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'No se puede eliminar: este producto tiene subproductos asociados.');
+        }
+
+        // Sin ventas (no existe detalle_venta activo con este producto_id)
+        $db = \Config\Database::connect();
+        $tieneVentas = $db->query(
+            "SELECT 1 FROM condoriri.detalle_venta WHERE producto_id = ? AND deleted_at IS NULL LIMIT 1",
+            [$productoId]
+        )->getRow() !== null;
+
+        if ($tieneVentas) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'No se puede eliminar: este producto ya tiene ventas registradas.');
+        }
+
+        $db->transBegin();
+        try {
+            // Restaurar cantidad_unidad a la reserva del inventario
+            $cantidadUnidad = (float)($producto->cantidad_unidad ?? 0);
+            if ($cantidadUnidad > 0) {
+                $inventario = $this->inventarioModel->find($inventarioId);
+                if ($inventario) {
+                    $nuevaReserva = (float)$inventario->reserva + $cantidadUnidad;
+                    $this->inventarioModel->update($inventarioId, ['reserva' => $nuevaReserva]);
+                }
+            }
+
+            // Soft-delete del producto
+            $this->productoModel->delete($productoId);
+
+            $db->transCommit();
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('message', 'Producto eliminado correctamente.');
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
         }
     }
 

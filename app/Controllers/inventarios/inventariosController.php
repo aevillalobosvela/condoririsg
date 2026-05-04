@@ -154,17 +154,56 @@ class InventariosController extends BaseController
         $puedeEditarCantidad = $esUltimoDelUsuario && $esDehoy && !$tieneProductos;
         $puedeEditarCalidad  = in_array($rolId, [1, 3]);
 
+        // --- Último producto eliminable del usuario en este inventario ---
+        $ultimoProducto       = null;
+        $puedeEliminarProducto = false;
+
+        if ($tieneProductos) {
+            // Último producto del usuario en este inventario creado hoy
+            $ultimoProductoCandidate = $this->productoModel
+                ->where('inventario_id', $id)
+                ->where('user_id', $userId)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->first();
+
+            if ($ultimoProductoCandidate) {
+                $esDehoyProducto = date('Y-m-d', strtotime($ultimoProductoCandidate->created_at)) === $hoy;
+
+                // Sin subproductos
+                $tieneSubproductos = $this->productoModel
+                    ->where('parent_id', $ultimoProductoCandidate->id)
+                    ->where('deleted_at', null)
+                    ->countAllResults() > 0;
+
+                // Sin ventas: no existe detalle_venta activo con este producto_id
+                $db = \Config\Database::connect();
+                $tieneVentas = $db->query(
+                    "SELECT 1 FROM condoriri.detalle_venta WHERE producto_id = ? AND deleted_at IS NULL LIMIT 1",
+                    [(int)$ultimoProductoCandidate->id]
+                )->getRow() !== null;
+
+                $puedeEliminarProducto = $esDehoyProducto && !$tieneSubproductos && !$tieneVentas;
+
+                if ($puedeEliminarProducto) {
+                    $ultimoProducto = $ultimoProductoCandidate;
+                }
+            }
+        }
+
         $data = [
-            'inventario'          => $inventario,
-            'productos'           => $productosArbol,
-            'categoriasSelect'    => $categoriasSelect,
-            'unidadesSelect'      => $unidadesSelect,
-            'title'               => 'Detalles del Inventario',
-            'puedeEditarCantidad' => $puedeEditarCantidad,
-            'puedeEditarCalidad'  => $puedeEditarCalidad,
-            'tieneProductos'      => $tieneProductos,
-            'esUltimoDelUsuario'  => $esUltimoDelUsuario,
-            'esDehoy'             => $esDehoy,
+            'inventario'            => $inventario,
+            'productos'             => $productosArbol,
+            'categoriasSelect'      => $categoriasSelect,
+            'unidadesSelect'        => $unidadesSelect,
+            'title'                 => 'Detalles del Inventario',
+            'puedeEditarCantidad'   => $puedeEditarCantidad,
+            'puedeEditarCalidad'    => $puedeEditarCalidad,
+            'tieneProductos'        => $tieneProductos,
+            'esUltimoDelUsuario'    => $esUltimoDelUsuario,
+            'esDehoy'               => $esDehoy,
+            'ultimoProducto'        => $ultimoProducto,
+            'puedeEliminarProducto' => $puedeEliminarProducto,
         ];
 
         return view('inventarios/inventariosShow', $data);

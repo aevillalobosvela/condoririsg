@@ -182,36 +182,33 @@ class ExportacionExcelService
             foreach ($productosUnicos as $nombreProducto) {
                 $productosAgrupados[$nombreProducto] = [
                     // null = el inventario no tiene este producto (se mostrara "-")
-                    'stock' => null,
-                    'cantidad_produccion' => null
+                    'stock'               => null,
+                    'cantidad_produccion' => null,
+                    'merma'               => null,
+                    'agrega'              => null,
                 ];
             }
-
-            $totalAgrega = 0;
-            $totalMerma  = 0;
 
             // Sumar valores de productos con el mismo nombre
             foreach ($productos as $prod) {
                 $nombreProducto = $this->normalizarNombreProducto(trim($prod->nombre ?? ''));
                 if (isset($productosAgrupados[$nombreProducto])) {
                     if ($productosAgrupados[$nombreProducto]['stock'] === null) {
-                        $productosAgrupados[$nombreProducto]['stock'] = 0;
-                    }
-                    if ($productosAgrupados[$nombreProducto]['cantidad_produccion'] === null) {
+                        $productosAgrupados[$nombreProducto]['stock']               = 0;
                         $productosAgrupados[$nombreProducto]['cantidad_produccion'] = 0;
+                        $productosAgrupados[$nombreProducto]['merma']               = 0;
+                        $productosAgrupados[$nombreProducto]['agrega']              = 0;
                     }
-                    $productosAgrupados[$nombreProducto]['stock'] += ($prod->stock ?? 0);
+                    $productosAgrupados[$nombreProducto]['stock']               += ($prod->stock ?? 0);
                     $productosAgrupados[$nombreProducto]['cantidad_produccion'] += ($prod->cantidad_produccion ?? 0);
+                    $productosAgrupados[$nombreProducto]['merma']               += ($prod->merma ?? 0);
+                    $productosAgrupados[$nombreProducto]['agrega']              += ($prod->agrega ?? 0);
                 }
-                $totalAgrega += ($prod->agrega ?? 0);
-                $totalMerma  += ($prod->merma ?? 0);
             }
 
             $datosConProductos[] = [
                 'inventario' => $inv,
                 'productos'  => $productosAgrupados,
-                'agrega'     => $totalAgrega,
-                'merma'      => $totalMerma,
             ];
         }
 
@@ -254,7 +251,7 @@ class ExportacionExcelService
 
         $this->definirAnchos($productosUnicos);
 
-        $totalColumnas = 7 + (count($productosUnicos) * 2) - 1;
+        $totalColumnas = 5 + (count($productosUnicos) * 4) - 1;
         echo '<Row ss:Height="25">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="titulo"><Data ss:Type="String">REPORTE GENERAL</Data></Cell>';
         echo '</Row>' . "\n";
@@ -668,6 +665,168 @@ class ExportacionExcelService
         echo '<Borders><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/></Borders>';
         echo '</Style>' . "\n";
 
+        // Encabezado merma/agrega (compacto, color diferenciado)
+        echo '<Style ss:ID="header_ma">';
+        echo '<Font ss:Bold="1" ss:Size="9" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#7A6A8A" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Encabezado merma/agrega con separador derecho
+        echo '<Style ss:ID="header_ma_sep">';
+        echo '<Font ss:Bold="1" ss:Size="9" ss:Color="#FFFFFF" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#7A6A8A" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Celdas compactas merma/agrega (amarillo)
+        echo '<Style ss:ID="ma_amarillo">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Celdas compactas merma/agrega (amarillo) con separador derecho
+        echo '<Style ss:ID="ma_amarillo_sep">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Celdas compactas merma/agrega (gris)
+        echo '<Style ss:ID="ma_azul">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Celdas compactas merma/agrega (gris) con separador derecho
+        echo '<Style ss:ID="ma_azul_sep">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Variantes con borde superior grueso (primer registro del día)
+        echo '<Style ss:ID="ma_amarillo_dia">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="ma_amarillo_dia_sep">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F0F7F0" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="ma_azul_dia">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="ma_azul_dia_sep">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Size="9" ss:FontName="Arial" ss:Color="#5A4A6A"/>';
+        echo '<Interior ss:Color="#F5F5F5" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        // Total mes merma/agrega compacto
+        echo '<Style ss:ID="total_mes_ma">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Bold="1" ss:Size="9" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#FFFDE7" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
+        echo '<Style ss:ID="total_mes_ma_sep">';
+        echo '<NumberFormat ss:Format="0"/>';
+        echo '<Font ss:Bold="1" ss:Size="9" ss:FontName="Arial"/>';
+        echo '<Interior ss:Color="#FFFDE7" ss:Pattern="Solid"/>';
+        echo '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+        echo '<Borders>';
+        echo '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="3" ss:Color="#333333"/>';
+        echo '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#666666"/>';
+        echo '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>';
+        echo '</Borders>';
+        echo '</Style>' . "\n";
+
         echo '</Styles>' . "\n";
     }
 
@@ -681,13 +840,13 @@ class ExportacionExcelService
         echo '<Column ss:Width="120"/>' . "\n"; // NOMBRE
         echo '<Column ss:Width="70"/>' . "\n";  // STOCK (L)
         echo '<Column ss:Width="70"/>' . "\n";  // RESERVA
-        echo '<Column ss:Width="70"/>' . "\n";  // AGREGA
-        echo '<Column ss:Width="70"/>' . "\n";  // MERMA
 
-        // Columnas dinámicas de productos
+        // Columnas dinámicas de productos: Stock | Cant.Prod | Merma | Agrega
         foreach ($productosUnicos as $producto) {
-            echo '<Column ss:Width="80"/>' . "\n";  // Stock del producto
-            echo '<Column ss:Width="80"/>' . "\n";  // Cant. Producción del producto
+            echo '<Column ss:Width="65"/>' . "\n";  // Stock
+            echo '<Column ss:Width="65"/>' . "\n";  // Cant.Prod
+            echo '<Column ss:Width="42"/>' . "\n";  // Merma
+            echo '<Column ss:Width="42"/>' . "\n";  // Agrega
         }
     }
 
@@ -713,27 +872,27 @@ class ExportacionExcelService
     {
         echo '<Row ss:Height="50">' . "\n";
 
-        // Columnas fijas
+        // Columnas fijas (sin AGREGA ni MERMA)
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">TURNO</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">NOMBRE</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">STOCK (L)</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">AGREGA</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">MERMA</Data></Cell>';
 
-        // Columnas dinámicas de productos
+        // Columnas dinámicas: Stock | Cant.Prod | M. | Ag.
         $totalProductos = count($productosUnicos);
         $indice = 0;
         foreach ($productosUnicos as $producto) {
-            $nombreProducto = htmlspecialchars($producto, ENT_XML1);
-            echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $nombreProducto . ' Stock</Data></Cell>';
-            
-            // La segunda columna (Cant.Prod) tiene separador derecho si no es el último producto
-            $esUltimoProducto = ($indice === $totalProductos - 1);
-            $estiloSegundaColumna = $esUltimoProducto ? 'header_producto' : 'header_producto_sep';
-            echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="String">' . $nombreProducto . ' Cant.Prod</Data></Cell>';
-            
+            $np = htmlspecialchars($producto, ENT_XML1);
+            $esUltimo = ($indice === $totalProductos - 1);
+
+            echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Stock</Data></Cell>';
+            echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Cant.Prod</Data></Cell>';
+            echo '<Cell ss:StyleID="header_ma"><Data ss:Type="String">M.</Data></Cell>';
+
+            $estiloAg = $esUltimo ? 'header_ma' : 'header_ma_sep';
+            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">Ag.</Data></Cell>';
+
             $indice++;
         }
 
@@ -759,7 +918,7 @@ class ExportacionExcelService
             $datosPorMes[$mes][] = $dato;
         }
 
-        $totalColumnas = 7 + (count($productosUnicos) * 2) - 1;
+        $totalColumnas = 5 + (count($productosUnicos) * 4) - 1;
         $primerMes = true;
 
         foreach ($datosPorMes as $mes => $datosDelMes) {
@@ -786,22 +945,17 @@ class ExportacionExcelService
             $indiceDia = 0;
             $diaAnterior = null;
 
-            $sumStock = 0.0;
+            $sumStock   = 0.0;
             $sumReserva = 0.0;
-            $sumAgrega = 0.0;
-            $sumMerma = 0.0;
             $countFilasMes = 0;
 
             $sumProductos = [];
-            $countProductos = [];
             foreach ($productosUnicos as $nombreProducto) {
                 $sumProductos[$nombreProducto] = [
-                    'stock' => 0.0,
+                    'stock'               => 0.0,
                     'cantidad_produccion' => 0.0,
-                ];
-                $countProductos[$nombreProducto] = [
-                    'stock' => 0,
-                    'cantidad_produccion' => 0,
+                    'merma'               => 0.0,
+                    'agrega'              => 0.0,
                 ];
             }
 
@@ -841,41 +995,50 @@ class ExportacionExcelService
                 echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
                 echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($inv->stock ?? 0, 2, '.', '') . '</Data></Cell>';
                 echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->reserva ?? 0, 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($dato['agrega'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($dato['merma'], 2, '.', '') . '</Data></Cell>';
 
-                $sumStock += (float)($inv->stock ?? 0);
+                $sumStock   += (float)($inv->stock ?? 0);
                 $sumReserva += (float)($inv->reserva ?? 0);
-                $sumAgrega += (float)($dato['agrega'] ?? 0);
-                $sumMerma += (float)($dato['merma'] ?? 0);
                 $countFilasMes++;
 
                 $totalProductos = count($productos);
                 $indice = 0;
                 foreach ($productos as $nombreProducto => $datosProducto) {
                     $esUltimoProducto = ($indice === $totalProductos - 1);
+
+                    // Stock
                     if ($datosProducto['stock'] === null) {
                         echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
                     } else {
                         $sumProductos[$nombreProducto]['stock'] += (float)$datosProducto['stock'];
-                        $countProductos[$nombreProducto]['stock']++;
                         echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
                     }
 
-                    $estiloSegundaColumna = $estiloNumero;
-                    if (!$esUltimoProducto) {
-                        if ($esPrimerRegistroDelDia && $diaAnterior !== null) {
-                            $estiloSegundaColumna = $esAmarillo ? 'numero_amarillo_dia_sep' : 'numero_azul_dia_sep';
-                        } else {
-                            $estiloSegundaColumna = $esAmarillo ? 'numero_amarillo_sep' : 'numero_azul_sep';
-                        }
-                    }
+                    // Cant.Prod
                     if ($datosProducto['cantidad_produccion'] === null) {
-                        echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="String">-</Data></Cell>';
+                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
                     } else {
                         $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
-                        $countProductos[$nombreProducto]['cantidad_produccion']++;
-                        echo '<Cell ss:StyleID="' . $estiloSegundaColumna . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                    }
+
+                    // Merma (compacta)
+                    $estiloMa     = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia'     : 'ma_amarillo')     : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia'     : 'ma_azul');
+                    $estiloMaSep  = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia_sep' : 'ma_amarillo_sep') : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia_sep' : 'ma_azul_sep');
+
+                    if ($datosProducto['merma'] === null) {
+                        echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="String">-</Data></Cell>';
+                    } else {
+                        $sumProductos[$nombreProducto]['merma'] += (float)$datosProducto['merma'];
+                        echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="Number">' . (int)$datosProducto['merma'] . '</Data></Cell>';
+                    }
+
+                    // Agrega (compacta, con separador si no es último)
+                    $estiloAg = $esUltimoProducto ? $estiloMa : $estiloMaSep;
+                    if ($datosProducto['agrega'] === null) {
+                        echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">-</Data></Cell>';
+                    } else {
+                        $sumProductos[$nombreProducto]['agrega'] += (float)$datosProducto['agrega'];
+                        echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$datosProducto['agrega'] . '</Data></Cell>';
                     }
 
                     $indice++;
@@ -892,18 +1055,19 @@ class ExportacionExcelService
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumStock, 2, '.', '') . '</Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumReserva, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumAgrega, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumMerma, 2, '.', '') . '</Data></Cell>';
 
             $totalProductosUnicos = count($productosUnicos);
             $indiceProducto = 0;
             foreach ($productosUnicos as $nombreProducto) {
-                $esUltimoProducto = ($indiceProducto === $totalProductosUnicos - 1);
-                $estiloStock = 'total_mes_numero';
-                $estiloCant = $esUltimoProducto ? 'total_mes_numero' : 'total_mes_numero_sep';
+                $esUltimo = ($indiceProducto === $totalProductosUnicos - 1);
 
-                echo '<Cell ss:StyleID="' . $estiloStock . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="' . $estiloCant . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="total_mes_ma"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['merma'] . '</Data></Cell>';
+
+                $estiloAg = $esUltimo ? 'total_mes_ma' : 'total_mes_ma_sep';
+                echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['agrega'] . '</Data></Cell>';
+
                 $indiceProducto++;
             }
             echo '</Row>' . "\n";
@@ -927,22 +1091,17 @@ class ExportacionExcelService
         }
 
         foreach ($datosConProductos as $dato) {
-            $stockTotal  += ($dato['inventario']->stock ?? 0);
-            $agregaTotal += $dato['agrega'];
-            $mermaTotal  += $dato['merma'];
+            $stockTotal += ($dato['inventario']->stock ?? 0);
 
             foreach ($productosUnicos as $nombre) {
-                $porProducto[$nombre]['stock'] += ($dato['productos'][$nombre]['stock'] ?? 0);
+                $porProducto[$nombre]['stock']  += ($dato['productos'][$nombre]['stock']  ?? 0);
+                $porProducto[$nombre]['agrega'] += ($dato['productos'][$nombre]['agrega'] ?? 0);
+                $porProducto[$nombre]['merma']  += ($dato['productos'][$nombre]['merma']  ?? 0);
             }
         }
 
-        // Necesitamos agrega/merma por producto: re-consultar desde los datos de productos
-        // Los datos de agrega/merma están a nivel de inventario (suma de todos sus productos),
-        // para el desglose por producto los obtenemos del modelo directamente
-        // Usamos los datos ya preparados: recorremos de nuevo sumando por nombre de producto
-        // Nota: agrega y merma en $datosConProductos son totales del inventario, no por producto.
-        // Para el resumen por producto solo tenemos stock disponible desde los datos preparados.
-        // agrega/merma globales se muestran en la fila TOTAL.
+        $agregaTotal = array_sum(array_column($porProducto, 'agrega'));
+        $mermaTotal  = array_sum(array_column($porProducto, 'merma'));
 
         // --- Título resumen ---
         echo '<Row ss:Height="24">';

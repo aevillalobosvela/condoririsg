@@ -7,7 +7,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
-## 2026-04-29
+## 2026-05-04
+
+### Added
+- **Inventarios — Eliminación del último inventario:** botón "Eliminar este inventario" en `inventariosShow.php`, visible solo si el registro es el último del usuario hoy y no tiene productos asociados. Modal de confirmación con datos del inventario. Método `deleteUltimoInventario()` en `inventariosController` con transacción: soft-delete + recálculo de reserva LECHE del inventario anterior. Ruta `POST inventarios/deleteUltimo`.
+- **Inventarios — Eliminación del último producto:** botón "Eliminar" en el árbol de productos de `inventariosShow.php`, visible solo en el último producto del usuario hoy sin subproductos ni ventas (`detalle_venta`). Modal de confirmación. Método `deleteUltimo()` en `productosController` con transacción: soft-delete + restauración de `cantidad_unidad` a `inventarios.reserva`. Ruta `POST productos/deleteUltimo`.
+- **Inventarios — Botones de acción con texto:** los botones del árbol de productos (Editar, Merma, Agregar, Subproducto, Eliminar) ahora muestran icono + etiqueta de texto. Se cambiaron botones sólidos por variantes `outline` para reducir peso visual. `.product-actions` usa `flex-wrap` para adaptarse a múltiples botones.
+- **Inventarios — Reporte General Excel — merma y agrega por producto:** las columnas fijas `AGREGA` y `MERMA` del inventario fueron eliminadas. Cada producto dinámico ahora incluye 4 columnas: `Stock | Cant.Prod | M. | Ag.`. Las columnas M. y Ag. son compactas (ancho 42px, fuente 9pt, color diferenciado morado) para minimizar el ancho total del documento. El separador grueso entre grupos de producto se ubica en la columna Ag. La fila `TOTAL MES` y la sección de resumen acumulan merma/agrega desde los datos individuales de cada producto.
+
+### Fixed
+- **Inventarios — Generación de código tras soft-delete:** `generateUniqueCode()` en `inventariosController` ahora usa `->withDeleted()` al buscar códigos existentes, evitando colisiones con registros eliminados que conservan su código único en la BD.
+
+### Changed
+- **Productos — Redirección tras edición:** `productosController::update()` ahora redirige a `inventarios/show/{inventario_id}` en lugar de `/productos`, usando el `inventario_id` del producto existente.
+- **Productos — Formulario de creación (barra de reserva):** eliminado el color rojo del indicador de uso de reserva. El estado crítico (100% de uso) ahora usa amarillo igual que el estado de advertencia (≥90%), tanto en la barra como en el panel de resultados y el badge de estado.
+
 
 ### Changed
 - **Inventarios — Reporte General Excel/PDF (solo LECHE):** ambos reportes ahora consideran exclusivamente registros con `nombre = 'LECHE'`.

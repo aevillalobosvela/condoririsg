@@ -41,8 +41,8 @@
     border-color: #ffc107;
   }
   .calculation-result.alerta-critica {
-    background-color: #f8d7da;
-    border-color: #dc3545;
+    background-color: #fff3cd;
+    border-color: #ffc107;
   }
 
   .result-highlight {
@@ -67,7 +67,7 @@
     background-color: #28a745;
   }
   .reserva-bar.warn  { background-color: #ffc107; }
-  .reserva-bar.crit  { background-color: #dc3545; }
+  .reserva-bar.crit  { background-color: #ffc107; }
 
   /* Stock info */
   .stock-info {
@@ -732,7 +732,7 @@
         if (pct >= 100) {
           reservaBar.className = 'reserva-bar crit';
           reservaBarTexto.textContent = 'Se usará toda la reserva disponible.';
-          reservaBarTexto.style.color = '#dc3545';
+          reservaBarTexto.style.color = '#856404';
         } else if (pct >= 90) {
           reservaBar.className = 'reserva-bar warn';
           reservaBarTexto.textContent = 'Se usará el ' + pct.toFixed(0) + '% de la reserva. Quedarán ' + reservaFinal.toFixed(2) + ' L.';
@@ -753,7 +753,7 @@
         // Badge
         if (unidades === 0 && (litros > 0 || porUnidad > 0)) {
           resultBadge.textContent = '0 unidades — revise los valores';
-          resultBadge.className = 'badge bg-danger';
+          resultBadge.className = 'badge bg-warning text-dark';
         } else if (pct >= 90) {
           resultBadge.textContent = 'Uso alto de reserva';
           resultBadge.className = 'badge bg-warning text-dark';
