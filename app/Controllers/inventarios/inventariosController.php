@@ -275,8 +275,9 @@ class InventariosController extends BaseController
             $fechaActual->format('Y') . '-' .
             $fechaActual->format('H'); // Solo la hora, sin minutos
 
-        // Verificar si ya existe un código con esta base
+        // Verificar si ya existe un código con esta base (incluye soft-deleted para evitar colisiones)
         $existingCodes = $this->inventarioModel
+            ->withDeleted()
             ->like('code', $baseCode, 'after')
             ->orderBy('code', 'DESC')
             ->findAll();
@@ -2677,6 +2678,85 @@ class InventariosController extends BaseController
 
         $service = new \App\Services\Inventarios\ExportacionExcelVentasService();
         $service->exportar($fecha_inicio, $fecha_fin, $tipo);
+    }
+
+    /**
+     * Elimina (soft-delete) el último inventario registrado por el usuario hoy,
+     * solo si no tiene productos asociados.
+     * Si era LECHE, recalcula la reserva del inventario anterior de LECHE.
+     */
+    public function deleteUltimoInventario(): RedirectResponse
+    {
+        $userId     = session()->get('id');
+        $sucursalId = session()->get('sucursal_id');
+
+        $inventarioId = (int)$this->request->getPost('inventario_id');
+        if (!$inventarioId) {
+            return redirect()->back()->with('error', 'Solicitud inválida.');
+        }
+
+        $inventario = $this->inventarioModel->find($inventarioId);
+        if (!$inventario) {
+            return redirect()->to('/inventarios')->with('error', 'Inventario no encontrado.');
+        }
+
+        // Verificar que sea el último inventario del usuario hoy
+        $ultimo = $this->inventarioModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo->id !== $inventarioId) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar el último inventario que usted registró.');
+        }
+
+        if (date('Y-m-d', strtotime($ultimo->created_at)) !== date('Y-m-d')) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar inventarios registrados el día de hoy.');
+        }
+
+        // Verificar que no tenga productos asociados
+        $tieneProductos = $this->productoModel
+            ->where('inventario_id', $inventarioId)
+            ->countAllResults();
+
+        if ($tieneProductos > 0) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'No se puede eliminar: este inventario ya tiene productos registrados.');
+        }
+
+        $db = \Config\Database::connect();
+        $db->transBegin();
+        try {
+            // Si era LECHE, recalcular la reserva del inventario anterior de LECHE
+            if (strtoupper($inventario->nombre) === 'LECHE') {
+                $anterior = $this->inventarioModel
+                    ->where('sucursal_id', $sucursalId)
+                    ->where('nombre', 'LECHE')
+                    ->where('id !=', $inventarioId)
+                    ->where('deleted_at', null)
+                    ->orderBy('id', 'DESC')
+                    ->first();
+
+                if ($anterior) {
+                    // La reserva del anterior vuelve a ser: su propia reserva anterior - el stock eliminado
+                    $reservaCorregida = (float)$anterior->reserva - (float)$inventario->stock;
+                    $this->inventarioModel->update($anterior->id, ['reserva' => max(0, $reservaCorregida)]);
+                }
+            }
+
+            // Soft-delete del inventario
+            $this->inventarioModel->delete($inventarioId);
+
+            $db->transCommit();
+            return redirect()->to('/inventarios')->with('success', 'Inventario eliminado correctamente.');
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Error al eliminar el inventario: ' . $e->getMessage());
+        }
     }
 
     /**

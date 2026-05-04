@@ -16,6 +16,8 @@
   .btn-primary:hover { background-color: #218838 !important; border-color: #1e7e34 !important; }
   .btn-secondary { background-color: #6c757d !important; border-color: #6c757d !important; }
   .btn-soft-warning { background-color: #fff3cd !important; color: #856404 !important; border: 1px solid #ffeaa7; }
+  .btn-soft-danger  { background-color: #f8d7da !important; color: #721c24 !important; border: 1px solid #f5c6cb; }
+  .btn-soft-danger:hover { background-color: #f1aeb5 !important; color: #721c24 !important; }
 
   /* Tarjetas */
   .card { border: 1px solid #e0f0e9; box-shadow: 0 0.125rem 0.25rem rgba(40, 167, 69, 0.08); }
@@ -113,14 +115,14 @@
                     </dl>
 
                     <?php if ($puedeEditarCantidad): ?>
-                    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.85rem;">
+                    <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
                         <i class="ri-edit-line me-1"></i>
-                        Puede corregir la cantidad de este inventario porque es el último que registró hoy y aún no tiene productos asociados.
+                        Puede corregir o eliminar este inventario porque es el último que registró hoy y aún no tiene productos asociados.
                     </div>
                     <form method="post" action="<?= base_url('inventarios/update-cantidad/' . $inventario->id) ?>">
                         <?= csrf_field() ?>
-                        <div class="input-group input-group-sm mb-3">
-                            <span class="input-group-text">Nueva cantidad</span>
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text"><i class="ri-edit-line"></i>&nbsp;Cantidad</span>
                             <input type="number" step="0.01" min="0" name="stock"
                                    class="form-control"
                                    value="<?= esc($inventario->stock) ?>"
@@ -130,10 +132,16 @@
                             </button>
                         </div>
                     </form>
+                    <button type="button"
+                            class="btn btn-soft-danger btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalConfirmarEliminar">
+                        <i class="ri-delete-bin-line me-1"></i> Eliminar este inventario
+                    </button>
                     <?php elseif ($esUltimoDelUsuario && $esDehoy && $tieneProductos): ?>
                     <div class="alert alert-secondary py-2 px-3" style="font-size:0.82rem;">
                         <i class="ri-lock-line me-1"></i>
-                        La cantidad no puede editarse porque ya existen productos registrados bajo este inventario.
+                        La cantidad no puede editarse ni eliminarse porque ya existen productos registrados bajo este inventario.
                     </div>
                     <?php endif; ?>
 
@@ -508,6 +516,43 @@
   </div>
 </div>
 
+<!-- Modal confirmación eliminar inventario -->
+<?php if ($puedeEditarCantidad): ?>
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-labelledby="modalConfirmarEliminarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header" style="background-color:#f8d7da; border-bottom:1px solid #f5c6cb;">
+        <h5 class="modal-title text-danger" id="modalConfirmarEliminarLabel">
+          <i class="ri-delete-bin-line me-1"></i> Confirmar eliminación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Está a punto de eliminar el inventario:</p>
+        <p class="fw-bold mb-1"><?= esc($inventario->nombre) ?> — <span class="text-muted"><?= esc($inventario->code) ?></span></p>
+        <p class="mb-3 text-muted" style="font-size:0.88rem;">Cantidad: <?= esc($inventario->stock) ?> L &nbsp;|&nbsp; Turno: <?= esc($inventario->turno) ?></p>
+        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:0.85rem;">
+          <i class="ri-information-line me-1"></i>
+          Esta acción no se puede deshacer. Solo es posible porque es su último inventario registrado hoy y no tiene productos asociados.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="ri-close-line me-1"></i> Cancelar
+        </button>
+        <form method="post" action="<?= base_url('inventarios/deleteUltimo') ?>" class="d-inline">
+          <?= csrf_field() ?>
+          <input type="hidden" name="inventario_id" value="<?= esc($inventario->id) ?>">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="ri-delete-bin-line me-1"></i> Sí, eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -522,8 +567,6 @@
       $stockClass = $producto->stock_inve > 0 ? 'bg-soft-stock' : 'bg-soft-no-stock';
       $estadoClass = $producto->estado ? 'bg-soft-activo' : 'bg-soft-inactivo';
       $estadoText = $producto->estado ? 'Activo' : 'Inactivo';
-      // $categoriasSelect = $producto->categoria_id ? 'bg-soft-Categoria' : 'bg-soft-Categoria';
-
 
       $html .= '<li>';
       $html .= '<div class="product-info">';
