@@ -70,6 +70,8 @@ class ExportacionExcelService
         $productosOtros = $this->obtenerProductosUnicos($inventariosOtros);
         $datosOtros = $this->prepararDatosConProductos($inventariosOtros, $productosOtros);
         $this->generarWorksheetReporteGeneral('SUERO Y OTROS', $datosOtros, $productosOtros, $fecha_inicio, $fecha_fin);
+        $resumenOtros = $this->construirResumenDetalladoMensual($datosOtros, $productosOtros);
+        $this->generarWorksheetResumenDetallado($resumenOtros, $productosOtros, $fecha_inicio, $fecha_fin);
 
         echo '</Workbook>';
         exit;
@@ -959,7 +961,7 @@ class ExportacionExcelService
     private function renderBloqueProduccionVentasPorMes(array $mensual, array $productosUnicos, int $columnas): void
     {
         $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">1) PRODUCCION Y VENTAS — DESGLOSE POR MES</Data></Cell></Row>' . "\n";
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">) PRODUCCION Y VENTAS — DESGLOSE POR MES</Data></Cell></Row>' . "\n";
         $this->renderEncabezadosProduccionVentas();
 
         $totalesGral = ['producido' => 0.0, 'merma' => 0.0, 'agrega' => 0.0, 'vendido' => 0.0, 'vendido_contado' => 0.0, 'vendido_credito' => 0.0, 'ingresos' => 0.0, 'ingresos_contado' => 0.0, 'ingresos_credito' => 0.0];
@@ -1040,7 +1042,7 @@ class ExportacionExcelService
     private function renderBloqueConsolidadoPorMes(array $mensual, array $productosUnicos, int $columnas): void
     {
         $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">2) CONSOLIDADO POR MES</Data></Cell></Row>' . "\n";
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String"> CONSOLIDADO POR MES</Data></Cell></Row>' . "\n";
 
         // Encabezados propios (6 columnas de datos, resto vacío)
         $headers    = ['MES', 'LITROS USADOS', 'UNIDADES PRODUCIDAS', 'INGRESOS CONTADO (Bs)', 'INGRESOS CRÉDITO (Bs)', 'TOTAL INGRESOS (Bs)'];
@@ -1122,7 +1124,7 @@ class ExportacionExcelService
     private function renderBloqueProduccionVentasPorProducto(array $mensual, array $productosUnicos, int $columnas): void
     {
         $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">2) PRODUCCION Y VENTAS — CONSOLIDADO POR PRODUCTO</Data></Cell></Row>' . "\n";
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">) PRODUCCION Y VENTAS — CONSOLIDADO POR PRODUCTO</Data></Cell></Row>' . "\n";
         $this->renderEncabezadosProduccionVentas();
 
         // ── Calcular rango de meses del reporte ───────────────────────────────

@@ -582,7 +582,7 @@ class ReporteLacteos extends FPDF
         // ── BLOQUE 1 — Desglose por mes → producto ────────────────────────────
         $this->AddPage();
         $this->Ln(2);
-        $this->resumenTitulo(utf8_decode('1) PRODUCCION Y VENTAS — DESGLOSE POR MES'), $azulOsc);
+        $this->resumenTitulo(utf8_decode('PRODUCCION Y VENTAS  DESGLOSE POR MES'), $azulOsc);
 
         // Columnas: MES(35) | PRODUCTO(50) | PROD(22) | MERMA(18) | AGREGA(18) |
         //           VTA.CO(22) | VTA.CR(22) | TOT.VTA(22) | ING.CO(30) | ING.CR(30) | TOT.ING(30)
@@ -676,7 +676,7 @@ class ReporteLacteos extends FPDF
         $mesesKeys = array_keys($mensual);
         $rangoMes  = $this->textoRangoPdf($mesesKeys);
 
-        $this->resumenTitulo(utf8_decode('2) PRODUCCION Y VENTAS — CONSOLIDADO POR PRODUCTO'), $azulOsc);
+        $this->resumenTitulo(utf8_decode('PRODUCCION Y VENTAS  CONSOLIDADO POR PRODUCTO'), $azulOsc);
         $this->resumenEncabezadoColumnas($cols1, $azulMed);
 
         $totGral2 = array_fill_keys(array_keys($totGral1), 0.0);
@@ -725,7 +725,7 @@ class ReporteLacteos extends FPDF
         $this->Ln(8);
         if ($this->GetY() + 60 > $this->GetPageHeight() - 15) { $this->AddPage(); }
 
-        $this->resumenTitulo(utf8_decode('3) CONSOLIDADO POR MES'), $azulOsc);
+        $this->resumenTitulo(utf8_decode(' CONSOLIDADO POR MES'), $azulOsc);
 
         $cols3 = [
             utf8_decode('MES')                  => 40,
