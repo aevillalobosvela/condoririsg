@@ -9,6 +9,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## 2026-05-05 ✅ COMPLETADO
 
+### Added
+- **Envíos — Ordenamiento de tabla:** botones de orden visibles encima de cada tab (Fecha, Código, Estado) con indicador de dirección asc/desc. Cada tab mantiene su estado de ordenamiento independiente. Por defecto: fecha descendente (más reciente primero). Funciona sobre las filas ya filtradas por el servidor.
+- **Envíos — Reporte Excel global:** nuevo método `exportarExcelEnvios()` en `EnviosController` y ruta `GET envios/exportarExcelEnvios`. Acepta los mismos filtros del índice (`sucursal_origen_id`, `sucursal_destino_id`, `estado_id`, `fecha_inicio`, `fecha_fin`) más `sort_by` y `sort_dir`. Incluye subfilas de productos agrupadas por nombre (SUM cantidad, SUM subtotal), fila de subtotal por envío con borde superior grueso, nombre completo del transportista (`nombre || apellidos`), y subtítulo con filtros y orden aplicados. Botón "Reporte general de envíos" en la barra de filtros (extremo derecho) con estilo gradiente verde, hint de texto y hover con elevación.
+
+### Fixed
+- **Envíos — Filtros de búsqueda no funcionales:** `EnviosController::index()` ignoraba los parámetros GET del formulario. Ahora aplica `sucursal_origen_id`, `sucursal_destino_id`, `estado_id`, `fecha_inicio` y `fecha_fin` como condiciones al query antes del `findAll()`.
+
+## 2026-05-05 ✅ COMPLETADO
+
 ### Changed
 - **Inventarios — Reporte General PDF — resumen final reemplazado:** el antiguo "RESUMEN GENERAL" (stock/agrega/merma totales + stock por producto) fue reemplazado por los mismos 3 bloques del Excel en páginas propias al final del PDF:
   1. **Desglose por mes → producto** con subtotal por mes y total general. Separador visual (borde grueso) entre grupos de mes.
