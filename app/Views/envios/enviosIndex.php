@@ -189,6 +189,7 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: flex-end;
   }
   .btn-filter {
     padding: 10px 20px;
@@ -425,6 +426,61 @@
     }
   }
 
+  /* Sort controls */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sort-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--secondary);
+    white-space: nowrap;
+  }
+  .btn-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 2px solid transparent;
+    background: var(--light);
+    color: var(--secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .btn-sort:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+  .btn-sort.active-asc,
+  .btn-sort.active-desc {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary-dark);
+    box-shadow: 0 3px 8px rgba(40,167,69,0.35);
+  }
+  .btn-sort .sort-icon {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+  }
+  .btn-sort.active-desc .sort-icon {
+    transform: rotate(180deg);
+  }
+  .sort-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+  }
+
   /* Animations */
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
@@ -432,6 +488,53 @@
   }
   .animate-fade-in-up {
     animation: fadeInUp 0.5s ease forwards;
+  }
+
+  /* ── Botón Reporte Excel (inline en barra de filtros) ── */
+  .excel-fab-inline {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 18px 9px 16px;
+    background: linear-gradient(135deg, #1a7a34 0%, #28a745 60%, #20c997 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 210px;
+    text-align: left;
+    filter: drop-shadow(0 4px 10px rgba(33,136,56,0.30));
+    margin-left: auto;   /* empuja el botón al extremo derecho de la barra */
+  }
+  .excel-fab-inline:hover {
+    transform: translateY(-3px) scale(1.02);
+    filter: brightness(1.08) drop-shadow(0 8px 18px rgba(33,136,56,0.40));
+  }
+  .excel-fab-inline:active {
+    transform: translateY(-1px) scale(0.99);
+  }
+  .excel-fab-icon {
+    font-size: 1.4rem;
+    margin-bottom: 1px;
+  }
+  .excel-fab-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .excel-fab-hint {
+    font-size: 0.70rem;
+    font-weight: 400;
+    opacity: 0.85;
+    line-height: 1.3;
+  }
+  @media (max-width: 767.98px) {
+    .excel-fab-inline {
+      margin-left: 0;
+      width: 100%;
+    }
   }
 </style>
 <?= $this->endSection() ?>
@@ -664,6 +767,12 @@ $estados = [
           <a href="<?= base_url('envios') ?>" class="btn btn-outline-secondary btn-filter">
             <i class="ri-refresh-line"></i> Limpiar
           </a>
+
+          <button type="button" id="btnExportarExcel" class="btn btn-success btn-filter">
+            <span class="excel-fab-label">Emitir reporte general</span>
+          </button>
+                      <span class="excel-fab-hint">Usa los filtros y el orden activo para personalizar la salida</span>
+
         </div>
       </form>
     </div>
@@ -691,8 +800,28 @@ $estados = [
 
     <?php foreach ($enviosPorEstado as $tabName => $enviosTab): ?>
       <div class="tab-content <?= $tabName === 'todos' ? 'active' : '' ?>" id="tab-<?= $tabName ?>">
+        <!-- Sort bar -->
+        <div class="table-header">
+          <span class="sort-label"><i class="ri-sort-asc"></i> Ordenar por:</span>
+          <div class="sort-bar">
+            <button class="btn-sort active-desc" data-sort="fecha" data-tab="<?= $tabName ?>">
+              <i class="ri-calendar-line"></i> Fecha
+              <span class="sort-icon">↑</span>
+            </button>
+            <div class="sort-divider"></div>
+            <button class="btn-sort" data-sort="codigo" data-tab="<?= $tabName ?>">
+              <i class="ri-barcode-line"></i> Código
+              <span class="sort-icon">↑</span>
+            </button>
+            <div class="sort-divider"></div>
+            <button class="btn-sort" data-sort="estado" data-tab="<?= $tabName ?>">
+              <i class="ri-flag-line"></i> Estado
+              <span class="sort-icon">↑</span>
+            </button>
+          </div>
+        </div>
         <div class="table-responsive">
-          <table class="table table-envios table-hover mb-0">
+          <table class="table table-envios table-hover mb-0" id="table-<?= $tabName ?>">
             <thead>
               <tr>
                 <th>Código</th>
@@ -707,44 +836,34 @@ $estados = [
             <tbody>
               <?php if (!empty($enviosTab)): ?>
                 <?php foreach ($enviosTab as $envio): ?>
-                  <tr class="estado-<?= $envio['estado_id'] ?>">
+                  <?php
+                    $nombre_origen  = '';
+                    $nombre_destino = '';
+                    foreach ($sucursales ?? [] as $sucursal) {
+                      if ($sucursal['id'] == $envio['sucursal_origen_id'])  $nombre_origen  = $sucursal['nombre'];
+                      if ($sucursal['id'] == $envio['sucursal_destino_id']) $nombre_destino = $sucursal['nombre'];
+                    }
+                    $fechaRaw = $envio['fecha_envio'] ? date('Y-m-d H:i:s', strtotime($envio['fecha_envio'])) : '0000-00-00';
+                  ?>
+                  <tr class="estado-<?= $envio['estado_id'] ?>"
+                      data-fecha="<?= esc($fechaRaw) ?>"
+                      data-codigo="<?= esc($envio['code']) ?>"
+                      data-estado="<?= (int)$envio['estado_id'] ?>">
                     <td><strong><?= esc($envio['code']) ?></strong></td>
-                    <td>
-                      <?php
-                        $nombre_origen = '';
-                        foreach ($sucursales as $sucursal) {
-                          if ($sucursal['id'] == $envio['sucursal_origen_id']) {
-                            $nombre_origen = $sucursal['nombre'];
-                            break;
-                          }
-                        }
-                        echo esc($nombre_origen ?: '—');
-                      ?>
-                    </td>
-                    <td>
-                      <?php
-                        $nombre_destino = '';
-                        foreach ($sucursales as $sucursal) {
-                          if ($sucursal['id'] == $envio['sucursal_destino_id']) {
-                            $nombre_destino = $sucursal['nombre'];
-                            break;
-                          }
-                        }
-                        echo esc($nombre_destino ?: '—');
-                      ?>
-                    </td>
+                    <td><?= esc($nombre_origen  ?: '—') ?></td>
+                    <td><?= esc($nombre_destino ?: '—') ?></td>
                     <td><?= esc($envio['fecha_envio'] ? date('d/m/Y H:i', strtotime($envio['fecha_envio'])) : '—') ?></td>
                     <td>
                       <?php 
-                        $estado_id = $envio['estado_id'];
+                        $estado_id     = $envio['estado_id'];
                         $estado_nombre = $estados[$estado_id] ?? 'Desconocido';
-                        $badge_class = 'badge-estado-' . $estado_id;
+                        $badge_class   = 'badge-estado-' . $estado_id;
                         $icon = match($estado_id) {
-                          1 => 'ri-time-line',
-                          2 => 'ri-truck-line',
+                          1  => 'ri-time-line',
+                          2  => 'ri-truck-line',
                           10 => 'ri-loader-line',
                           11 => 'ri-alert-line',
-                          9 => 'ri-checkbox-circle-line',
+                          9  => 'ri-checkbox-circle-line',
                           default => 'ri-question-line'
                         };
                       ?>
@@ -754,7 +873,7 @@ $estados = [
                     </td>
                     <td>
                       <?php 
-                        $obs_origen = $envio['observacion_origen'] ?? '';
+                        $obs_origen  = $envio['observacion_origen']  ?? '';
                         $obs_destino = $envio['observacion_destino'] ?? '';
                         $observacion = $obs_destino ?: $obs_origen;
                         if ($observacion) {
@@ -766,21 +885,13 @@ $estados = [
                     </td>
                     <td class="text-end">
                       <div class="btn-group" role="group">
-                        <?php 
-                          $userRolId = session()->get('rol_id');
-                          $showUrl = ($userRolId == 2) 
-                            ? base_url('envios/show/' . $envio['id']) 
-                            : base_url('envios/show/' . $envio['id']);
-                        ?>
-                        <a href="<?= $showUrl ?>" 
-                           class="btn btn-sm btn-outline-success" 
-                           title="Ver Detalles">
+                        <a href="<?= base_url('envios/show/' . $envio['id']) ?>" 
+                           class="btn btn-sm btn-outline-success" title="Ver Detalles">
                           <i class="ri-eye-fill"></i>
                         </a>
                         <?php if ($envio['estado_id'] == 1): ?>
                         <a href="<?= base_url('envios/edit/' . $envio['id']) ?>" 
-                           class="btn btn-sm btn-outline-primary" 
-                           title="Editar">
+                           class="btn btn-sm btn-outline-primary" title="Editar">
                           <i class="ri-pencil-fill"></i>
                         </a>
                         <?php endif; ?>
@@ -792,27 +903,9 @@ $estados = [
                 <tr>
                   <td colspan="7">
                     <div class="empty-state">
-                      <div class="empty-icon">
-                        <i class="ri-inbox-line"></i>
-                      </div>
-                      <h3 class="empty-text">
-                        <?php if ($userRolId == 2): ?>
-                          No hay devoluciones en esta categoría
-                        <?php elseif ($userRolId == 3): ?>
-                          No hay envíos en esta categoría
-                        <?php else: ?>
-                          No hay registros en esta categoría
-                        <?php endif; ?>
-                      </h3>
-                      <p class="text-muted mt-2">
-                        <?php if ($userRolId == 2): ?>
-                          Las devoluciones aparecerán aquí cuando estén disponibles.
-                        <?php elseif ($userRolId == 3): ?>
-                          Los envíos aparecerán aquí cuando estén disponibles.
-                        <?php else: ?>
-                          Los registros aparecerán aquí cuando estén disponibles.
-                        <?php endif; ?>
-                      </p>
+                      <div class="empty-icon"><i class="ri-inbox-line"></i></div>
+                      <h3 class="empty-text">No hay registros en esta categoría</h3>
+                      <p class="text-muted mt-2">Los registros aparecerán aquí cuando estén disponibles.</p>
                     </div>
                   </td>
                 </tr>
@@ -828,74 +921,131 @@ $estados = [
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Tab switching functionality
-  const tabs = document.querySelectorAll('.nav-tab');
-  const tabContents = document.querySelectorAll('.tab-content');
+document.addEventListener('DOMContentLoaded', function () {
 
-  window.switchTab = function(tabName) {
-    tabs.forEach(tab => {
-      if (tab.dataset.tab === tabName) {
-        tab.click();
+  // ── Estado de ordenamiento por tab ───────────────────────────────────────
+  // Cada tab recuerda su columna activa y dirección
+  const sortState = {};
+
+  // ── Ordenar filas de una tabla ────────────────────────────────────────────
+  function sortTable(tabName, column) {
+    const table  = document.getElementById('table-' + tabName);
+    if (!table) return;
+    const tbody  = table.querySelector('tbody');
+    const rows   = Array.from(tbody.querySelectorAll('tr[data-fecha]')); // solo filas de datos reales
+    if (rows.length === 0) return;
+
+    // Determinar dirección: si ya estaba activo en esta columna, invertir; si no, desc por defecto
+    const prev = sortState[tabName] || {};
+    let dir = 'desc';
+    if (prev.column === column) {
+      dir = prev.dir === 'desc' ? 'asc' : 'desc';
+    }
+    sortState[tabName] = { column, dir };
+
+    rows.sort((a, b) => {
+      let valA, valB;
+      if (column === 'fecha') {
+        valA = a.dataset.fecha;
+        valB = b.dataset.fecha;
+      } else if (column === 'codigo') {
+        valA = a.dataset.codigo;
+        valB = b.dataset.codigo;
+      } else if (column === 'estado') {
+        valA = parseInt(a.dataset.estado, 10);
+        valB = parseInt(b.dataset.estado, 10);
+      }
+      if (valA < valB) return dir === 'asc' ? -1 :  1;
+      if (valA > valB) return dir === 'asc' ?  1 : -1;
+      return 0;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+    updateSortButtons(tabName, column, dir);
+  }
+
+  // ── Actualizar apariencia de botones ─────────────────────────────────────
+  function updateSortButtons(tabName, activeColumn, dir) {
+    const tabEl = document.getElementById('tab-' + tabName);
+    if (!tabEl) return;
+    tabEl.querySelectorAll('.btn-sort').forEach(btn => {
+      btn.classList.remove('active-asc', 'active-desc');
+      if (btn.dataset.sort === activeColumn) {
+        btn.classList.add(dir === 'asc' ? 'active-asc' : 'active-desc');
       }
     });
-  };
+  }
 
-  window.showAllTabs = function() {
-    switchTab('todos');
-  };
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', function() {
-      const targetTab = this.dataset.tab;
-      
-      // Remove active class from all tabs and contents
-      tabs.forEach(t => t.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // Add active class to clicked tab and corresponding content
-      this.classList.add('active');
-      document.getElementById('tab-' + targetTab).classList.add('active');
+  // ── Adjuntar listeners a todos los botones de sort ───────────────────────
+  document.querySelectorAll('.btn-sort').forEach(btn => {
+    btn.addEventListener('click', function () {
+      sortTable(this.dataset.tab, this.dataset.sort);
     });
   });
 
-  // Toggle filters on mobile
-  const filtersToggle = document.getElementById('filtersToggle');
-  const filtersBody = document.getElementById('filtersBody');
-  
-  if (window.innerWidth < 768) {
-    filtersBody.style.display = 'none';
-  }
-  
-  filtersToggle.addEventListener('click', () => {
-    const isHidden = filtersBody.style.display === 'none';
-    filtersBody.style.display = isHidden ? 'block' : 'none';
+  // Ordenar por fecha desc al cargar (más reciente primero) en todos los tabs
+  ['todos', 'pendientes', 'transito', 'entregados', 'observados'].forEach(tab => {
+    sortState[tab] = { column: 'fecha', dir: 'asc' }; // forzar que el primer click quede en desc
+    sortTable(tab, 'fecha');
   });
 
-  // Form validation
-  document.getElementById('filterForm')?.addEventListener('submit', function(e) {
+  // ── Botón Exportar Excel ─────────────────────────────────────────────────
+  document.getElementById('btnExportarExcel')?.addEventListener('click', function () {
+    // Recoger filtros del formulario
+    const form    = document.getElementById('filterForm');
+    const params  = new URLSearchParams(new FormData(form));
+
+    // Detectar el tab activo y su estado de ordenamiento
+    const activeTab = document.querySelector('.nav-tab.active')?.dataset?.tab ?? 'todos';
+    const state     = sortState[activeTab] ?? { column: 'fecha', dir: 'desc' };
+    params.set('sort_by',  state.column);
+    params.set('sort_dir', state.dir);
+
+    window.location.href = '<?= base_url('envios/exportarExcelEnvios') ?>?' + params.toString();
+  });
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  const tabs        = document.querySelectorAll('.nav-tab');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  window.switchTab = function (tabName) {
+    tabs.forEach(tab => { if (tab.dataset.tab === tabName) tab.click(); });
+  };
+  window.showAllTabs = function () { switchTab('todos'); };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function () {
+      tabs.forEach(t => t.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Toggle filtros en móvil ───────────────────────────────────────────────
+  const filtersToggle = document.getElementById('filtersToggle');
+  const filtersBody   = document.getElementById('filtersBody');
+  if (window.innerWidth < 768) filtersBody.style.display = 'none';
+  filtersToggle.addEventListener('click', () => {
+    filtersBody.style.display = filtersBody.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // ── Validación de fechas ──────────────────────────────────────────────────
+  document.getElementById('filterForm')?.addEventListener('submit', function (e) {
     const inicio = document.getElementById('filter_fecha_inicio')?.value;
-    const fin = document.getElementById('filter_fecha_fin')?.value;
-    
+    const fin    = document.getElementById('filter_fecha_fin')?.value;
     if (inicio && fin && inicio > fin) {
       e.preventDefault();
       alert('⚠️ La fecha de inicio no puede ser posterior a la fecha de fin.');
     }
   });
 
-  // Auto-switch tab based on URL parameter
+  // ── Auto-switch tab por parámetro URL ────────────────────────────────────
   const urlParams = new URLSearchParams(window.location.search);
-  const estadoId = urlParams.get('estado_id');
+  const estadoId  = urlParams.get('estado_id');
   if (estadoId) {
-    const tabMap = {
-      '1': 'pendientes',
-      '2': 'transito',
-      '9': 'entregados',
-      '11': 'observados'
-    };
-    if (tabMap[estadoId]) {
-      switchTab(tabMap[estadoId]);
-    }
+    const tabMap = { '1': 'pendientes', '2': 'transito', '9': 'entregados', '11': 'observados' };
+    if (tabMap[estadoId]) switchTab(tabMap[estadoId]);
   }
 });
 </script>
