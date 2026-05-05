@@ -9,6 +9,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## 2026-05-05 ✅ COMPLETADO
 
+### Changed
+- **Inventarios — Reporte General PDF — resumen final reemplazado:** el antiguo "RESUMEN GENERAL" (stock/agrega/merma totales + stock por producto) fue reemplazado por los mismos 3 bloques del Excel en páginas propias al final del PDF:
+  1. **Desglose por mes → producto** con subtotal por mes y total general. Separador visual (borde grueso) entre grupos de mes.
+  2. **Consolidado por producto** (una fila por producto, rango de meses en col. MES).
+  3. **Consolidado por mes** (una fila por mes: unidades producidas, ingresos contado/crédito/total).
+  - Columnas bloques 1 y 2: MES | PRODUCTO | PRODUCIDO | MERMA | AGREGA | VTA. CONTADO | VTA. CRÉDITO | TOTAL VENDIDO | ING. CONTADO | ING. CRÉDITO | TOTAL INGRESOS.
+  - Ventas reales obtenidas via SQL (`detalle_venta JOIN ventas`, `sucursal_id=4`, excluyendo agro).
+  - Helpers nuevos en `ReporteLacteos`: `resumenTitulo()`, `resumenEncabezadoColumnas()`, `resumenFila()`, `resumenFilaTotal()`, `textoMesCorto()`, `textoRangoPdf()`.
+
+## 2026-05-05 ✅ COMPLETADO
+
+### Changed
+- **Inventarios — Reporte General Excel — hoja "Resumen Detallado" reestructurada (v2):** eliminado el bloque de materia prima; la hoja queda con 2 bloques de producción/ventas con la misma estructura de columnas pero diferente agrupación:
+  1. **Desglose por mes:** filas ordenadas mes → producto. Separador visual (borde superior azul grueso) entre cada cambio de mes.
+  2. **Desglose por producto:** mismas columnas, filas ordenadas producto → mes. Separador visual entre cada cambio de producto.
+  - Columnas de ambos bloques: MES | PRODUCTO | PRODUCIDO | MERMA | AGREGA | VENDIDO | STOCK RESTANTE | INGRESOS (Bs) | P. PROM. VENTA.
+  - Lógica compartida extraída a métodos reutilizables: `renderEncabezadosProduccionVentas()`, `renderFilaTotalesProduccionVentas()`, `renderFilaProduccionVentas()`.
+  - 4 estilos nuevos `resumen_sep_*` con borde superior `weight=2` color `#4D6A83` para los separadores de grupo.
+  - Bloque 2 nuevo — **Consolidado por mes:** una fila por mes con litros usados en producción, unidades producidas totales, ingresos contado, ingresos crédito y total ingresos. Query SQL extendida con `tipo_pago` para separar contado/crédito. Fila TOTAL GENERAL al pie.
+  - Bloque 3 (antes bloque 2) — Consolidado por producto: sin cambios de lógica, renumerado.
+
+## 2026-05-05 ✅ COMPLETADO
+
 ### Added
 - **Inventarios — Reporte General Excel — hoja de resumen detallado:** segunda hoja `Resumen Detallado` agregada al archivo Excel del Reporte General con 3 tablas usando los mismos estilos visuales de la hoja principal:
   1. **Resumen mensual de leche (materia prima):** por mes — registros, litros recibidos, promedio diario, reserva total, turnos AM/PM, días activos.
