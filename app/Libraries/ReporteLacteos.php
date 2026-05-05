@@ -19,7 +19,7 @@ class ReporteLacteos extends FPDF
     // Anchos de columna calculados dinámicamente
     protected $wFecha   = 22;
     protected $wTurno   = 12;
-    protected $wNombre  = 30;
+    protected $wNombre  = 21;
     protected $wStock   = 18;
     protected $wReserva = 18;
     protected $wProd    = 20; // ancho por cada columna Stock y Cant.Prod
@@ -324,7 +324,7 @@ class ReporteLacteos extends FPDF
 
     private function filasEncabezados(array $productosUnicos): void
     {
-        $this->SetFont('Arial', 'B', 7);
+        $this->SetFont('Arial', 'B', 6);
 
         // Calcular alto: máximo de líneas en etiquetas de producto (Stk y Prod)
         $maxLineas = 1;
@@ -357,6 +357,7 @@ class ReporteLacteos extends FPDF
             $this->celdaMultilineaCentrada($label, $w, $this->hHeader, $this->hHeaderLine, 74, 111, 165);
         }
 
+        $this->SetFont('Arial', 'B', 6);
         // Columnas dinámicas: Stock | Cant.Prod | M. | Ag.
         foreach ($productosUnicos as $nombre) {
             $this->celdaMultilineaCentrada(utf8_decode($nombre) . ' Stk',  $this->wProd, $this->hHeader, $this->hHeaderLine, 93, 138, 138);
@@ -372,7 +373,7 @@ class ReporteLacteos extends FPDF
 
     private function calcularAlturaEncabezado(array $productosUnicos): float
     {
-        $this->SetFont('Arial', 'B', 7);
+        $this->SetFont('Arial', 'B', 6);
         $maxLineas = 1;
         foreach ($productosUnicos as $nombre) {
             foreach ([utf8_decode($nombre) . ' Stk', utf8_decode($nombre) . ' Prod'] as $etiqueta) {
@@ -473,6 +474,7 @@ class ReporteLacteos extends FPDF
             $textoMerma = $datoProd['merma']               === null ? '-' : (string)(int)$datoProd['merma'];
             $textoAgrega = $datoProd['agrega']             === null ? '-' : (string)(int)$datoProd['agrega'];
 
+            $this->SetFont('Arial', '', 6);
             $this->Cell($this->wProd, $this->hRow, $textoStock,  1, 0, 'C', true);
             $this->Cell($this->wProd, $this->hRow, $textoProd,   1, 0, 'C', true);
 

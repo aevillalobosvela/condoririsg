@@ -7,6 +7,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-05-05 ⏳ PENDIENTE
+
+### Pending
+- **Inventarios — Reporte General Excel — hoja de resumen detallado:** agregar una segunda hoja `Resumen Detallado` al archivo Excel del Reporte General. La hoja debe contener 3 tablas con los mismos estilos visuales de la hoja principal:
+  1. **Resumen mensual de leche (materia prima):** por mes — registros, litros totales recibidos, promedio diario, reserva total, turnos AM/PM.
+  2. **Producción mensual por producto:** filas = meses, columnas = productos. Por cada producto: unidades producidas (`cantidad_produccion`), litros de leche usados (`cantidad_produccion × cantidad_unidad`), merma, agrega, valor producido (`cantidad_produccion × precio_contado`). Fila TOTAL al final.
+  3. **Eficiencia de conversión leche→producto por mes:** litros recibidos vs litros usados en producción → % de aprovechamiento.
+- **Inventarios — Refactorización `ExportacionExcelService`:** el método `definirEstilos()` tiene 556 líneas (48% del archivo). Refactorizar usando un helper interno `estilo()` que construya el XML de cada estilo en una sola llamada, reduciendo `definirEstilos()` de ~556 a ~60 líneas sin cambiar funcionalidad ni estilos existentes. Los nuevos estilos de la hoja resumen se agregan en el mismo helper.
+  - Archivo: `app/Services/Inventarios/ExportacionExcelService.php`
+
+---
+
+## 2026-05-05
+
+### Changed
+- **Inventarios — Reporte General PDF — ajuste de fuentes y columna NOMBRE:** en `app/Libraries/ReporteLacteos.php`, fuente de encabezados de columnas dinámicas reducida de 7pt a 6pt; fuente de datos numéricos (Stock/Cant.Prod) de columnas dinámicas reducida de 7pt a 6pt; `wNombre` reducido de 30mm a 21mm (−30%). `calcularAlturaEncabezado()` alineado a 6pt para consistencia. Mejora la legibilidad con 8-9 productos sin desbordar el ancho A3 landscape.
+
+---
+
 ## 2026-05-04
 
 ### Added
