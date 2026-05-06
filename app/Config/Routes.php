@@ -294,6 +294,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     // Edición última venta
     $routes->get('ultimaVenta', 'ventas\ventasController::ultimaVenta', ['filter' => 'role:admin,vendedor']);
     $routes->post('updateUltimaVenta', 'ventas\ventasController::updateUltimaVenta', ['filter' => 'role:admin,vendedor']);
+    $routes->post('deleteUltimaVenta', 'ventas\ventasController::deleteUltimaVenta', ['filter' => 'role:admin,vendedor']);
 });
 
 // ============================================================================
