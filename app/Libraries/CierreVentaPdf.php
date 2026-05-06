@@ -57,7 +57,22 @@ class CierreVentaPdf extends CierreVentaBasePdf
             if (!isset($ventasAgrupadas[$ventaId])) {
                 $cliente = $item->cliente_nombre ?? 'Consumidor Final';
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = '';
-                $ventasAgrupadas[$ventaId] = ['cliente' => utf8_decode($cliente), 'code' => $codigoVenta, 'total_venta' => 0, 'items' => []];
+                $fechaVenta = !empty($item->fecha_venta)
+                    ? date('d/m/Y', strtotime($item->fecha_venta))
+                    : '';
+                $origenMap = [
+                    'ORURO-VENTAS' => 'SUC. CENTRO',
+                    'LACTEOS'      => 'PLANTA PROD.',
+                ];
+                $origen = $origenMap[$item->sucursal_nombre ?? ''] ?? 'OTRO';
+                $ventasAgrupadas[$ventaId] = [
+                    'cliente'     => utf8_decode($cliente),
+                    'code'        => $codigoVenta,
+                    'fecha_venta' => $fechaVenta,
+                    'origen'      => $origen,
+                    'total_venta' => 0,
+                    'items'       => [],
+                ];
             }
 
             if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
@@ -99,7 +114,8 @@ class CierreVentaPdf extends CierreVentaBasePdf
         $wNro       = 8;
         $labelWidth = 50;
         $numProds   = count($productosUnicos);
-        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $wNro - $labelWidth - 30) / $numProds) : 25;
+        // Reservar espacio para Nro.Venta(22) + Fecha(18) + Origen(22) + Total(10) = 72mm
+        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $wNro - $labelWidth - 72) / $numProds) : 25;
 
         $this->SetFillColor(220, 220, 220);
         $this->SetFont('Arial', 'B', 8);
@@ -157,7 +173,7 @@ class CierreVentaPdf extends CierreVentaBasePdf
 
         $this->Ln(5);
 
-        $wNota = 22; $wTotal = 10; $subColW = $colWidth / 2;
+        $wNota = 22; $wFecha = 18; $wOrigen = 22; $wTotal = 10; $subColW = $colWidth / 2;
         $this->SetFillColor(200, 200, 200);
         $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -165,8 +181,10 @@ class CierreVentaPdf extends CierreVentaBasePdf
             $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
             $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
         }
-        $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-        $this->Cell($wTotal, 5, 'T', 1, 1, 'C', true);
+        $this->Cell($wNota,   5, 'Nro. Venta', 1, 0, 'C', true);
+        $this->Cell($wFecha,  5, 'Fecha',       1, 0, 'C', true);
+        $this->Cell($wOrigen, 5, 'Origen',      1, 0, 'C', true);
+        $this->Cell($wTotal,  5, 'T',           1, 1, 'C', true);
 
         $this->SetFont('Arial', '', 7);
         $fill = false;
@@ -182,8 +200,10 @@ class CierreVentaPdf extends CierreVentaBasePdf
                     $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
                     $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
                 }
-                $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-                $this->Cell($wTotal, 5, 'TOTAL', 1, 1, 'C', true);
+                $this->Cell($wNota,   5, 'Nro. Venta', 1, 0, 'C', true);
+                $this->Cell($wFecha,  5, 'Fecha',       1, 0, 'C', true);
+                $this->Cell($wOrigen, 5, 'Origen',      1, 0, 'C', true);
+                $this->Cell($wTotal,  5, 'TOTAL',       1, 1, 'C', true);
                 $this->SetFillColor(245, 245, 245);
             }
 
@@ -200,8 +220,10 @@ class CierreVentaPdf extends CierreVentaBasePdf
                     $this->Cell($subColW, 5, '', 1, 0, 'C', $fill);
                 }
             }
-            $this->Cell($wNota, 5, $venta['code'], 1, 0, 'C', $fill);
-            $this->Cell($wTotal, 5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R', $fill);
+            $this->Cell($wNota,   5, $venta['code'],        1, 0, 'C', $fill);
+            $this->Cell($wFecha,  5, $venta['fecha_venta'], 1, 0, 'C', $fill);
+            $this->Cell($wOrigen, 5, $venta['origen'],      1, 0, 'C', $fill);
+            $this->Cell($wTotal,  5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R', $fill);
             $fill = !$fill;
         }
 
