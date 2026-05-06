@@ -435,6 +435,33 @@
         <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
           <i class="ri-pencil-line me-1"></i> Corregir esta venta
         </button>
+        <button type="button" class="btn btn-outline-danger w-100 mt-1 btn-sm" id="btnEliminarVenta">
+          <i class="ri-delete-bin-line me-1"></i> Eliminar esta venta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación eliminar última venta -->
+<div class="modal fade" id="modalEliminarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="ri-delete-bin-line me-1"></i>Eliminar venta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="elimVentaError" class="alert alert-danger d-none mb-2"></div>
+        <p class="mb-1">¿Eliminar la venta <strong id="elimVentaCode"></strong>?</p>
+        <p class="text-muted small mb-0">Monto: <strong id="elimVentaMonto"></strong></p>
+        <p class="text-muted small mt-2">El stock de los productos será repuesto automáticamente. Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarEliminar">
+          <i class="ri-delete-bin-line me-1"></i>Sí, eliminar
+        </button>
       </div>
     </div>
   </div>
@@ -1162,6 +1189,49 @@
       })
       .catch(() => {});
   }
+
+  // --- Abrir modal de confirmación de eliminación ---
+  document.getElementById('btnEliminarVenta').addEventListener('click', function () {
+    if (!uvData) return;
+    document.getElementById('elimVentaCode').textContent  = uvData.venta.code;
+    document.getElementById('elimVentaMonto').textContent = 'Bs. ' + parseFloat(uvData.venta.monto_total).toFixed(2);
+    document.getElementById('elimVentaError').classList.add('d-none');
+    const btn = document.getElementById('btnConfirmarEliminar');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    new bootstrap.Modal(document.getElementById('modalEliminarVenta')).show();
+  });
+
+  // --- Confirmar eliminación ---
+  document.getElementById('btnConfirmarEliminar').addEventListener('click', function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...';
+    const params = new URLSearchParams({ venta_id: uvData.venta.id });
+    fetch('<?= base_url('inventarios/deleteUltimaVenta') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEliminarVenta')).hide();
+        window.location.reload();
+      } else {
+        document.getElementById('elimVentaError').textContent = data.error;
+        document.getElementById('elimVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+      }
+    })
+    .catch(() => {
+      document.getElementById('elimVentaError').textContent = 'Error de conexión.';
+      document.getElementById('elimVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    });
+  });
 
   document.getElementById('btnCorregirVenta').addEventListener('click', function() {
     if (!uvData) return;

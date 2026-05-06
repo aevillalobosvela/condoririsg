@@ -152,6 +152,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     // Edición última venta
     $routes->get('ultimaVenta', 'inventarios\inventariosController::ultimaVenta', ['filter' => 'role:admin,almacen']);
     $routes->post('updateUltimaVenta', 'inventarios\inventariosController::updateUltimaVenta', ['filter' => 'role:admin,almacen']);
+    $routes->post('deleteUltimaVenta', 'inventarios\inventariosController::deleteUltimaVenta', ['filter' => 'role:admin,almacen']);
 });
 
 // Productos Terminados (quesos, yogurt, etc.)
@@ -332,6 +333,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     // Edición última venta
     $routes->get('ultimaVenta', 'productosAgro\ventasAgroController::ultimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->post('updateUltimaVenta', 'productosAgro\ventasAgroController::updateUltimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('deleteUltimaVenta', 'productosAgro\ventasAgroController::deleteUltimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
 });
 
 // ============================================================================

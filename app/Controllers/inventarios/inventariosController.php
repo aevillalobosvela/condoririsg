@@ -1655,6 +1655,90 @@ class InventariosController extends BaseController
         }
     }
 
+    /**
+     * Elimina la última venta del usuario hoy (módulo lácteos planta).
+     * Devuelve stock_inve y hace soft-delete de detalles + soft-delete de la venta.
+     */
+    public function deleteUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = 4;
+        $db         = \Config\Database::connect();
+
+        $ventaId = (int)$this->request->getPost('venta_id');
+        if ($ventaId <= 0) {
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de venta inválido.']);
+        }
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no eliminable.']);
+        }
+
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede eliminar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detalles = $db->query("
+                SELECT dv.id, dv.producto_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver stock_inve
+            foreach ($detalles as $det) {
+                $db->query("
+                    UPDATE condoriri.productos SET stock_inve = stock_inve + ? WHERE id = ?
+                ", [$det->cantidad, $det->producto_id]);
+            }
+
+            // 3. Soft-delete de detalles
+            foreach ($detalles as $det) {
+                $this->detalleModel->delete($det->id);
+            }
+
+            // 4. Soft-delete de la venta
+            $db->query("UPDATE condoriri.ventas SET deleted_at = NOW() WHERE id = ?", [$ventaId]);
+
+            $db->transCommit();
+            return $this->response->setJSON(['success' => true]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     public function exportarPdfVentas()
     {
         $fecha_inicio = $this->request->getGet('fecha_inicio');
