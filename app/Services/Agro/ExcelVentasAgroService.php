@@ -43,7 +43,22 @@ class ExcelVentasAgroService
             if (!isset($ventasAgrupadas[$ventaId])) {
                 $cliente = $item->cliente_nombre ?? 'Consumidor Final';
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = '';
-                $ventasAgrupadas[$ventaId] = ['cliente' => $cliente, 'code' => $codigoVenta, 'total_venta' => 0, 'items' => []];
+                $fechaVenta = !empty($item->fecha_venta)
+                    ? date('d/m/Y', strtotime($item->fecha_venta))
+                    : '';
+                $origenMap = [
+                    'ORURO-VENTAS' => 'SUCURSAL CENTRO',
+                    'LACTEOS'      => 'PLANTA PRODUCCION',
+                ];
+                $origen = $origenMap[$item->sucursal_nombre ?? ''] ?? 'OTRO ORIGEN';
+                $ventasAgrupadas[$ventaId] = [
+                    'cliente'     => $cliente,
+                    'code'        => $codigoVenta,
+                    'fecha_venta' => $fechaVenta,
+                    'origen'      => $origen,
+                    'total_venta' => 0,
+                    'items'       => [],
+                ];
             }
 
             if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
@@ -81,7 +96,7 @@ class ExcelVentasAgroService
         $tipoNota  = $tipo === 'contado' ? 'al contado' : ($tipo === 'credito' ? 'a crédito' : 'generales');
 
         $numProds  = count($productosUnicos);
-        $totalCols = 1 + ($numProds * 2) + 2 - 1 + 1;
+        $totalCols = 1 + ($numProds * 2) + 2 - 1 + 1 + 2; // +2 por Fecha y Origen
 
         $filename = 'ventas_agro_' . $tipo . '_' . $fecha_inicio . '.xls';
         header('Content-Type: application/vnd.ms-excel');
@@ -118,6 +133,8 @@ class ExcelVentasAgroService
             echo '<Column ss:Width="40"/>';
         }
         echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="80"/>';
+        echo '<Column ss:Width="110"/>';
         echo '<Column ss:Width="100"/>';
 
         echo '<Row ss:Height="20"><Cell ss:MergeAcross="' . $totalCols . '" ss:StyleID="titulo_uto"><Data ss:Type="String">UNIVERSIDAD TÉCNICA DE ORURO</Data></Cell></Row>';
@@ -176,6 +193,8 @@ class ExcelVentasAgroService
             echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Bs</Data></Cell>';
         }
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Nro. Venta</Data></Cell>';
+        echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">FECHA</Data></Cell>';
+        echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">ORIGEN</Data></Cell>';
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
 
         $fill = false;
@@ -196,6 +215,8 @@ class ExcelVentasAgroService
                 }
             }
             echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($venta['code'], ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($venta['fecha_venta'], ENT_XML1) . '</Data></Cell>';
+            echo '<Cell ss:StyleID="left"><Data ss:Type="String">' . htmlspecialchars($venta['origen'], ENT_XML1) . '</Data></Cell>';
             echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($venta['total_venta'], 2, '.', '') . '</Data></Cell></Row>';
             $fill = !$fill;
         }
