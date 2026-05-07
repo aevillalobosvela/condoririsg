@@ -170,6 +170,13 @@ $userRoleName = session()->get('rol_nombre');
               </ul>
             </div>
           </li>
+
+          <li class="menu-title"><span>Reportes</span></li>
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="#" data-bs-toggle="modal" data-bs-target="#modalResumenGlobal">
+              <i class="ri-file-chart-line"></i> <span>Resumen Global</span>
+            </a>
+          </li>
         <?php endif; ?>
 
 
@@ -309,6 +316,13 @@ $userRoleName = session()->get('rol_nombre');
           <li class="nav-item">
             <a class="nav-link menu-link" href="<?= base_url('productosagro') ?>">
               <i class="ri-leaf-line"></i> <span>Registrar Productos</span>
+            </a>
+          </li>
+
+          <li class="menu-title"><span>Reportes</span></li>
+          <li class="nav-item">
+            <a class="nav-link menu-link" href="#" data-bs-toggle="modal" data-bs-target="#modalResumenGlobal">
+              <i class="ri-file-chart-line"></i> <span>Resumen Global</span>
             </a>
           </li>
         <?php endif; ?>

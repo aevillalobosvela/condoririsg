@@ -378,6 +378,14 @@ $routes->group('baja', ['filter' => 'auth'], function($routes) {
 });
 
 // ============================================================================
+// RESUMEN GLOBAL
+// ============================================================================
+$routes->group('resumen-global', ['filter' => 'auth'], function ($routes) {
+    $routes->get('exportar',    'reportes\ResumenGlobalController::exportar',    ['filter' => 'role:admin,almacen']);
+    $routes->get('exportarPdf', 'reportes\ResumenGlobalController::exportarPdf', ['filter' => 'role:admin,almacen']);
+});
+
+// ============================================================================
 // RUTAS CATCH-ALL (Manejo de errores)
 // ============================================================================
 $routes->group('', ['filter' => 'auth'], function ($routes) {
