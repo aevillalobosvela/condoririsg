@@ -7,6 +7,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-05-07 ✅ COMPLETADO
+
+### Added
+- **Envíos — Ordenamiento de tabla:** botones de orden (Fecha, Código, Estado) encima de cada tab con indicador visual asc/desc. Cada tab mantiene su estado independiente. Por defecto: fecha descendente.
+- **Envíos — Reporte Excel global:** `EnviosController::exportarExcelEnvios()` + ruta `GET envios/exportarExcelEnvios`. Subfilas de productos agrupadas por nombre, subtotal por envío, nombre completo del transportista. Botón en barra de filtros (extremo derecho).
+- **Ventas — Eliminación de última venta (6 puntos de venta):** `deleteUltimaVenta()` en `ventasController` (hard-delete por `uk_detalle_stock`), `inventariosController` y `ventasAgroController` (soft-delete). Repone stock en `stock_sucursales`, `stock_inve` o `cantidad_inve` según módulo. 3 rutas `POST deleteUltimaVenta`. Botón + modal de confirmación en las 6 vistas (3 contado + 3 crédito).
+- **Resumen Global — Excel + PDF:** nueva funcionalidad accesible desde el sidebar (admin y almacen) mediante modal con selector de mes.
+  - `app/Services/Shared/ResumenGlobalService.php` — Excel con 4 bloques en una sola hoja: Producción, Ventas (tienda/planta/agro), Envíos, Balance estimado. 12 indicadores entre secciones (días pico, producto más vendido, cliente más frecuente, tasa de entrega, etc.).
+  - `app/Libraries/ResumenGlobalPdf.php` — PDF con encabezado institucional UTO/Condoriri, mismos 4 bloques + indicadores, orientación landscape A4.
+  - `app/Controllers/reportes/ResumenGlobalController.php` — métodos `exportar()` y `exportarPdf()`.
+  - Rutas `GET resumen-global/exportar` y `GET resumen-global/exportarPdf`.
+  - Modal en `layouts/main.php` con dos botones (Excel / PDF), visible solo para admin y almacen.
+  - Enlace "Resumen Global" en sidebar para roles admin y almacen.
+
+### Fixed
+- **Envíos — Filtros de búsqueda no funcionales:** `EnviosController::index()` ignoraba los parámetros GET. Ahora aplica `sucursal_origen_id`, `sucursal_destino_id`, `estado_id`, `fecha_inicio` y `fecha_fin`.
+- **Inventarios — `ExportacionExcelVentasService` inexistente:** el controller apuntaba a una clase que no existía. Creado como wrapper de `ExcelVentasMatrizService` con `TIENDA_LACTEOS`.
+
+### Changed
+- **Reportes Excel de ventas (3 módulos):** columnas `FECHA` (dd/mm/yyyy) y `ORIGEN` (`SUCURSAL CENTRO` / `PLANTA PRODUCCION` / `OTRO ORIGEN`) agregadas al final de cada fila. Afecta `ExcelVentasMatrizService`, `ExcelVentasAgroService`.
+- **Reportes PDF de ventas (3 módulos):** columnas `Fecha` y `Origen` agregadas en `CierreVentaPdf`, `CierreVentaInve` y `CierreVentaAgroPdf`. Anchos de columna recalculados para A4 portrait.
+- **ArqueoVentasPdf — reestructuración:** fuentes reducidas ~25% (métodos sobreescritos localmente sin afectar clase base). Anchos dinámicos basados en `$pageW`. Bloque 1 con desglose contado/crédito por producto (doble encabezado, 6 columnas, fila TOTAL). Bloque 4 dividido en dos tablas separadas (contado / crédito) con sub-fila de códigos de venta y "Ventas sin cliente registrado" al final. Resumen financiero con columna `N° Ventas`.
+
 ## 2026-05-05 ✅ COMPLETADO
 
 ### Added
