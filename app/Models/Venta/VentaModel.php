@@ -1150,7 +1150,44 @@ public function getDailySalesReportDataAdmin(
     return $query->getResult();
 }
 
+    /**
+     * Calcula el monto acumulado en ventas a crédito para un receptor (uto o externo)
+     * en el período activo (del día 11 de un mes al día 10 del mes siguiente).
+     *
+     * @param string $tipoReceptor 'uto' o 'externo'
+     * @param int $receptorId ID de la persona o del cliente externo
+     * @return float
+     */
+    public function getAcumuladoCreditoPeriodo(string $tipoReceptor, int $receptorId): float
+    {
+        $today = new \DateTime();
+        $day = (int)$today->format('d');
+        if ($day >= 11) {
+            $inicio = $today->format('Y-m-11 00:00:00');
+            $nextMonth = clone $today;
+            $nextMonth->modify('+1 month');
+            $fin = $nextMonth->format('Y-m-10 23:59:59');
+        } else {
+            $prevMonth = clone $today;
+            $prevMonth->modify('-1 month');
+            $inicio = $prevMonth->format('Y-m-11 00:00:00');
+            $fin = $today->format('Y-m-10 23:59:59');
+        }
 
-
-
+        $db = \Config\Database::connect();
+        
+        $campoId = ($tipoReceptor === 'uto') ? 'personal_uto_id' : 'cliente_externo_id';
+        
+        $sql = "SELECT COALESCE(SUM(monto_total), 0) as total
+                FROM condoriri.ventas
+                WHERE {$campoId} = ?
+                  AND LOWER(tipo_pago) = 'credito'
+                  AND deleted_at IS NULL
+                  AND created_at BETWEEN ? AND ?";
+                  
+        $query = $db->query($sql, [$receptorId, $inicio, $fin]);
+        $row = $query->getRow();
+        
+        return (float)($row ? $row->total : 0.0);
+    }
 }

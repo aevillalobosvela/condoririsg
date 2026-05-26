@@ -1413,6 +1413,13 @@ class InventariosController extends BaseController
             ? trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? '')) 
             : 'Usuario Desconocido';
 
+        $acumuladoCredito = 0.0;
+        if (strtolower(trim($venta->tipo_pago)) === 'credito') {
+            $tipoReceptor = !empty($venta->personal_uto_id) ? 'uto' : 'externo';
+            $receptorId = !empty($venta->personal_uto_id) ? (int)$venta->personal_uto_id : (int)$venta->cliente_externo_id;
+            $acumuladoCredito = $this->ventaModel->getAcumuladoCreditoPeriodo($tipoReceptor, $receptorId);
+        }
+
         // --- Pasar datos a la vista ---
         $data = [
             'title'          => 'Recibo de Venta #' . $ventaId,
@@ -1423,6 +1430,7 @@ class InventariosController extends BaseController
             'clienteExterno' => $clienteExterno,
             'sucursal'       => $sucursalInfo,
             'nombreUsuario'  => $nombreUsuario,
+            'acumuladoCredito' => $acumuladoCredito,
         ];
 
         return view('inventarios/recibo_print', $data);

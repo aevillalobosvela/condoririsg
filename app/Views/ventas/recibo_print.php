@@ -331,6 +331,29 @@ $userSucursalName = session()->get('sucursal_nombre');
 
             <div class="total-section">
                 <p>TOTAL PAGADO: <?= number_format($venta->monto_total, 2) ?> Bs</p>
+                <?php if (strtolower(trim($venta->tipo_pago)) === 'credito' && isset($acumuladoCredito)): ?>
+                    <div class="separator"></div>
+                    <p style="font-size: 11px;">ACUMULADO PERIODO: <?= number_format($acumuladoCredito, 2) ?> Bs</p>
+                <?php endif; ?>
+                    <?php
+                    // Calcular rango de periodo basado en la fecha de la venta
+                    $fechaVenta = new \DateTime($venta->created_at);
+                    $dayVenta = (int)$fechaVenta->format('d');
+                    if ($dayVenta >= 11) {
+                        $inicioP = $fechaVenta->format('Y-m-11');
+                        $nextMonthP = clone $fechaVenta;
+                        $nextMonthP->modify('+1 month');
+                        $finP = $nextMonthP->format('Y-m-10');
+                    } else {
+                        $prevMonthP = clone $fechaVenta;
+                        $prevMonthP->modify('-1 month');
+                        $inicioP = $prevMonthP->format('Y-m-11');
+                        $finP = $fechaVenta->format('Y-m-10');
+                    }
+                    $inicioFmt = (new \DateTime($inicioP))->format('d/m/Y');
+                    $finFmt = (new \DateTime($finP))->format('d/m/Y');
+                    ?>
+                    <p style="font-size: 11px;">PERIODO: <?= esc($inicioFmt) ?> - <?= esc($finFmt) ?></p>
             </div>
 
             <div class="separator"></div>
