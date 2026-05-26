@@ -10,7 +10,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 ## 2026-05-26 ✅ COMPLETADO
 
 ### Added
-- **Reportes PDF de ventas — orientación landscape (A4 horizontal):** los tres reportes matriciales de ventas (`CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf`) cambiaron de A4 portrait a A4 landscape. El ancho útil pasa de 190mm a 277mm, mejorando la legibilidad con múltiples productos y la columna "Categoría". `labelWidth` ampliado de 50mm a 65mm para nombres más largos. Saltos de página internos también actualizados a `AddPage('L', 'A4')`.
+- **Reportes PDF de ventas — ajuste de anchos con 8+ productos:** `labelWidth` ahora es dinámico (calculado con `GetStringWidth()` sobre los nombres reales del reporte, entre 40mm y 70mm). Fuente de filas de datos reducida de 7pt a 6pt. Eliminadas declaraciones duplicadas de `$esCredito`/`$wCategoria`. Afecta `CierreVentaPdf`, `CierreVentaInve` y `CierreVentaAgroPdf`.
+
+ los tres reportes matriciales de ventas (`CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf`) cambiaron de A4 portrait a A4 landscape. El ancho útil pasa de 190mm a 277mm, mejorando la legibilidad con múltiples productos y la columna "Categoría". `labelWidth` ampliado de 50mm a 65mm para nombres más largos. Saltos de página internos también actualizados a `AddPage('L', 'A4')`.
 
 ### Added
 - **Reportes de ventas a crédito — columna "Categoría":** los reportes PDF y Excel de ventas a crédito (3 módulos: tienda CEAC, planta lácteos, agropecuario) ahora muestran la categoría laboral/institucional del receptor en cada venta.

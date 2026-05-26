@@ -109,10 +109,24 @@ class CierreVentaAgroPdf extends CierreVentaBasePdf
         $this->Ln(2);
 
         $wNro       = 8;
-        $labelWidth = 65;
         $numProds   = count($productosUnicos);
-        // Reservar espacio para Nro.Venta(22) + Fecha(18) + Origen(22) + Total(10) = 72mm
-        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $wNro - $labelWidth - 72) / $numProds) : 25;
+        $esCredito  = ($tipo === 'credito');
+        $wCategoria = $esCredito ? 22 : 0;
+
+        // labelWidth dinámico: ancho justo para el nombre más largo del reporte
+        $this->SetFont('Arial', '', 7);
+        $maxNombreW = 40;
+        foreach ($ventasAgrupadas as $venta) {
+            $w = $this->GetStringWidth($venta['cliente']) + 4;
+            if ($w > $maxNombreW) $maxNombreW = $w;
+        }
+        $labelWidth = min(70, max(40, $maxNombreW));
+
+        // Columnas fijas: wNro + wNota + wFecha + wOrigen + wCategoria + wTotal
+        $wFijos   = $wNro + 22 + 18 + 22 + $wCategoria + 10;
+        $colWidth = $numProds > 0
+            ? ($this->GetPageWidth() - 20 - $labelWidth - $wFijos) / $numProds
+            : 20;
 
         $this->SetFillColor(220, 220, 220);
         $this->SetFont('Arial', 'B', 8);
@@ -176,8 +190,6 @@ class CierreVentaAgroPdf extends CierreVentaBasePdf
         $wOrigen = 22;
         $wTotal = 10;
         $subColW = $colWidth / 2;
-        $esCredito  = ($tipo === 'credito');
-        $wCategoria = $esCredito ? 22 : 0;
         $this->SetFillColor(200, 200, 200);
         $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -193,7 +205,7 @@ class CierreVentaAgroPdf extends CierreVentaBasePdf
         }
         $this->Cell($wTotal,     5, 'T',           1, 1, 'C', true);
 
-        $this->SetFont('Arial', '', 7);
+        $this->SetFont('Arial', '', 6);
         $fill = false;
         $nro  = 1;
         foreach ($ventasAgrupadas as $venta) {
