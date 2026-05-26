@@ -193,6 +193,12 @@ class CierreVentaBasePdf extends FPDF
                 $this->Cell($w[1], 5, '', 1, 0, 'L', true);
                 $this->Cell($w[2], 5, utf8_decode('Sección:'), 1, 0, 'R', true);
                 $this->Cell($w[3], 5, utf8_decode($venta['seccion']), 1, 1, 'L', true);
+                if (!empty($venta['receptor_categoria'])) {
+                    $this->Cell($w[0], 5, '', 1, 0, 'R', true);
+                    $this->Cell($w[1], 5, '', 1, 0, 'L', true);
+                    $this->Cell($w[2], 5, utf8_decode('Categoría:'), 1, 0, 'R', true);
+                    $this->Cell($w[3], 5, utf8_decode($venta['receptor_categoria']), 1, 1, 'L', true);
+                }
             }
 
             $this->SetFont('Arial', 'B', 9);

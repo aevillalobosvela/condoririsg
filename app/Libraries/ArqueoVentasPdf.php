@@ -264,6 +264,12 @@ class ArqueoVentasPdf extends CierreVentaBasePdf
                 $this->Cell($wCr[1], 4, '',                                        1, 0, 'L', true);
                 $this->Cell($wCr[2], 4, utf8_decode('Sección:'),                  1, 0, 'R', true);
                 $this->Cell($wCr[3], 4, utf8_decode($venta['seccion']),           1, 1, 'L', true);
+                if (!empty($venta['receptor_categoria'])) {
+                    $this->Cell($wCr[0], 4, '',                                        1, 0, 'R', true);
+                    $this->Cell($wCr[1], 4, '',                                        1, 0, 'L', true);
+                    $this->Cell($wCr[2], 4, utf8_decode('Categoría:'),                1, 0, 'R', true);
+                    $this->Cell($wCr[3], 4, utf8_decode($venta['receptor_categoria']), 1, 1, 'L', true);
+                }
             }
 
             // Encabezado de ítems — mismo ancho total
@@ -446,15 +452,16 @@ class ArqueoVentasPdf extends CierreVentaBasePdf
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = 'Consumidor Final';
                 $tipoPago = ucfirst(strtolower($item->tipo_pago));
                 $ventasMap[$vid] = [
-                    'Nro'             => $item->codigo_venta ?? $vid,
-                    'cliente'         => $cliente,
-                    'tipo_pago'       => $tipoPago,
-                    'monto_total'     => 0,
-                    'fecha'           => $item->fecha_venta,
-                    'dip'             => $item->personal_dip ?? '',
-                    'nombre_personal' => $item->personal_nombre ?? '',
-                    'seccion'         => $item->personal_seccion ?? '',
-                    'items'           => [],
+                    'Nro'                => $item->codigo_venta ?? $vid,
+                    'cliente'            => $cliente,
+                    'tipo_pago'          => $tipoPago,
+                    'monto_total'        => 0,
+                    'fecha'              => $item->fecha_venta,
+                    'dip'                => $item->personal_dip ?? '',
+                    'nombre_personal'    => $item->personal_nombre ?? '',
+                    'seccion'            => $item->personal_seccion ?? '',
+                    'receptor_categoria' => $item->receptor_categoria ?? '',
+                    'items'              => [],
                 ];
                 // Contar venta única por tipo
                 if (strtolower($item->tipo_pago) === 'contado') {

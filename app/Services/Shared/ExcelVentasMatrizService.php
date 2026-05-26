@@ -69,12 +69,13 @@ class ExcelVentasMatrizService
                 ];
                 $origen = $origenMap[$item->sucursal_nombre ?? ''] ?? 'OTRO ORIGEN';
                 $ventasAgrupadas[$ventaId] = [
-                    'cliente'     => $cliente,
-                    'code'        => $codigoVenta,
-                    'fecha_venta' => $fechaVenta,
-                    'origen'      => $origen,
-                    'total_venta' => 0,
-                    'items'       => [],
+                    'cliente'            => $cliente,
+                    'code'               => $codigoVenta,
+                    'fecha_venta'        => $fechaVenta,
+                    'origen'             => $origen,
+                    'total_venta'        => 0,
+                    'receptor_categoria' => $item->receptor_categoria ?? null,
+                    'items'              => [],
                 ];
             }
 
@@ -144,8 +145,10 @@ class ExcelVentasMatrizService
         echo '</Styles>';
 
         // ── Hoja ───────────────────────────────────────────────────────────────
-        $numProds  = count($productosUnicos);
-        $totalCols = 1 + ($numProds * 2) + 2 - 1 + 1 + 2; // +2 por Fecha y Origen
+        $numProds   = count($productosUnicos);
+        $esCredito  = ($tipo === 'credito');
+        // +2 por Fecha y Origen, +1 por Categoría si es crédito
+        $totalCols  = 1 + ($numProds * 2) + 2 - 1 + 1 + 2 + ($esCredito ? 1 : 0);
 
         echo '<Worksheet ss:Name="VENTAS">';
         echo '<Table>';
@@ -159,6 +162,9 @@ class ExcelVentasMatrizService
         echo '<Column ss:Width="80"/>';
         echo '<Column ss:Width="80"/>';
         echo '<Column ss:Width="110"/>';
+        if ($esCredito) {
+            echo '<Column ss:Width="90"/>';
+        }
         echo '<Column ss:Width="100"/>';
 
         // Encabezado institucional
@@ -239,6 +245,9 @@ class ExcelVentasMatrizService
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">Nro. Venta</Data></Cell>';
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">FECHA</Data></Cell>';
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">ORIGEN</Data></Cell>';
+        if ($esCredito) {
+            echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">CATEGORÍA</Data></Cell>';
+        }
         echo '<Cell ss:StyleID="header_prod"><Data ss:Type="String">TOTAL</Data></Cell></Row>';
 
         // Filas de ventas
@@ -262,6 +271,10 @@ class ExcelVentasMatrizService
             echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($venta['code'], ENT_XML1) . '</Data></Cell>';
             echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . htmlspecialchars($venta['fecha_venta'], ENT_XML1) . '</Data></Cell>';
             echo '<Cell ss:StyleID="' . $rowStyle . '"><Data ss:Type="String">' . htmlspecialchars($venta['origen'], ENT_XML1) . '</Data></Cell>';
+            if ($esCredito) {
+                $cat = htmlspecialchars($venta['receptor_categoria'] ?? '', ENT_XML1);
+                echo '<Cell ss:StyleID="center"><Data ss:Type="String">' . $cat . '</Data></Cell>';
+            }
             echo '<Cell ss:StyleID="number"><Data ss:Type="Number">' . number_format($venta['total_venta'], 2, '.', '') . '</Data></Cell></Row>';
             $fill = !$fill;
         }

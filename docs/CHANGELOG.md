@@ -7,6 +7,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 
 ## [Unreleased]
 
+## 2026-05-26 ✅ COMPLETADO
+
+### Added
+- **Reportes PDF de ventas — orientación landscape (A4 horizontal):** los tres reportes matriciales de ventas (`CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf`) cambiaron de A4 portrait a A4 landscape. El ancho útil pasa de 190mm a 277mm, mejorando la legibilidad con múltiples productos y la columna "Categoría". `labelWidth` ampliado de 50mm a 65mm para nombres más largos. Saltos de página internos también actualizados a `AddPage('L', 'A4')`.
+
+### Added
+- **Reportes de ventas a crédito — columna "Categoría":** los reportes PDF y Excel de ventas a crédito (3 módulos: tienda CEAC, planta lácteos, agropecuario) ahora muestran la categoría laboral/institucional del receptor en cada venta.
+  - Personal UTO: muestra `tipo_empleado` de `rrhh.tipos_empleados` (ej. `ADMINISTRATIVO`, `DOCENTE TC`, `DOCENTE TH`, `EVENTUAL`).
+  - Clientes externos: muestra el segmento (`SEGURO_UNIV`, `SPECTROLAB`, `OTROS`).
+  - Solo aparece en reportes de **crédito** — contado y general no se modifican.
+  - **Capa de datos:** `VentaModel::getDailySalesReportData()`, `getDailySalesReportDataInve()` y `getDailySalesReportDataAdmin()` — agregado `COALESCE(te.tipo_empleado, ce.segmento, NULL) AS receptor_categoria` y JOIN a `rrhh.tipos_empleados`.
+  - **PDF:** `CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf` — columna "Categoría" en tabla matricial (22mm, condicional a `$tipo === 'credito'`). `CierreVentaBasePdf::mostrarVentas()` y `ArqueoVentasPdf::mostrarVentas()` — fila "Categoría:" en bloque de datos del receptor.
+  - **Excel:** `ExcelVentasMatrizService` y `ExcelVentasAgroService` — columna `CATEGORÍA` al final de cada fila, `$totalCols` ajustado dinámicamente.
+
 ## 2026-05-07 ✅ COMPLETADO
 
 ### Added
