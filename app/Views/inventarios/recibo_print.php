@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title) ?></title>
+    <script src="<?= base_url('assets/js/qrcode.min.js') ?>"></script>
     <style>
         body {
             background-color: #f0f0f0;
@@ -101,6 +102,31 @@
         }
         .cliente-section {
             margin: 6px 0;
+        }
+        .cliente-qr-row {
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .cliente-qr-row .cliente-info {
+            flex: 3;
+        }
+        .cliente-qr-row .qr-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .cliente-qr-row .qr-box canvas,
+        .cliente-qr-row .qr-box img {
+            width: 52px !important;
+            height: 52px !important;
+        }
+        .qr-label {
+            font-size: 8px;
+            text-align: center;
+            font-weight: normal;
+            margin-top: 1px;
         }
         .productos-header {
             display: flex;
@@ -232,18 +258,40 @@ $userSucursalName = session()->get('sucursal_nombre');
             
             <div class="cliente-section">
                 <?php if (!empty($venta->personal_uto_id) && !empty($personal)): ?>
-                    <div class="info-line">Cliente: <?= esc($personal['nombre'] ?? 'N/A') ?></div>
-                    <div class="info-line">Documento: <?= esc($personal['dip'] ?? 'N/A') ?></div>
+                    <div class="cliente-qr-row">
+                        <div class="cliente-info">
+                            <div class="info-line">Cliente: <?= esc($personal['nombre'] ?? 'N/A') ?></div>
+                        </div>
+                        <div class="qr-box">
+                            <div id="qr-doc" data-qr="<?= esc($personal['dip'] ?? '') ?>"></div>
+                            <span class="qr-label">CI</span>
+                        </div>
+                    </div>
                 <?php elseif (!empty($venta->cliente_externo_id) && !empty($clienteExterno)): ?>
-                    <div class="info-line">Cliente: <?= esc($clienteExterno['nombre']) ?></div>
-                    <div class="info-line">Documento: <?= esc($clienteExterno['dip']) ?></div>
-                    <div class="info-line">Segmento: <?= esc($clienteExterno['segmento']) ?></div>
+                    <div class="cliente-qr-row">
+                        <div class="cliente-info">
+                            <div class="info-line">Cliente: <?= esc($clienteExterno['nombre']) ?></div>
+                            <div class="info-line">Segmento: <?= esc($clienteExterno['segmento']) ?></div>
+                        </div>
+                        <div class="qr-box">
+                            <div id="qr-doc" data-qr="<?= esc($clienteExterno['dip']) ?>"></div>
+                            <span class="qr-label">CI</span>
+                        </div>
+                    </div>
                 <?php elseif (!empty($cliente)): ?>
-                    <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
-                    <div class="info-line">Documento: <?= esc($cliente['ci_nit'] ?? '0') ?></div>
+                    <div class="cliente-qr-row">
+                        <div class="cliente-info">
+                            <div class="info-line">Cliente: <?= esc($cliente['nombre_completo'] ?? 'Cliente General') ?></div>
+                        </div>
+                        <?php if (!empty($cliente['ci_nit'])): ?>
+                        <div class="qr-box">
+                            <div id="qr-doc" data-qr="<?= esc($cliente['ci_nit']) ?>"></div>
+                            <span class="qr-label">CI</span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 <?php else: ?>
                     <div class="info-line">Cliente: CLIENTE</div>
-                    <div class="info-line">Documento: 0</div>
                 <?php endif; ?>
             </div>
 
@@ -303,15 +351,20 @@ $userSucursalName = session()->get('sucursal_nombre');
 
     <script>
         window.onload = function() {
-            const printButton = document.getElementById('print-button');
-            const closeButton = document.getElementById('close-button');
+            var qrEl = document.getElementById('qr-doc');
+            if (qrEl && qrEl.dataset.qr) {
+                new QRCode(qrEl, {
+                    text: qrEl.dataset.qr,
+                    width: 56, height: 56,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
 
-            printButton.addEventListener('click', function() {
+            document.getElementById('print-button').addEventListener('click', function() {
                 window.print();
             });
-
-            closeButton.addEventListener('click', function() {
-                window.location.href = '/inventarios/ventas'; 
+            document.getElementById('close-button').addEventListener('click', function() {
+                window.location.href = '/inventarios/ventas';
             });
         };
     </script>

@@ -10,7 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventi
 ## 2026-05-26 ✅ COMPLETADO
 
 ### Added
-- **Reportes PDF de ventas — ajuste de anchos con 8+ productos:** `labelWidth` ahora es dinámico (calculado con `GetStringWidth()` sobre los nombres reales del reporte, entre 40mm y 70mm). Fuente de filas de datos reducida de 7pt a 6pt. Eliminadas declaraciones duplicadas de `$esCredito`/`$wCategoria`. Afecta `CierreVentaPdf`, `CierreVentaInve` y `CierreVentaAgroPdf`.
+- **Recibos de venta — QR rediseñado (layout 3/4 + 1/4):** sección cliente reestructurada en dos columnas flex — 3/4 para nombre/datos del cliente, 1/4 para el QR alineado a la derecha a la misma altura. Eliminados el label "Documento:", el texto "Escanear para ver CI" y reemplazados por etiqueta compacta "CI" debajo del QR. Estilos obsoletos `.qr-doc-wrapper`, `.qr-doc-hint`, `.qr-doc-label` eliminados de los tres archivos.
+
+ el dato "Documento/DIP" en los 3 recibos de venta (`ventas/`, `inventarios/`, `productosAgro/`) fue reemplazado por un código QR generado en el cliente con `qrcode.min.js` (descargado a `public/assets/js/`). El CI no queda visible en texto en el papel impreso — se escanea el QR para acceder al dato. Aplica a personal UTO, clientes externos y clientes contado. Clientes sin documento no muestran QR.
+
+### Added
+- **Reportes PDF de ventas — resumen financiero al final:** método `protected renderResumenFinanciero()` agregado a `CierreVentaBasePdf`. Se activa solo en reportes de tipo `contado` y `credito` (no `general`) en los 3 módulos. Bloque 1: N° ventas, monto total, ticket promedio, venta mín/máx, producto más vendido. Bloque 2: top 5 clientes por monto acumulado. Todo calculado desde datos en memoria sin queries adicionales. Salto de página automático si no hay espacio.
+
+ `labelWidth` ahora es dinámico (calculado con `GetStringWidth()` sobre los nombres reales del reporte, entre 40mm y 70mm). Fuente de filas de datos reducida de 7pt a 6pt. Eliminadas declaraciones duplicadas de `$esCredito`/`$wCategoria`. Afecta `CierreVentaPdf`, `CierreVentaInve` y `CierreVentaAgroPdf`.
 
  los tres reportes matriciales de ventas (`CierreVentaPdf`, `CierreVentaInve`, `CierreVentaAgroPdf`) cambiaron de A4 portrait a A4 landscape. El ancho útil pasa de 190mm a 277mm, mejorando la legibilidad con múltiples productos y la columna "Categoría". `labelWidth` ampliado de 50mm a 65mm para nombres más largos. Saltos de página internos también actualizados a `AddPage('L', 'A4')`.
 
