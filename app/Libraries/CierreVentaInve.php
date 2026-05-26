@@ -257,6 +257,11 @@ class CierreVentaInve extends CierreVentaBasePdf
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(0, 6, 'TOTAL ' . $tituloTipo . ': ' . $this->numeroALiteral($totalGeneralBs) . ' BOLIVIANOS', 0, 1, 'L');
 
+        // Resumen financiero — solo contado y crédito
+        if ($tipo !== 'general') {
+            $this->renderResumenFinanciero($ventasAgrupadas, $productosUnicos, $totalGeneralBs);
+        }
+
         $nombreUsuario = utf8_decode($filters['nombre_usuario'] ?? 'Usuario');
         $this->Ln(15);
         $pageW = $this->GetPageWidth();
