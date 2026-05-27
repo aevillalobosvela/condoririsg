@@ -1003,13 +1003,21 @@ class InventariosController extends BaseController
             return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
         }
 
-        $nombre   = strtoupper(trim($this->request->getPost('nombre') ?? ''));
-        $dip      = trim($this->request->getPost('dip') ?? '');
-        $segmento = trim($this->request->getPost('segmento') ?? '');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $dip             = trim($this->request->getPost('dip') ?? '');
+        $segmento        = trim($this->request->getPost('segmento') ?? '');
 
-        if (empty($nombre) || empty($dip) || empty($segmento)) {
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        }
+
+        if (empty($dip) || empty($segmento)) {
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
         }
+
+        $nombre = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $existente = $this->clienteExternoModel
             ->where('dip', $dip)

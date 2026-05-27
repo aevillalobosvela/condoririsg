@@ -377,16 +377,27 @@
       </div>
       <div class="modal-body">
         <div id="nuevoExternoError" class="alert alert-danger d-none"></div>
-        <div class="mb-3">
-          <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="extNombre" placeholder="Ej. JUAN PEREZ MAMANI">
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extApellidoPaterno"
+            style="text-transform:uppercase" placeholder="Ej: MAMANI">
         </div>
-        <div class="mb-3">
-          <label class="form-label">DIP / CI <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Materno</label>
+          <input type="text" class="form-control" id="extApellidoMaterno"
+            style="text-transform:uppercase" placeholder="Ej: QUISPE">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extNombres"
+            style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">DIP / CI <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="extDip" placeholder="Ej. 7456123">
         </div>
-        <div class="mb-3">
-          <label class="form-label">Segmento <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Segmento <span class="text-danger">*</span></label>
           <select class="form-select" id="extSegmento">
             <option value="">Seleccione...</option>
             <option value="SEGURO_UNIV">Seguro Universitario</option>
@@ -585,13 +596,15 @@
     });
 
     document.getElementById('btnGuardarExterno').addEventListener('click', function() {
-      const nombre   = document.getElementById('extNombre').value.trim();
+      const apellidoPaterno = document.getElementById('extApellidoPaterno').value.trim().toUpperCase();
+      const apellidoMaterno = document.getElementById('extApellidoMaterno').value.trim().toUpperCase();
+      const nombres         = document.getElementById('extNombres').value.trim().toUpperCase();
       const dip      = document.getElementById('extDip').value.trim();
       const segmento = document.getElementById('extSegmento').value;
       const errDiv   = document.getElementById('nuevoExternoError');
 
-      if (!nombre || !dip || !segmento) {
-        errDiv.textContent = 'Todos los campos son obligatorios.';
+      if (!apellidoPaterno || !nombres || !dip || !segmento) {
+        errDiv.textContent = 'Apellido paterno, nombre(s), DIP y segmento son obligatorios.';
         errDiv.classList.remove('d-none');
         return;
       }
@@ -600,7 +613,12 @@
       fetch('<?= base_url('productosagro/guardarClienteExterno') ?>', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-        body: new URLSearchParams({ nombre, dip, segmento, '<?= csrf_token() ?>': '<?= csrf_hash() ?>' })
+        body: new URLSearchParams({
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
+          nombres, dip, segmento,
+          '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+        })
       })
       .then(r => r.json())
       .then(res => {
@@ -625,8 +643,11 @@
             <strong>Seleccionado:</strong> ${c.nombre} — DIP: ${c.dip}
             <span class="badge bg-warning text-dark ms-2">Externo</span>
           </div>`;
+        fetchSaldoCredito('externo', c.id);
         modalNuevoExterno.hide();
-        document.getElementById('extNombre').value    = '';
+        document.getElementById('extApellidoPaterno').value = '';
+        document.getElementById('extApellidoMaterno').value = '';
+        document.getElementById('extNombres').value = '';
         document.getElementById('extDip').value       = '';
         document.getElementById('extSegmento').value  = '';
       })

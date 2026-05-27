@@ -429,19 +429,31 @@
 <div class="modal fade" id="newClientModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form action="<?= base_url('cliente/create') ?>" method="post">
+      <form id="formNuevoCliente" action="<?= base_url('cliente/create') ?>" method="post">
         <div class="modal-header">
           <h5 class="modal-title">Registrar Nuevo Cliente</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="nombre_completo" class="form-label">Nombre Completo</label>
-            <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" required>
+          <div id="nuevoClienteError" class="alert alert-danger d-none"></div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="apellido_paterno" required
+              style="text-transform:uppercase" placeholder="Ej: MAMANI">
           </div>
-          <div class="mb-3">
-            <label for="ci_nit" class="form-label">CI / NIT</label>
-            <input type="text" class="form-control" id="ci_nit" name="ci_nit" required>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Apellido Materno</label>
+            <input type="text" class="form-control" name="apellido_materno"
+              style="text-transform:uppercase" placeholder="Ej: QUISPE">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="nombres" required
+              style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">CI / NIT <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="ci_nit" required placeholder="Ej: 7456123">
           </div>
         </div>
         <div class="modal-footer">

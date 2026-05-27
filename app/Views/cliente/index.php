@@ -202,14 +202,24 @@
       </div>
       <div class="modal-body">
         <input type="hidden" name="id" id="cliente_id">
-        
-        <div class="mb-3">
-          <label for="nombre_completo" class="form-label fw-semibold">Nombre Completo <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" required>
+        <div id="editarClienteError" class="alert alert-danger d-none"></div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="edit_apellido_paterno" name="apellido_paterno" required
+            style="text-transform:uppercase" placeholder="Ej: MAMANI">
         </div>
-
-        <div class="mb-3">
-          <label for="ci_nit" class="form-label fw-semibold">CI / NIT <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Materno</label>
+          <input type="text" class="form-control" id="edit_apellido_materno" name="apellido_materno"
+            style="text-transform:uppercase" placeholder="Ej: QUISPE">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="edit_nombres" name="nombres" required
+            style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">CI / NIT <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="ci_nit" name="ci_nit" required>
         </div>
       </div>
@@ -231,16 +241,22 @@
   const formEditar = document.getElementById('formEditarCliente');
 
   function editarCliente(id) {
-    // Fetch client data
     fetch(`<?= base_url('cliente/get/') ?>${id}`)
       .then(response => response.json())
       .then(data => {
         if (data.success) {
           const cliente = data.cliente;
           document.getElementById('cliente_id').value = cliente.id;
-          document.getElementById('nombre_completo').value = cliente.nombre_completo;
           document.getElementById('ci_nit').value = cliente.ci_nit;
-          
+
+          // Descomponer nombre_completo en los 3 campos
+          const partes = (cliente.nombre_completo || '').trim().split(/\s+/);
+          document.getElementById('edit_apellido_paterno').value = partes[0] || '';
+          document.getElementById('edit_apellido_materno').value = partes.length >= 3 ? partes[1] : '';
+          document.getElementById('edit_nombres').value = partes.length >= 3
+            ? partes.slice(2).join(' ')
+            : (partes[1] || '');
+
           modalEditar.show();
         } else {
           alert('Error al cargar los datos del cliente: ' + (data.error || 'Desconocido'));

@@ -61,14 +61,27 @@ class clienteController extends BaseController
      */
     public function update()
     {
-        $id             = $this->request->getPost('id');
-        $nombreCompleto = $this->request->getPost('nombre_completo');
-        $ciNit          = $this->request->getPost('ci_nit');
-        $userId         = session()->get('id');
+        $id     = $this->request->getPost('id');
+        $ciNit  = $this->request->getPost('ci_nit');
+        $userId = session()->get('id');
 
         if (empty($id)) {
             return $this->response->setJSON(['success' => false, 'error' => 'ID de cliente no proporcionado.']);
         }
+
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        }
+
+        if (empty($ciNit)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El CI/NIT es obligatorio.']);
+        }
+
+        $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         // Verificar que sea el último cliente registrado por este usuario hoy
         $ultimo = $this->clienteModel
@@ -86,13 +99,9 @@ class clienteController extends BaseController
         }
 
         $data = [
-            'nombre_completo' => !empty($nombreCompleto) ? strtoupper(trim($nombreCompleto)) : '',
-            'ci_nit'          => !empty($ciNit) ? strtoupper(trim($ciNit)) : '',
+            'nombre_completo' => $nombreCompleto,
+            'ci_nit'          => strtoupper(trim($ciNit)),
         ];
-
-        if (empty($data['nombre_completo']) || empty($data['ci_nit'])) {
-            return $this->response->setJSON(['success' => false, 'error' => 'El nombre completo y CI/NIT son obligatorios.']);
-        }
 
         if ($this->clienteModel->update($id, $data)) {
             return $this->response->setJSON([
@@ -162,19 +171,27 @@ class clienteController extends BaseController
      */
     public function create()
     {
-        $nombreCompleto = $this->request->getPost('nombre_completo');
-        $ciNit = $this->request->getPost('ci_nit');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
+
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        }
+
+        if (empty($ciNit)) {
+            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+        }
+
+        $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $data = [
-            'nombre_completo' => !empty($nombreCompleto) ? strtoupper(trim($nombreCompleto)) : '',
-            'ci_nit'          => !empty($ciNit) ? strtoupper(trim($ciNit)) : '',
+            'nombre_completo' => $nombreCompleto,
+            'ci_nit'          => $ciNit,
             'estado'          => true,
             'user_id'         => session()->get('id'),
         ];
-
-        if (empty($data['nombre_completo']) || empty($data['ci_nit'])) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
-        }
 
         if ($this->clienteModel->save($data)) {
             return redirect()->to('/ventas/register')->with('success', 'Cliente creado exitosamente.');
@@ -186,19 +203,27 @@ class clienteController extends BaseController
 
     public function registerCliente()
     {
-        $nombreCompleto = $this->request->getPost('nombre_completo');
-        $ciNit = $this->request->getPost('ci_nit');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
+
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        }
+
+        if (empty($ciNit)) {
+            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+        }
+
+        $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $data = [
-            'nombre_completo' => !empty($nombreCompleto) ? strtoupper(trim($nombreCompleto)) : '',
-            'ci_nit'          => !empty($ciNit) ? strtoupper(trim($ciNit)) : '',
+            'nombre_completo' => $nombreCompleto,
+            'ci_nit'          => $ciNit,
             'estado'          => true,
             'user_id'         => session()->get('id'),
         ];
-
-        if (empty($data['nombre_completo']) || empty($data['ci_nit'])) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
-        }
 
         if ($this->clienteModel->save($data)) {
             return redirect()->to('/productosagro/registerVentas')->with('success', 'Cliente creado exitosamente.');
@@ -210,19 +235,27 @@ class clienteController extends BaseController
 
     public function registerClienteInve()
     {
-        $nombreCompleto = $this->request->getPost('nombre_completo');
-        $ciNit = $this->request->getPost('ci_nit');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
+
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        }
+
+        if (empty($ciNit)) {
+            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+        }
+
+        $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $data = [
-            'nombre_completo' => !empty($nombreCompleto) ? strtoupper(trim($nombreCompleto)) : '',
-            'ci_nit'          => !empty($ciNit) ? strtoupper(trim($ciNit)) : '',
+            'nombre_completo' => $nombreCompleto,
+            'ci_nit'          => $ciNit,
             'estado'          => true,
             'user_id'         => session()->get('id'),
         ];
-
-        if (empty($data['nombre_completo']) || empty($data['ci_nit'])) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
-        }
 
         if ($this->clienteModel->save($data)) {
             return redirect()->to('/inventarios/registerVenta')->with('success', 'Cliente creado exitosamente.');
