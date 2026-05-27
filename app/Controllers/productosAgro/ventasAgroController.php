@@ -761,10 +761,12 @@ class ventasAgroController extends BaseController
         }
 
         $acumuladoCredito = 0.0;
+        $saldoAnterior    = 0.0;
         if (strtolower(trim($venta->tipo_pago)) === 'credito') {
             $tipoReceptor = !empty($venta->personal_uto_id) ? 'uto' : 'externo';
             $receptorId = !empty($venta->personal_uto_id) ? (int)$venta->personal_uto_id : (int)$venta->cliente_externo_id;
             $acumuladoCredito = $this->ventaModel->getAcumuladoCreditoPeriodo($tipoReceptor, $receptorId);
+            $saldoAnterior    = max(0.0, $acumuladoCredito - (float)$venta->monto_total);
         }
 
         $data = [
@@ -775,6 +777,7 @@ class ventasAgroController extends BaseController
             'personal'       => $personal,
             'clienteExterno' => $clienteExterno,
             'acumuladoCredito' => $acumuladoCredito,
+            'saldoAnterior'    => $saldoAnterior,
         ];
 
         return view('productosAgro/recibo_print', $data);
