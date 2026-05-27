@@ -160,6 +160,12 @@
           </button>
         </div>
         <div id="personalInfo" class="mt-3"></div>
+        <div id="panelSaldoCredito" style="display:none; background:#fffbeb; border-left:4px solid #f97316; border-radius:4px; padding:8px 12px; margin-top:8px; font-size:12px;">
+          <div style="font-weight:600; color:#92400e; margin-bottom:4px;">CRÉDITO PERIODO <span id="saldoPeriodo" style="font-weight:400;"></span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Saldo anterior:</span><span id="saldoAnteriorVal">Bs. 0.00</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Esta venta:</span><span id="saldoEstaVenta">Bs. 0.00</span></div>
+          <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px dashed #f97316; margin-top:4px; padding-top:4px;"><span>Total a descontar:</span><span id="saldoTotalDescontar">Bs. 0.00</span></div>
+        </div>
         <!-- Panel de edición inline cliente externo -->
         <div id="clienteExternoEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
           <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
@@ -478,6 +484,27 @@
     const modalNuevoExterno = new bootstrap.Modal(document.getElementById('modalNuevoExterno'));
 
     let searchTimeout;
+    let saldoAnteriorActual = 0;
+
+    function fetchSaldoCredito(tipo, id) {
+      fetch(`<?= base_url('productosagro/saldoCredito') ?>?tipo=${tipo}&id=${id}`)
+        .then(r => r.json())
+        .then(data => {
+          saldoAnteriorActual = parseFloat(data.saldo_anterior) || 0;
+          const estaVenta = parseFloat(totalDisplay.textContent.replace('Bs. ', '')) || 0;
+          document.getElementById('saldoPeriodo').textContent = data.periodo ? '(' + data.periodo + ')' : '';
+          document.getElementById('saldoAnteriorVal').textContent = 'Bs. ' + saldoAnteriorActual.toFixed(2);
+          document.getElementById('saldoEstaVenta').textContent = 'Bs. ' + estaVenta.toFixed(2);
+          document.getElementById('saldoTotalDescontar').textContent = 'Bs. ' + (saldoAnteriorActual + estaVenta).toFixed(2);
+          document.getElementById('panelSaldoCredito').style.display = 'block';
+        })
+        .catch(() => {});
+    }
+
+    function ocultarPanelSaldo() {
+      saldoAnteriorActual = 0;
+      document.getElementById('panelSaldoCredito').style.display = 'none';
+    }
 
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
@@ -486,6 +513,7 @@
       clienteIdInput.value = '';
       tipoReceptorInput.value = '';
       selectedPersonal = null;
+      ocultarPanelSaldo();
       if (dip.length < 3) return;
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
@@ -521,6 +549,7 @@
                 selectedPersonal = { nombre: el.dataset.nombre, dip: el.dataset.dip, tipo: el.dataset.tipo };
                 clienteIdInput.value    = el.dataset.id;
                 tipoReceptorInput.value = el.dataset.tipo;
+                fetchSaldoCredito(el.dataset.tipo, el.dataset.id);
 
                 const panel = document.getElementById('clienteExternoEditPanel');
                 if (el.dataset.tipo === 'externo') {
@@ -770,6 +799,10 @@
       discountDisplay.textContent = `- Bs. ${totalDiscount.toFixed(2)}`;
       totalDisplay.textContent = `Bs. ${total.toFixed(2)}`;
       updateChange();
+      if (document.getElementById('panelSaldoCredito').style.display !== 'none') {
+        document.getElementById('saldoEstaVenta').textContent = 'Bs. ' + total.toFixed(2);
+        document.getElementById('saldoTotalDescontar').textContent = 'Bs. ' + (saldoAnteriorActual + total).toFixed(2);
+      }
     }
 
     function updateChange() {
@@ -842,6 +875,7 @@
         clienteIdInput.value = '';
         montoRecibidoInput.value = '';
         cambioInput.value = 'Bs. 0.00';
+        ocultarPanelSaldo();
       }
     });
 
