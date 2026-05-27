@@ -333,7 +333,9 @@ $userSucursalName = session()->get('sucursal_nombre');
                 <p>TOTAL PAGADO: <?= number_format($venta->monto_total, 2) ?> Bs</p>
                 <?php if (strtolower(trim($venta->tipo_pago)) === 'credito' && isset($acumuladoCredito)): ?>
                     <div class="separator"></div>
-                    <p style="font-size: 11px;">ACUMULADO PERIODO: <?= number_format($acumuladoCredito, 2) ?> Bs</p>
+                    <p style="font-size: 11px;">SALDO ANTERIOR PERIODO: <?= number_format($saldoAnterior ?? 0, 2) ?> Bs</p>
+                    <p style="font-size: 11px;">ESTA VENTA: <?= number_format($venta->monto_total, 2) ?> Bs</p>
+                    <p style="font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 3px;">TOTAL A DESCONTAR: <?= number_format($acumuladoCredito, 2) ?> Bs</p>
                 <?php endif; ?>
                     <?php
                     // Calcular rango de periodo basado en la fecha de la venta

@@ -318,27 +318,28 @@ $nombreUsuario    = session()->get('nombre') ?? session()->get('username') ?? 'U
             <div class="total-section">
                 <p>TOTAL PAGADO: <?= number_format($venta->monto_total, 2) ?> Bs</p>
                 <?php if (strtolower(trim($venta->tipo_pago)) === 'credito' && isset($acumuladoCredito)): ?>
+                    <?php
+                    $fechaVenta = new \DateTime($venta->created_at);
+                    $dayVenta   = (int)$fechaVenta->format('d');
+                    if ($dayVenta >= 11) {
+                        $inicioP   = $fechaVenta->format('Y-m-11');
+                        $nextMonth = clone $fechaVenta;
+                        $nextMonth->modify('+1 month');
+                        $finP = $nextMonth->format('Y-m-10');
+                    } else {
+                        $prevMonth = clone $fechaVenta;
+                        $prevMonth->modify('-1 month');
+                        $inicioP = $prevMonth->format('Y-m-11');
+                        $finP    = $fechaVenta->format('Y-m-10');
+                    }
+                    $inicioFmt = (new \DateTime($inicioP))->format('d/m/Y');
+                    $finFmt    = (new \DateTime($finP))->format('d/m/Y');
+                    ?>
                     <div class="separator"></div>
-                    <p style="font-size: 11px;">ACUMULADO PERIODO: <?= number_format($acumuladoCredito, 2) ?> Bs</p>
-<?php
-// Calcular rango de periodo basado en la fecha de la venta
-$fechaVenta = new \DateTime($venta->created_at);
-$dayVenta = (int)$fechaVenta->format('d');
-if ($dayVenta >= 11) {
-    $inicioP = $fechaVenta->format('Y-m-11');
-    $nextMonthP = clone $fechaVenta;
-    $nextMonthP->modify('+1 month');
-    $finP = $nextMonthP->format('Y-m-10');
-} else {
-    $prevMonthP = clone $fechaVenta;
-    $prevMonthP->modify('-1 month');
-    $inicioP = $prevMonthP->format('Y-m-11');
-    $finP = $fechaVenta->format('Y-m-10');
-}
-$inicioFmt = (new \DateTime($inicioP))->format('d/m/Y');
-$finFmt = (new \DateTime($finP))->format('d/m/Y');
-?>
-<p style="font-size: 11px;">PERIODO: <?= esc($inicioFmt) ?> - <?= esc($finFmt) ?></p>
+                    <p style="font-size: 11px;">SALDO ANTERIOR PERIODO: <?= number_format($saldoAnterior ?? 0, 2) ?> Bs</p>
+                    <p style="font-size: 11px;">ESTA VENTA: <?= number_format($venta->monto_total, 2) ?> Bs</p>
+                    <p style="font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 3px;">TOTAL A DESCONTAR: <?= number_format($acumuladoCredito, 2) ?> Bs</p>
+                    <p style="font-size: 11px;">PERIODO: <?= esc($inicioFmt) ?> - <?= esc($finFmt) ?></p>
                 <?php endif; ?>
             </div>
 
