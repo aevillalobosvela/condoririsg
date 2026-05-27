@@ -897,6 +897,35 @@ class InventariosController extends BaseController
         ]);
     }
 
+    public function saldoCredito()
+    {
+        $tipo = $this->request->getGet('tipo');
+        $id   = (int) $this->request->getGet('id');
+
+        if (!in_array($tipo, ['uto', 'externo']) || $id <= 0) {
+            return $this->response->setJSON(['saldo_anterior' => 0, 'periodo' => '']);
+        }
+
+        $saldo = $this->ventaModel->getAcumuladoCreditoPeriodo($tipo, $id);
+        $hoy   = new \DateTime();
+        $dia   = (int) $hoy->format('d');
+        if ($dia >= 11) {
+            $ini = (new \DateTime($hoy->format('Y-m-11')))->format('d/m');
+            $fin = (new \DateTime($hoy->format('Y-m-11') . ' +1 month'))
+                ->modify('-1 day')->format('d/m');
+        } else {
+            $prev = (clone $hoy)->modify('-1 month');
+            $ini  = (new \DateTime($prev->format('Y-m-11')))->format('d/m');
+            $fin  = (new \DateTime($hoy->format('Y-m-10')))->format('d/m');
+        }
+
+        return $this->response->setJSON([
+            'saldo_anterior' => $saldo,
+            'periodo'        => $ini . ' al ' . $fin,
+        ]);
+    }
+
+
     public function credito()
     {
 

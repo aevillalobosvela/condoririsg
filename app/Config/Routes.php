@@ -135,7 +135,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('arqueo/pdf', 'inventarios\inventariosController::exportarArqueoPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
-    $routes->post('guardarClienteExterno', 'inventarios\inventariosController::guardarClienteExterno', ['filter' => 'role:admin,almacen']);
+    $routes->get('saldoCredito', 'inventarios\inventariosController::saldoCredito', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarVenta', 'inventarios\inventariosController::guardarVenta', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarCreditoVenta', 'inventarios\inventariosController::guardarCreditoVenta', ['filter' => 'role:admin,almacen']);
     $routes->get('buscar-clientes', 'inventarios\inventariosController::buscarClientes', ['filter' => 'role:admin,almacen']);
@@ -279,7 +279,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     
     // Funciones auxiliares
     $routes->get('buscarPersonalUto', 'ventas\ventasController::buscarPersonalUto', ['filter' => 'role:admin,vendedor']);
-    $routes->post('guardarClienteExterno', 'ventas\ventasController::guardarClienteExterno', ['filter' => 'role:admin,vendedor']);
+    $routes->get('saldoCredito', 'ventas\ventasController::saldoCredito', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-clientes', 'ventas\ventasController::buscarClientes', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-productos', 'ventas\ventasController::buscarProductos', ['filter' => 'role:admin,vendedor']);
     $routes->post('guardar-cliente', 'ventas\ventasController::guardarCliente', ['filter' => 'role:admin,vendedor']);
@@ -322,7 +322,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     
     // Funciones auxiliares
     $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
-    $routes->post('guardarClienteExterno', 'productosAgro\ventasAgroController::guardarClienteExterno', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->get('saldoCredito', 'productosAgro\ventasAgroController::saldoCredito', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
     $routes->get('exportarExcelVentas', 'productosAgro\ventasAgroController::exportarExcelVentas', ['filter' => 'role:admin,ganaderia,agropecuario,contabilidad,vendedor,almacen']);
