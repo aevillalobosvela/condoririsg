@@ -35,44 +35,46 @@ class stockinventarioController extends BaseController
     {
         // Obtener parámetros de filtro
         $filters = [
-            'fecha_inicio' => $this->request->getGet('fecha_inicio') ?? '',
-            'fecha_fin'    => $this->request->getGet('fecha_fin') ?? '',
-            // El filtro de sucursal se mantiene para la vista, aunque los nuevos métodos de resumen son globales.
-            'sucursal_filter_id' => $this->request->getGet('sucursal_filter_id') ?? '' 
+            'fecha_inicio'       => $this->request->getGet('fecha_inicio') ?? '',
+            'fecha_fin'          => $this->request->getGet('fecha_fin') ?? '',
+            'sucursal_filter_id' => $this->request->getGet('sucursal_filter_id') ?? '',
         ];
 
         $fechaInicio = empty($filters['fecha_inicio']) ? null : $filters['fecha_inicio'];
-        $fechaFin = empty($filters['fecha_fin']) ? null : $filters['fecha_fin'];
+        $fechaFin    = empty($filters['fecha_fin'])    ? null : $filters['fecha_fin'];
 
-        // 1. Obtener el stock AGRUPADO por nombre. Si hay fechas, se usa el método filtrado.
-        // NOTA: Los métodos getStockTotal... devuelven resultados a nivel de base de datos (GLOBAL),
-        // no están filtrados por sucursal.
+        // Obtener stock agrupado (con o sin filtro de fecha)
         if ($fechaInicio && $fechaFin) {
             $stockAgrupado = $this->productoModel->getStockTotalFiltradoPorFecha($fechaInicio, $fechaFin);
         } else {
-            // Si no hay fechas, obtenemos el stock agrupado sin filtro temporal
             $stockAgrupado = $this->productoModel->getStockTotalAgrupadoPorNombre();
         }
-        
-        // 2. Obtener el resumen GENERAL (total_productos, total_stock_actual)
-        // El método getResumen que ya tenías implementado sirve para esto.
+
+        // Resumen general
         $resumenGeneral = $this->productoModel->getResumen($fechaInicio, $fechaFin);
 
-        // Obtener todas las sucursales para el filtro
-        $sucursales = $this->sucursalModel->findAll();
+        // Vista completa (incluye productos con stock = 0) o solo disponibles
+        $vistaCompleta = $this->request->getGet('vista') === 'completa';
+        if (!$vistaCompleta) {
+            $stockAgrupado = array_values(array_filter(
+                $stockAgrupado,
+                fn($i) => ($i->suma_stock_inve ?? 0) > 0
+            ));
+        }
 
-        // Determinar la pestaña activa (default: stock)
-        $activeTab = $this->request->getGet('tab') ?? 'stock';
+        $sucursales = $this->sucursalModel->findAll();
+        $activeTab  = $this->request->getGet('tab') ?? 'stock';
 
         $data = [
-            'stockAgrupado'      => $stockAgrupado, // <- La data clave para la tabla de resumen
+            'stockAgrupado'      => $stockAgrupado,
             'sucursales'         => $sucursales,
-            'resumenGeneral'     => $resumenGeneral, // <- Resumen de totales
+            'resumenGeneral'     => $resumenGeneral,
             'filters'            => $filters,
             'activeTab'          => $activeTab,
+            'vistaCompleta'      => $vistaCompleta,
             'title'              => 'Resumen de Inventario (Agrupado por Producto)',
-            'stockSucursales'    => [], // Se mantiene vacío o puedes cargar la data que necesites aquí
-            'resumenPorProducto' => []  // Se reemplaza por stockAgrupado
+            'stockSucursales'    => [],
+            'resumenPorProducto' => [],
         ];
 
         return view('inventarios/stockIndex', $data);
@@ -91,22 +93,18 @@ class stockinventarioController extends BaseController
      */
     public function reporteStock()
     {
-        $fecha_inicio = $this->request->getGet('fecha_inicio') ?? '';
-        $fecha_fin = $this->request->getGet('fecha_fin') ?? '';
+        $fecha_inicio    = $this->request->getGet('fecha_inicio') ?? '';
+        $fecha_fin       = $this->request->getGet('fecha_fin') ?? '';
+        $soloDisponibles = $this->request->getGet('solo_disponibles') === '1';
 
-        // OBTENER sucursal_id del usuario logueado (Se mantiene para consistencia, aunque los reportes son globales)
-        $user = session()->get('user');
-        $sucursal_id = $user['sucursal_id'] ?? 1;
-
-        // Get user data
         $userId = session()->get('id');
         $userModel = new \App\Models\UsuarioModel();
         $user = $userModel->find($userId);
-        
-        $nombreUser = $user['nombre'] ?? '';
+
+        $nombreUser   = $user['nombre'] ?? '';
         $apellidosUser = $user['apellidos'] ?? '';
-        $ciUser = $user['ci'] ?? '';
-        
+        $ciUser       = $user['ci'] ?? '';
+
         $datosUsuario = trim("$nombreUser $apellidosUser");
         if (!empty($ciUser)) {
             $datosUsuario .= " - CI: $ciUser";
@@ -115,34 +113,36 @@ class stockinventarioController extends BaseController
             $datosUsuario = 'Usuario Desconocido';
         }
 
-        // 💡 Uso de las nuevas funciones para el reporte
         $fechaInicio = empty($fecha_inicio) ? null : $fecha_inicio;
-        $fechaFin = empty($fecha_fin) ? null : $fecha_fin;
+        $fechaFin    = empty($fecha_fin)    ? null : $fecha_fin;
 
-        // Resumen General (Totales)
         $resumenGeneral = $this->productoModel->getResumen($fechaInicio, $fechaFin);
 
-        // Resumen Agrupado por Producto (Detalles)
         if ($fechaInicio && $fechaFin) {
             $stockAgrupado = $this->productoModel->getStockTotalFiltradoPorFecha($fechaInicio, $fechaFin);
         } else {
             $stockAgrupado = $this->productoModel->getStockTotalAgrupadoPorNombre();
         }
 
-        // Preparar el arreglo de filtros para pasar al PDF (el viejo controller lo usaba)
+        // Filtrar solo disponibles si se solicitó
+        if ($soloDisponibles) {
+            $stockAgrupado = array_values(array_filter(
+                $stockAgrupado,
+                fn($i) => ($i->suma_stock_inve ?? 0) > 0
+            ));
+        }
+
         $filters = [
-            'fecha_inicio' => $fecha_inicio,
-            'fecha_fin' => $fecha_fin,
-            'usuario' => $datosUsuario
+            'fecha_inicio'    => $fecha_inicio,
+            'fecha_fin'       => $fecha_fin,
+            'usuario'         => $datosUsuario,
+            'solo_disponibles' => $soloDisponibles,
         ];
 
-        // Check if ReporteStock library exists
         if (class_exists('\App\Libraries\ReporteStockInve')) {
             $pdfGenerator = new \App\Libraries\ReporteStockInve();
-            // 💡 Se pasa el resumen general y el resumen agrupado
             $pdfGenerator->generarReporte($resumenGeneral, $stockAgrupado, $filters);
         } else {
-            // Fallback: Generate simple PDF
             $this->generarReporteSimple($resumenGeneral, $stockAgrupado, $filters);
         }
     }
