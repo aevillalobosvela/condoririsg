@@ -185,6 +185,16 @@ class clienteController extends BaseController
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
+        $avisoUto       = $this->buscarPersonaUto($ciNit);
+
+        $existente = $this->clienteModel
+            ->where('ci_nit', $ciNit)
+            ->where('deleted_at', null)
+            ->first();
+        if ($existente) {
+            return redirect()->back()->withInput()
+                ->with('error', "El CI/NIT {$ciNit} ya está registrado a nombre de: {$existente['nombre_completo']}.");
+        }
 
         $data = [
             'nombre_completo' => $nombreCompleto,
@@ -194,7 +204,8 @@ class clienteController extends BaseController
         ];
 
         if ($this->clienteModel->save($data)) {
-            return redirect()->to('/ventas/register')->with('success', 'Cliente creado exitosamente.');
+            $msg = 'Cliente creado exitosamente.' . $avisoUto;
+            return redirect()->to('/ventas/register')->with('success', $msg);
         } else {
             $errors = $this->clienteModel->errors();
             return redirect()->back()->withInput()->with('error', 'Error al crear el cliente: ' . implode(', ', $errors));
@@ -217,6 +228,16 @@ class clienteController extends BaseController
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
+        $avisoUto       = $this->buscarPersonaUto($ciNit);
+
+        $existente = $this->clienteModel
+            ->where('ci_nit', $ciNit)
+            ->where('deleted_at', null)
+            ->first();
+        if ($existente) {
+            return redirect()->back()->withInput()
+                ->with('error', "El CI/NIT {$ciNit} ya está registrado a nombre de: {$existente['nombre_completo']}.");
+        }
 
         $data = [
             'nombre_completo' => $nombreCompleto,
@@ -226,7 +247,8 @@ class clienteController extends BaseController
         ];
 
         if ($this->clienteModel->save($data)) {
-            return redirect()->to('/productosagro/registerVentas')->with('success', 'Cliente creado exitosamente.');
+            $msg = 'Cliente creado exitosamente.' . $avisoUto;
+            return redirect()->to('/productosagro/registerVentas')->with('success', $msg);
         } else {
             $errors = $this->clienteModel->errors();
             return redirect()->back()->withInput()->with('error', 'Error al crear el cliente: ' . implode(', ', $errors));
@@ -249,6 +271,16 @@ class clienteController extends BaseController
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
+        $avisoUto       = $this->buscarPersonaUto($ciNit);
+
+        $existente = $this->clienteModel
+            ->where('ci_nit', $ciNit)
+            ->where('deleted_at', null)
+            ->first();
+        if ($existente) {
+            return redirect()->back()->withInput()
+                ->with('error', "El CI/NIT {$ciNit} ya está registrado a nombre de: {$existente['nombre_completo']}.");
+        }
 
         $data = [
             'nombre_completo' => $nombreCompleto,
@@ -258,10 +290,29 @@ class clienteController extends BaseController
         ];
 
         if ($this->clienteModel->save($data)) {
-            return redirect()->to('/inventarios/registerVenta')->with('success', 'Cliente creado exitosamente.');
+            $msg = 'Cliente creado exitosamente.' . $avisoUto;
+            return redirect()->to('/inventarios/registerVenta')->with('success', $msg);
         } else {
             $errors = $this->clienteModel->errors();
             return redirect()->back()->withInput()->with('error', 'Error al crear el cliente: ' . implode(', ', $errors));
         }
+    }
+
+    /**
+     * Busca si el CI corresponde a un empleado UTO activo.
+     * Retorna un string de aviso si existe, vacío si no.
+     */
+    private function buscarPersonaUto(string $ciNit): string
+    {
+        if (empty($ciNit) || in_array($ciNit, ['000', '00000', '00000000'])) {
+            return '';
+        }
+        $db  = \Config\Database::connect();
+        $row = $db->query(
+            "SELECT nombre FROM public.personas WHERE dip = ? AND id_estado = true LIMIT 1",
+            [$ciNit]
+        )->getRow();
+        if (!$row) return '';
+        return ' Aviso: este CI corresponde al empleado UTO ' . $row->nombre . '. Puede realizar compras a crédito.';
     }
 }

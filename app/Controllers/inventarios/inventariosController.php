@@ -954,7 +954,7 @@ class InventariosController extends BaseController
         $pattern = '%' . $termino . '%';
 
         $sqlUto = "
-            SELECT
+            SELECT DISTINCT ON (p.id_persona)
                 p.id_persona,
                 p.nombre AS nombre,
                 p.dip,
@@ -964,12 +964,12 @@ class InventariosController extends BaseController
                 s.seccion,
                 'uto' AS tipo
             FROM public.personas p
-            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\")
-            LEFT JOIN rrhh.cargos c    ON (e.id_cargo = c.id_cargo)
-            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
+            JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+            LEFT JOIN rrhh.cargos c    ON c.id_cargo = e.id_cargo
+            LEFT JOIN rrhh.secciones s ON s.id_seccion = e.id_seccion
             WHERE p.\"id_estado\" = true
-              AND e.\"id_estado\" = true
               AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
+            ORDER BY p.id_persona, e.fec_ingreso DESC NULLS LAST, e.id_empleado DESC
             LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
