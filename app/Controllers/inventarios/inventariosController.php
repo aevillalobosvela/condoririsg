@@ -67,7 +67,9 @@ class InventariosController extends BaseController
             $pager = null;
         } else {
             // Sin filtros: mostrar solo hoy por defecto, todos si se especifica
-            $builder = $this->inventarioModel->orderBy('created_at', 'DESC');
+            $builder = $this->inventarioModel
+                ->where('deleted_at', null)
+                ->orderBy('created_at', 'DESC');
 
             if (!$mostrarTodos) {
                 // Filtrar solo por el día de hoy (comportamiento por defecto)

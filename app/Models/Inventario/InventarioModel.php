@@ -98,6 +98,9 @@ class InventarioModel extends Model
     {
         $builder = $this->builder();
 
+        // Excluir registros eliminados (soft-delete) explícitamente
+        $builder->where('deleted_at', null);
+
         if (!empty($nombre)) {
             $builder->groupStart()
                 ->like('nombre', $nombre)
