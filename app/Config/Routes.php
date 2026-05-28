@@ -262,6 +262,7 @@ $routes->group('cliente', ['filter' => 'auth'], function ($routes) {
     $routes->get('lista', 'cliente\clienteController::index', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia']);
     $routes->get('get/(:num)', 'cliente\clienteController::get/$1', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     $routes->post('update', 'cliente\clienteController::update', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
+    $routes->post('updateAdmin', 'cliente\clienteController::updateAdmin', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     $routes->post('updateExterno', 'cliente\clienteController::updateExterno', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
 });
 

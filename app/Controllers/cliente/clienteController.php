@@ -19,24 +19,53 @@ class clienteController extends BaseController
     }
 
     /**
-     * Muestra la lista de todos los clientes.
+     * Muestra la lista de todos los clientes con paginación.
      */
     public function index()
     {
-        $search = $this->request->getGet('search');
-        
+        $search  = $this->request->getGet('search');
+        $estado  = $this->request->getGet('estado');
+        $page    = max(1, (int)($this->request->getGet('page') ?? 1));
+        $sortBy  = $this->request->getGet('sort_by')  ?? 'nombre_completo';
+        $sortDir = strtoupper($this->request->getGet('sort_dir') ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
+        $perPage = 30;
+
+        $allowed = ['id', 'nombre_completo', 'ci_nit', 'estado', 'created_at'];
+        if (!in_array($sortBy, $allowed)) $sortBy = 'nombre_completo';
+
+        $db      = \Config\Database::connect();
+        $builder = $db->table('condoriri.clientes')->where('deleted_at', null);
+
         if ($search) {
-            $clientes = $this->clienteModel->like('nombre_completo', $search)
-                                           ->orLike('ci_nit', $search)
-                                           ->findAll();
-        } else {
-            $clientes = $this->clienteModel->findAll();
+            $pattern = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
+            $builder->groupStart()
+                ->where("nombre_completo ILIKE '{$pattern}'")
+                ->orWhere("ci_nit ILIKE '{$pattern}'")
+                ->groupEnd();
         }
 
+        if ($estado === 'activo') {
+            $builder->where('estado', true);
+        } elseif ($estado === 'inactivo') {
+            $builder->where('estado', false);
+        }
+
+        $total    = $builder->countAllResults(false);
+        $clientes = $builder->orderBy($sortBy, $sortDir)
+                            ->get($perPage, ($page - 1) * $perPage)
+                            ->getResultArray();
+
         $data = [
-            'title'    => 'Gestión de Clientes',
-            'clientes' => $clientes,
-            'search'   => $search
+            'title'      => 'Gestión de Clientes',
+            'clientes'   => $clientes,
+            'search'     => $search,
+            'estado'     => $estado,
+            'page'       => $page,
+            'perPage'    => $perPage,
+            'total'      => $total,
+            'totalPages' => (int)ceil($total / $perPage),
+            'sortBy'     => $sortBy,
+            'sortDir'    => $sortDir,
         ];
 
         return view('cliente/index', $data);
@@ -101,6 +130,65 @@ class clienteController extends BaseController
         $data = [
             'nombre_completo' => $nombreCompleto,
             'ci_nit'          => strtoupper(trim($ciNit)),
+        ];
+
+        if ($this->clienteModel->update($id, $data)) {
+            return $this->response->setJSON([
+                'success'         => true,
+                'message'         => 'Cliente actualizado exitosamente.',
+                'nombre_completo' => $data['nombre_completo'],
+                'ci_nit'          => $data['ci_nit'],
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => false, 'error' => 'Error al actualizar el cliente.']);
+    }
+
+    /**
+     * Actualiza cualquier cliente sin restricción de último registro.
+     * Usado desde /cliente/ (gestión administrativa).
+     */
+    public function updateAdmin()
+    {
+        $id    = $this->request->getPost('id');
+        $ciNit = $this->request->getPost('ci_nit');
+
+        if (empty($id)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de cliente no proporcionado.']);
+        }
+
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        }
+
+        if (empty($ciNit)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El CI/NIT es obligatorio.']);
+        }
+
+        $ciNit = strtoupper(trim($ciNit));
+
+        // Verificar que el CI no esté en uso por otro cliente activo
+        $duplicado = $this->clienteModel
+            ->where('ci_nit', $ciNit)
+            ->where('deleted_at', null)
+            ->where('id !=', $id)
+            ->first();
+        if ($duplicado) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => "El CI/NIT {$ciNit} ya está registrado a nombre de: {$duplicado['nombre_completo']}.",
+            ]);
+        }
+
+        $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
+
+        $data = [
+            'nombre_completo' => $nombreCompleto,
+            'ci_nit'          => $ciNit,
         ];
 
         if ($this->clienteModel->update($id, $data)) {
