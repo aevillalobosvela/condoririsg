@@ -183,6 +183,8 @@
             </button>
           </div>
          <div id="clientResults" class="list-group"></div>
+          <!-- Indicador de cliente seleccionado -->
+          <div id="clienteSeleccionadoInfo" class="mt-2"></div>
           <!-- Panel de edición inline -->
           <div id="clientEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
             <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
@@ -537,9 +539,12 @@
               </div>
               <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.88rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
+              <div class="mb-1">
+                <span style="font-size:1.05rem;font-weight:700;color:${c.border};line-height:1;">${p.cantidad_inve}</span>
+                <span style="font-size:0.72rem;font-weight:400;color:${c.text};"> ${p.unidad_nombre || 'und'}</span>
+              </div>
             </div>
           </div>
         </div>`;
@@ -712,6 +717,22 @@
       clienteIdInput.value = client.id;
       document.getElementById('clientResults').style.display = 'none';
 
+      // Indicador de cliente seleccionado
+      const infoEl = document.getElementById('clienteSeleccionadoInfo');
+      if (client.id && parseInt(client.id) > 0) {
+        infoEl.innerHTML = `
+          <div class="alert alert-success py-2 mb-0">
+            <i class="ri-user-check-line me-1"></i>
+            <strong>Cliente:</strong> ${client.name}${client.ci ? ' — CI: ' + client.ci : ''}
+          </div>`;
+      } else {
+        infoEl.innerHTML = `
+          <div class="alert alert-secondary py-2 mb-0">
+            <i class="ri-user-line me-1"></i>
+            <strong>Consumidor Final</strong> — sin CI registrado
+          </div>`;
+      }
+
       const panel = document.getElementById('clientEditPanel');
       const clientDate = client.created_at ? client.created_at.substring(0, 10) : '';
       if (parseInt(client.user_id) === SESSION_USER_ID && clientDate === TODAY) {
@@ -811,6 +832,8 @@
             renderCart();
             updateSummary();
             clientSearch.value = '';
+            document.getElementById('clienteSeleccionadoInfo').innerHTML = '';
+            document.getElementById('clientEditPanel').style.display = 'none';
             montoRecibidoInput.value = '';
             cambioInput.value = 'Bs. 0.00';
             clienteIdInput.value = '';

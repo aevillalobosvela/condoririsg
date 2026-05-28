@@ -229,6 +229,8 @@
             </button>
           </div>
          <div id="clientResults" class="list-group"></div>
+          <!-- Indicador de cliente seleccionado -->
+          <div id="clienteSeleccionadoInfo" class="mt-2"></div>
           <!-- Panel de edición inline -->
           <div id="clientEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
             <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
@@ -657,14 +659,15 @@
                 })()
               }
               
-              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
+              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.82rem; line-height: 1.2;">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
               
-              <div class="mb-2">
-                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
+              <div class="mb-1">
+                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.88rem;">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
               </div>
               
               <div class="mb-2">
-                <span class="badge" style="background-color: ${colors.border}; font-size: 0.65rem;">${p.stock_inve || 0} ${p.unidad_nombre || 'und'}</span>
+                <span style="font-size: 1.05rem; font-weight: 700; color: ${colors.badge}; line-height: 1;">${p.stock_inve || 0}</span>
+                <span style="font-size: 0.72rem; font-weight: 400; color: ${colors.text};"> ${p.unidad_nombre || 'und'}</span>
               </div>
               
               ${createdDate ? `<div class="text-muted" style="font-size: 0.65rem;"><i class="ri-calendar-line"></i> ${createdDate}</div>` : ''}
@@ -839,6 +842,22 @@
       clienteIdInput.value = client.id;
       document.getElementById('clientResults').style.display = 'none';
 
+      // Indicador de cliente seleccionado
+      const infoEl = document.getElementById('clienteSeleccionadoInfo');
+      if (client.id && parseInt(client.id) > 0) {
+        infoEl.innerHTML = `
+          <div class="alert alert-success py-2 mb-0">
+            <i class="ri-user-check-line me-1"></i>
+            <strong>Cliente:</strong> ${client.name}${client.ci ? ' — CI: ' + client.ci : ''}
+          </div>`;
+      } else {
+        infoEl.innerHTML = `
+          <div class="alert alert-secondary py-2 mb-0">
+            <i class="ri-user-line me-1"></i>
+            <strong>Consumidor Final</strong> — sin CI registrado
+          </div>`;
+      }
+
       const panel = document.getElementById('clientEditPanel');
       const clientDate = client.created_at ? client.created_at.substring(0, 10) : '';
       if (parseInt(client.user_id) === SESSION_USER_ID && clientDate === TODAY) {
@@ -926,6 +945,8 @@
             renderCart();
             updateSummary();
             clientSearch.value = '';
+            document.getElementById('clienteSeleccionadoInfo').innerHTML = '';
+            document.getElementById('clientEditPanel').style.display = 'none';
             montoRecibidoInput.value = '';
             cambioInput.value = 'Bs. 0.00';
             clienteIdInput.value = '';
