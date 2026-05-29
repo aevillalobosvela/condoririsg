@@ -22,7 +22,10 @@ class ReporteLacteos extends FPDF
     protected $wStock   = 18;
     protected $wReserva = 18;
     protected $wProd    = 20; // ancho por cada columna Stock y Cant.Prod
-    protected $wMA      = 10; // ancho compacto para columnas M. y Ag.
+    protected $wMA      = 6; // ancho mínimo MERMA/AGREGA (texto rotado + datos 0–999)
+
+    /** @var float Rotación activa en grados (FPDF) */
+    protected $angle = 0;
 
     // Altura de fila de datos
     protected $hRow = 6;
@@ -302,13 +305,28 @@ class ReporteLacteos extends FPDF
     // -------------------------------------------------------------------------
     // Cálculo dinámico de anchos
     // -------------------------------------------------------------------------
+    /**
+     * Ancho mínimo (mm) para columnas MERMA/AGREGA: grosor del texto rotado y valores de dato.
+     */
+    private function resolverAnchoColumnaMa(): float
+    {
+        $this->SetFont('Arial', 'B', 6);
+        $grosorTextoRotado = $this->FontSize * 0.352778 + 0.8;
+
+        $this->SetFont('Arial', '', 6);
+        $anchoDato = $this->GetStringWidth('999') + 1.0;
+
+        return max($grosorTextoRotado, $anchoDato, 5.0);
+    }
+
     private function calcularAnchos(int $numProductos): void
     {
         $pageW  = $this->GetPageWidth() - $this->lMargin - $this->rMargin;
         // Columnas fijas: sin AGREGA ni MERMA
         $wFijas = $this->wFecha + $this->wTurno + $this->wStock + $this->wReserva;
-        // Cada producto ocupa 4 columnas: Stock + Cant.Prod + M. + Ag.
-        // wMA fijo en 10mm; wProd calculado con el espacio restante
+        // MERMA/AGREGA: solo el ancho necesario (encabezado rotado + cifras)
+        $this->wMA = (int) ceil($this->resolverAnchoColumnaMa());
+        // Cada producto ocupa 4 columnas: Stock + Cant.Prod + MERMA + AGREGA
         $wMATotal   = $numProductos > 0 ? $numProductos * 2 * $this->wMA : 0;
         $wDinamica  = $pageW - $wFijas - $wMATotal;
 
@@ -316,16 +334,19 @@ class ReporteLacteos extends FPDF
             $this->wProd = max(12, floor($wDinamica / ($numProductos * 2)));
         }
 
-        // Si aún no cabe, reducir todo proporcionalmente
+        // Si no cabe: reducir solo FECHA/turno/stock/reserva y Stk/Prod (no MERMA/AGREGA)
         $totalUsado = $wFijas + ($numProductos * 2 * $this->wProd) + $wMATotal;
         if ($totalUsado > $pageW && $numProductos > 0) {
-            $factor = $pageW / $totalUsado;
-            $this->wFecha   = floor($this->wFecha   * $factor);
-            $this->wTurno   = floor($this->wTurno   * $factor);
-            $this->wStock   = floor($this->wStock   * $factor);
-            $this->wReserva = floor($this->wReserva * $factor);
-            $this->wProd    = floor($this->wProd    * $factor);
-            $this->wMA      = max(7, floor($this->wMA * $factor));
+            $wResto = $wFijas + ($numProductos * 2 * $this->wProd);
+            $espacioResto = $pageW - $wMATotal;
+            if ($wResto > 0 && $espacioResto > 0) {
+                $factor = $espacioResto / $wResto;
+                $this->wFecha   = max(14, (int) floor($this->wFecha   * $factor));
+                $this->wTurno   = max(8,  (int) floor($this->wTurno   * $factor));
+                $this->wStock   = max(12, (int) floor($this->wStock   * $factor));
+                $this->wReserva = max(12, (int) floor($this->wReserva * $factor));
+                $this->wProd    = max(10, (int) floor($this->wProd    * $factor));
+            }
         }
     }
 
@@ -353,7 +374,10 @@ class ReporteLacteos extends FPDF
     {
         $this->SetFont('Arial', 'B', 6);
 
-        // Calcular alto: máximo de líneas en etiquetas de producto (Stk y Prod)
+        // Alto del encabezado rotado (= longitud horizontal de la palabra más larga)
+        $altoEncabezadoRotado = $this->GetStringWidth(utf8_decode('AGREGA')) + 3;
+
+        // Alto según productos (Stk / Prod): solo palabras completas, sin rotar
         $maxLineas = 1;
         foreach ($productosUnicos as $nombre) {
             foreach ([utf8_decode($nombre) . ' Stk', utf8_decode($nombre) . ' Prod'] as $etiqueta) {
@@ -363,7 +387,11 @@ class ReporteLacteos extends FPDF
                 }
             }
         }
-        $this->hHeader = max(5 * $this->hHeaderLine + 4, $maxLineas * $this->hHeaderLine + 4);
+        $this->hHeader = max(
+            $altoEncabezadoRotado,
+            5 * $this->hHeaderLine + 4,
+            $maxLineas * $this->hHeaderLine + 4
+        );
 
         $yInicio = $this->GetY();
         $xInicio = $this->GetX();
@@ -384,12 +412,12 @@ class ReporteLacteos extends FPDF
         }
 
         $this->SetFont('Arial', 'B', 6);
-        // Columnas dinámicas: Stock | Cant.Prod | M. | Ag.
+        // Stock | Cant.Prod (horizontal); MERMA | AGREGA (rotadas 90°)
         foreach ($productosUnicos as $nombre) {
             $this->celdaMultilineaCentrada(utf8_decode($nombre) . ' Stk',  $this->wProd, $this->hHeader, $this->hHeaderLine, 93, 138, 138);
             $this->celdaMultilineaCentrada(utf8_decode($nombre) . ' Prod', $this->wProd, $this->hHeader, $this->hHeaderLine, 123, 164, 164);
-            $this->celdaMultilineaCentrada('M.',  $this->wMA, $this->hHeader, $this->hHeaderLine, 122, 106, 138);
-            $this->celdaMultilineaCentrada('Ag.', $this->wMA, $this->hHeader, $this->hHeaderLine, 122, 106, 138);
+            $this->celdaEncabezadoRotado('MERMA',  $this->wMA, $this->hHeader, 122, 106, 138);
+            $this->celdaEncabezadoRotado('AGREGA', $this->wMA, $this->hHeader, 122, 106, 138);
         }
 
         $this->SetTextColor(0, 0, 0);
@@ -400,6 +428,7 @@ class ReporteLacteos extends FPDF
     private function calcularAlturaEncabezado(array $productosUnicos): float
     {
         $this->SetFont('Arial', 'B', 6);
+        $altoEncabezadoRotado = $this->GetStringWidth(utf8_decode('AGREGA')) + 4;
         $maxLineas = 1;
         foreach ($productosUnicos as $nombre) {
             foreach ([utf8_decode($nombre) . ' Stk', utf8_decode($nombre) . ' Prod'] as $etiqueta) {
@@ -409,7 +438,128 @@ class ReporteLacteos extends FPDF
                 }
             }
         }
-        return max(5 * $this->hHeaderLine + 4, $maxLineas * $this->hHeaderLine + 4);
+        return max($altoEncabezadoRotado, 5 * $this->hHeaderLine + 4, $maxLineas * $this->hHeaderLine + 4);
+    }
+
+    /**
+     * @param float $angle Grados; 0 restaura la transformación
+     */
+    protected function Rotate(float $angle, float $x = -1, float $y = -1): void
+    {
+        if ($x === -1) {
+            $x = $this->GetX();
+        }
+        if ($y === -1) {
+            $y = $this->GetY();
+        }
+        if ($this->angle !== 0.0) {
+            $this->_out('Q');
+        }
+        $this->angle = $angle;
+        if ($angle !== 0.0) {
+            $angleRad = $angle * M_PI / 180;
+            $c = cos($angleRad);
+            $s = sin($angleRad);
+            $cx = $x * $this->k;
+            $cy = ($this->h - $y) * $this->k;
+            $this->_out(sprintf(
+                'q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm',
+                $c,
+                $s,
+                -$s,
+                $c,
+                $cx,
+                $cy,
+                -$cx,
+                -$cy
+            ));
+        }
+    }
+
+    protected function _endpage(): void
+    {
+        if ($this->angle !== 0.0) {
+            $this->angle = 0.0;
+            $this->_out('Q');
+        }
+        parent::_endpage();
+    }
+
+    /**
+     * Encabezado MERMA/AGREGA: columna estrecha con etiqueta rotada 90° y centrada.
+     */
+    private function celdaEncabezadoRotado(string $texto, float $w, float $hTotal, int $r, int $g, int $b): void
+    {
+        $x = $this->GetX();
+        $y = $this->GetY();
+
+        $this->SetFillColor($r, $g, $b);
+        $this->SetDrawColor(0, 0, 0);
+        $this->SetTextColor(255, 255, 255);
+        $this->SetFont('Arial', 'B', 6);
+
+        // Dibujar celda de fondo con borde
+        $this->SetXY($x, $y);
+        $this->Cell($w, $hTotal, '', 1, 0, 'C', true);
+
+        $etiqueta    = utf8_decode($texto);
+        $anchoTexto  = $this->GetStringWidth($etiqueta);
+        // Altura de la línea de texto en mm (tamaño de fuente en puntos → mm)
+        $alturaLinea = $this->FontSize / $this->k;
+
+        // Centro de la celda
+        $cx = $x + $w / 2;
+        $cy = $y + $hTotal / 2;
+
+        // Con rotación 90° alrededor de (cx, cy):
+        //   el eje X del texto apunta hacia arriba en la página
+        //   → para centrar horizontalmente: desplazar -anchoTexto/2 en el eje X rotado
+        //   → para centrar verticalmente:  desplazar -alturaLinea/2 en el eje Y rotado
+        $this->Rotate(90, $cx, $cy);
+        $this->Text($cx - $anchoTexto / 2, $cy + $alturaLinea / 2, $etiqueta);
+        $this->Rotate(0);
+
+        $this->SetTextColor(0, 0, 0);
+        $this->SetXY($x + $w, $y);
+    }
+
+    /**
+     * Parte el texto en líneas usando solo espacios; nunca corta palabras.
+     *
+     * @return list<string>
+     */
+    private function partirEnLineasPorPalabras(string $texto, float $w): array
+    {
+        $palabras = preg_split('/\s+/', trim($texto)) ?: [];
+        if ($palabras === []) {
+            return [''];
+        }
+
+        $lineas = [];
+        $lineaActual = '';
+
+        foreach ($palabras as $palabra) {
+            $prueba = $lineaActual === '' ? $palabra : $lineaActual . ' ' . $palabra;
+
+            if ($lineaActual !== '' && $this->GetStringWidth($prueba) > $w - 0.5) {
+                $lineas[] = $lineaActual;
+                $lineaActual = $palabra;
+                continue;
+            }
+
+            if ($lineaActual === '' && $this->GetStringWidth($palabra) > $w - 0.5) {
+                $lineas[] = $palabra;
+                continue;
+            }
+
+            $lineaActual = $prueba;
+        }
+
+        if ($lineaActual !== '') {
+            $lineas[] = $lineaActual;
+        }
+
+        return $lineas;
     }
 
     /**
@@ -425,18 +575,18 @@ class ReporteLacteos extends FPDF
         $this->SetFillColor($r, $g, $b);
         $this->Rect($x, $y, $w, $hTotal, 'DF');
 
-        // Calcular cuántas líneas ocupa el texto
-        $lineas   = $this->contarLineas($texto, $w);
-        $altoTexto = $lineas * $hLinea;
-        // Offset vertical para centrar
-        $offsetY  = ($hTotal - $altoTexto) / 2;
+        $lineas    = $this->partirEnLineasPorPalabras($texto, $w);
+        $altoTexto = count($lineas) * $hLinea;
+        $offsetY   = ($hTotal - $altoTexto) / 2;
 
-        // Posicionar y escribir con MultiCell
-        $this->SetXY($x, $y + $offsetY);
         $this->SetTextColor(255, 255, 255);
-        $this->MultiCell($w, $hLinea, $texto, 0, 'C');
+        $yLinea = $y + $offsetY;
+        foreach ($lineas as $linea) {
+            $this->SetXY($x, $yLinea);
+            $this->Cell($w, $hLinea, $linea, 0, 0, 'C');
+            $yLinea += $hLinea;
+        }
 
-        // Restaurar posición al lado derecho de la celda para continuar la fila
         $this->SetXY($x + $w, $y);
     }
 
@@ -445,22 +595,7 @@ class ReporteLacteos extends FPDF
      */
     private function contarLineas(string $texto, float $w): int
     {
-        // Ancho de un carácter promedio con fuente Arial Bold 7pt ≈ 1.8 mm
-        $charW    = $this->GetStringWidth('M'); // ancho de un carácter representativo
-        $charsMax = max(1, floor($w / $charW));
-        $palabras = explode(' ', $texto);
-        $linea    = '';
-        $lineas   = 1;
-        foreach ($palabras as $palabra) {
-            $prueba = $linea === '' ? $palabra : $linea . ' ' . $palabra;
-            if ($this->GetStringWidth($prueba) > $w - 1) {
-                $lineas++;
-                $linea = $palabra;
-            } else {
-                $linea = $prueba;
-            }
-        }
-        return $lineas;
+        return count($this->partirEnLineasPorPalabras($texto, $w));
     }
 
     private function filasDatos($inv, array $productos, array $productosUnicos, bool $esAmarillo, bool $bordeTop, bool $esPrimerDelDia, float $agrega = 0, float $merma = 0): void

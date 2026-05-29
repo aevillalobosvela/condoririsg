@@ -369,9 +369,6 @@ class ExportacionExcelService
 
         $style('header_ma', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuaves);
         $style('header_ma_sep', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuavesSep);
-        // Variantes con texto rotado 90° para nombres completos MERMA / AGREGA
-        $style('header_ma_rotado',     ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'rotate' => 90], null, $bordesSuaves);
-        $style('header_ma_sep_rotado', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'rotate' => 90], null, $bordesSuavesSep);
 
         $style('ma_amarillo', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuaves);
         $style('ma_amarillo_sep', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuavesSep);
@@ -434,6 +431,9 @@ class ExportacionExcelService
             if (!empty($config['alignment']['wrapText'])) {
                 $attrs[] = 'ss:WrapText="1"';
             }
+            if (isset($config['alignment']['rotate'])) {
+                $attrs[] = 'ss:Rotate="' . (int) $config['alignment']['rotate'] . '"';
+            }
             echo '<Alignment ' . implode(' ', $attrs) . '/>';
         }
 
@@ -487,8 +487,8 @@ class ExportacionExcelService
         foreach ($productosUnicos as $producto) {
             echo '<Column ss:Width="65"/>' . "\n";  // Stock
             echo '<Column ss:Width="65"/>' . "\n";  // Cant.Prod
-            echo '<Column ss:Width="42"/>' . "\n";  // Merma
-            echo '<Column ss:Width="42"/>' . "\n";  // Agrega
+            echo '<Column ss:Width="52"/>' . "\n";  // MERMA
+            echo '<Column ss:Width="52"/>' . "\n";  // AGREGA
         }
     }
 
@@ -520,7 +520,7 @@ class ExportacionExcelService
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">CANT. LECHE</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
 
-        // Columnas dinámicas: Stock | Cant.Prod | M. | Ag.
+        // Columnas dinámicas: Stock | Cant.Prod | MERMA | AGREGA (horizontal, wrap por palabra)
         $totalProductos = count($productosUnicos);
         $indice = 0;
         foreach ($productosUnicos as $producto) {
@@ -529,10 +529,10 @@ class ExportacionExcelService
 
             echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Stock</Data></Cell>';
             echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Cant.Prod</Data></Cell>';
-            echo '<Cell ss:StyleID="header_ma"><Data ss:Type="String">M.</Data></Cell>';
+            echo '<Cell ss:StyleID="header_ma"><Data ss:Type="String">MERMA</Data></Cell>';
 
             $estiloAg = $esUltimo ? 'header_ma' : 'header_ma_sep';
-            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">Ag.</Data></Cell>';
+            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">AGREGA</Data></Cell>';
 
             $indice++;
         }
