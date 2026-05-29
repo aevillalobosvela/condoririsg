@@ -120,6 +120,7 @@ class InventarioModel extends Model
     public function getResumen($fechaInicio = null, $fechaFin = null)
     {
         $builder = $this->builder();
+        $builder->where('deleted_at', null);
         $builder->select('COUNT(*) as total_registros, SUM(stock) as total_stock_producido');
 
         if (!empty($fechaInicio) && !empty($fechaFin)) {
@@ -132,13 +133,16 @@ class InventarioModel extends Model
 
     public function getResumenPorNombre1($fechaInicio = null, $fechaFin = null)
     {
-        $builder = $this->db->table('condoriri.productos');
-        $builder->select('nombre, COUNT(*) as cantidad, SUM(stock) as total_producido, SUM(stock_inve) as total_stock_actual')
-                ->groupBy('nombre');
+        $builder = $this->db->table('condoriri.productos as p');
+        $builder->select('p.nombre, COUNT(p.id) as cantidad, SUM(p.stock) as total_producido, SUM(p.stock_inve) as total_stock_actual')
+                ->join('condoriri.inventarios as i', 'i.id = p.inventario_id')
+                ->where('p.deleted_at', null)
+                ->where('i.deleted_at', null)
+                ->groupBy('p.nombre');
 
         if (!empty($fechaInicio) && !empty($fechaFin)) {
-            $builder->where('created_at >=', $fechaInicio)
-                    ->where('created_at <=', $fechaFin . ' 23:59:59');
+            $builder->where('p.created_at >=', $fechaInicio)
+                    ->where('p.created_at <=', $fechaFin . ' 23:59:59');
         }
 
         return $builder->get()->getResult();
@@ -147,15 +151,18 @@ class InventarioModel extends Model
     
     public function getResumenPorNombre($fechaInicio = null, $fechaFin = null)
     {
-        $builder = $this->db->table('condoriri.productos');
-        $builder->select('nombre, COUNT(*) as cantidad, SUM(stock) as total_producido, SUM(stock_inve) as total_stock_actual')
-                ->groupBy('nombre');
+        $builder = $this->db->table('condoriri.productos as p');
+        $builder->select('p.nombre, COUNT(p.id) as cantidad, SUM(p.stock) as total_producido, SUM(p.stock_inve) as total_stock_actual')
+                ->join('condoriri.inventarios as i', 'i.id = p.inventario_id')
+                ->where('p.deleted_at', null)
+                ->where('i.deleted_at', null)
+                ->groupBy('p.nombre');
 
         if (!empty($fechaInicio)) {
-            $builder->where('created_at >=', $fechaInicio);
+            $builder->where('p.created_at >=', $fechaInicio);
         }
         if (!empty($fechaFin)) {
-            $builder->where('created_at <=', $fechaFin . ' 23:59:59');
+            $builder->where('p.created_at <=', $fechaFin . ' 23:59:59');
         }    
 
     

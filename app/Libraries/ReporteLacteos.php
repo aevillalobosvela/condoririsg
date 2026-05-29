@@ -251,6 +251,12 @@ class ReporteLacteos extends FPDF
         }
         $lista = array_keys($set);
         sort($lista);
+        $idx = array_search('LECHE', $lista);
+        if ($idx !== false) {
+            unset($lista[$idx]);
+            $lista = array_values($lista);
+            array_unshift($lista, 'LECHE');
+        }
         return $lista;
     }
 

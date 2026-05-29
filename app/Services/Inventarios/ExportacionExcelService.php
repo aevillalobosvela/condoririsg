@@ -99,6 +99,12 @@ class ExportacionExcelService
 
         $productosUnicos = array_keys($productosSet);
         sort($productosUnicos); // Ordenar alfabéticamente
+        $idx = array_search('LECHE', $productosUnicos);
+        if ($idx !== false) {
+            unset($productosUnicos[$idx]);
+            $productosUnicos = array_values($productosUnicos);
+            array_unshift($productosUnicos, 'LECHE');
+        }
 
         return $productosUnicos;
     }

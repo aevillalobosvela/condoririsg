@@ -171,6 +171,7 @@ class ProductoModel extends Model
                     ->join('condoriri.categorias', 'condoriri.categorias.id = condoriri.productos.categoria_id')
                     ->join('condoriri.unidades', 'condoriri.unidades.id = condoriri.productos.unidad_id')
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->findAll();
     }
     
@@ -182,6 +183,7 @@ class ProductoModel extends Model
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
                     ->join('condoriri.usuarios', 'condoriri.usuarios.id = condoriri.productos.user_id')
                     ->where('condoriri.productos.id', $id)
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->first();
     }
     
@@ -219,7 +221,8 @@ class ProductoModel extends Model
         $this->select('condoriri.productos.*, categorias.nombre as categoria_nombre, unidades.nombre as unidad_nombre, inventarios.nombre as inventario_nombre')
              ->join('condoriri.categorias', 'condoriri.categorias.id = condoriri.productos.categoria_id')
              ->join('condoriri.unidades', 'condoriri.unidades.id = condoriri.productos.unidad_id')
-             ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id');
+             ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
+             ->where('condoriri.inventarios.deleted_at', null);
 
         if (!empty($filters['categoria_id'])) {
             $this->where('productos.categoria_id', $filters['categoria_id']);
@@ -278,8 +281,10 @@ class ProductoModel extends Model
             p.categoria_id,
             p.unidad_id
         ')
-        ->join('condoriri.productos p', 'p.id = i.producto_id')
-        ->where('i.sucursal_id', $sucursalId);
+        ->join('condoriri.productos p', 'p.inventario_id = i.id')
+        ->where('i.sucursal_id', $sucursalId)
+        ->where('i.deleted_at', null)
+        ->where('p.deleted_at', null);
 
     if ($query) {
         $builder->groupStart()
@@ -300,6 +305,7 @@ class ProductoModel extends Model
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
                     ->join('condoriri.usuarios', 'condoriri.usuarios.id = condoriri.productos.user_id')
                     ->where('condoriri.productos.id', $id)
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->first();
     } catch (\Exception $e) {
         log_message('error', 'Error al obtener producto con relaciones: ' . $e->getMessage());
