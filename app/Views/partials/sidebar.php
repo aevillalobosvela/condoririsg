@@ -293,6 +293,7 @@ $userRoleName = session()->get('rol_nombre');
               <ul class="nav nav-sm flex-column">
                 <li class="nav-item"><a href="<?= base_url('inventarios/ventas') ?>" class="nav-link">Gestionar Ventas</a>
                 </li>
+                <li class="nav-item"><a href="<?= base_url('cliente/lista') ?>" class="nav-link">Clientes</a></li>
               </ul>
             </div>
           </li>
