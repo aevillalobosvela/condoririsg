@@ -511,6 +511,44 @@
       return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
     }
 
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono Remix Icon por categoría/nombre
+    function getCategoryIcon(nombre, categoria) {
+      const n = (nombre || '').toUpperCase();
+      const c = (categoria || '').toUpperCase();
+      if (c === 'TUBERCULOS')    return 'ri-plant-line';
+      if (c === 'HORTALIZAS')    return 'ri-leaf-line';
+      if (c === 'CEREALES')      return 'ri-seedling-line';
+      if (c === 'LEGUMINOSAS')   return 'ri-seedling-line';
+      if (c === 'DESHIDRATADOS') return 'ri-sun-line';
+      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return 'ri-bowl-line';
+      if (n.includes('LECHE'))                               return 'ri-drop-line';
+      if (n.includes('QUESO'))                               return 'ri-cake-2-line';
+      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return 'ri-cup-line';
+      return 'ri-shopping-basket-line';
+    }
+
+    // Resuelve imagen con cadena de prioridad (niveles 2 y 4 para agro)
+    function getProductImage(nombre, categoria) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(nombre, categoria) };
+    }
+
     function renderProducts(nameFilter = '', catFilter = '') {
       const filtered = allProducts.filter(p =>
         p.producto.toLowerCase().includes(nameFilter.toLowerCase()) &&
@@ -533,10 +571,23 @@
              data-categoria="${(p.categoria||'').toUpperCase()}">
           <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
             <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
-              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width:56px;height:56px;background-color:${c.border};">
-                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
-              </div>
+              ${
+                (() => {
+                  const img = getProductImage(p.producto, p.categoria);
+                  if (img.type === 'url') {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
+                         style="width:72px;height:72px;background-color:${c.border};">
+                      <img src="${img.src}" alt="${p.producto}"
+                           style="width:100%;height:100%;object-fit:cover;">
+                    </div>`;
+                  } else {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                         style="width:72px;height:72px;background-color:${c.border};color:#fff;">
+                      <i class="${img.icon}" style="font-size:1.8rem;"></i>
+                    </div>`;
+                  }
+                })()
+              }
               <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
                 <span class="fw-bold" style="color:${c.border};font-size:0.88rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>

@@ -567,6 +567,25 @@
     // Cache: num -> url resuelta (png, jpg, o null)
     const resolvedImages = {};
 
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono Remix Icon por categoría/nombre
+    function getCategoryIcon(nombre) {
+      const n = (nombre || '').toUpperCase();
+      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return 'ri-bowl-line';
+      if (n.includes('LECHE'))                               return 'ri-drop-line';
+      if (n.includes('QUESO'))                               return 'ri-cake-2-line';
+      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return 'ri-cup-line';
+      return 'ri-shopping-basket-line';
+    }
+
     function probeImage(url) {
       return new Promise(resolve => {
         const img = new Image();
@@ -586,10 +605,28 @@
       }));
     }
 
-    function getProductImage(nombre) {
-      const num = IMAGE_MAP[nombre.toUpperCase().trim()];
-      if (!num) return null;
-      return resolvedImages[num] ?? null; // ya resuelta o null
+    // Resuelve imagen con cadena de prioridad de 4 niveles
+    function getProductImage(nombre, imagenBD) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario en BD
+      if (imagenBD && imagenBD !== 'jpg') {
+        return { type: 'url', src: '<?= base_url() ?>' + imagenBD };
+      }
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 3: imagen servidor externo UTO
+      const num = IMAGE_MAP[key];
+      if (num && resolvedImages[num]) {
+        return { type: 'url', src: resolvedImages[num] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(nombre) };
     }
 
     // Función para detectar tipo de producto y asignar colores
@@ -651,17 +688,17 @@
               <!-- Icono circular o Imagen -->
               ${
                 (() => {
-                  const imgUrl = getProductImage(p.producto);
-                  if (imgUrl) {
+                  const img = getProductImage(p.producto, p.imagen ?? null);
+                  if (img.type === 'url') {
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
                        style="width: 90px; height: 90px; background-color: ${colors.border};">
-                      <img src="${imgUrl}" alt="${p.producto}"
+                      <img src="${img.src}" alt="${p.producto}"
                            style="width: 100%; height: 100%; object-fit: cover;">
                     </div>`;
                   } else {
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
                        style="width: 90px; height: 90px; background-color: ${colors.border}; color: white;">
-                      <span class="fw-bold" style="font-size: 0.9rem;">${p.producto.substring(0,2)}</span>
+                      <i class="${img.icon}" style="font-size: 2rem;"></i>
                     </div>`;
                   }
                 })()
