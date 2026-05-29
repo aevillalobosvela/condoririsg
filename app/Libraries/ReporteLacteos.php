@@ -19,7 +19,6 @@ class ReporteLacteos extends FPDF
     // Anchos de columna calculados dinámicamente
     protected $wFecha   = 22;
     protected $wTurno   = 12;
-    protected $wNombre  = 21;
     protected $wStock   = 18;
     protected $wReserva = 18;
     protected $wProd    = 20; // ancho por cada columna Stock y Cant.Prod
@@ -100,7 +99,10 @@ class ReporteLacteos extends FPDF
         // 2. Calcular anchos dinámicos según número de productos
         $this->calcularAnchos(count($productosUnicos));
 
-        // 3. Preparar datos con productos agrupados
+        // 3. Ordenar ascendente: más antiguo primero, AM antes que PM dentro del día
+        $inventarios = $this->ordenarAscendente($inventarios);
+
+        // 4. Preparar datos con productos agrupados
         $datosConProductos = $this->prepararDatos($inventarios, $productosUnicos, $productoModel);
 
         // 4. Generar contenido
@@ -206,6 +208,32 @@ class ReporteLacteos extends FPDF
     // -------------------------------------------------------------------------
     // Helpers de datos (misma lógica que ExportacionExcelService)
     // -------------------------------------------------------------------------
+    private function ordenarAscendente(array $inventarios): array
+    {
+        usort($inventarios, static function ($a, $b) {
+            $fechaA = date('Y-m-d', strtotime($a->created_at));
+            $fechaB = date('Y-m-d', strtotime($b->created_at));
+
+            if ($fechaA !== $fechaB) {
+                return strcmp($fechaA, $fechaB); // ascendente: más antiguo primero
+            }
+
+            $turnoOrden = ['AM' => 0, 'PM' => 1];
+            $turnoA = strtoupper(trim($a->turno ?? 'AM'));
+            $turnoB = strtoupper(trim($b->turno ?? 'AM'));
+            $ordenA = $turnoOrden[$turnoA] ?? 99;
+            $ordenB = $turnoOrden[$turnoB] ?? 99;
+
+            if ($ordenA !== $ordenB) {
+                return $ordenA <=> $ordenB;
+            }
+
+            return strtotime($a->created_at) <=> strtotime($b->created_at); // ascendente
+        });
+
+        return $inventarios;
+    }
+
     private function obtenerProductosUnicos(array $inventarios, ProductoModel $productoModel): array
     {
         $set = [];
@@ -278,7 +306,7 @@ class ReporteLacteos extends FPDF
     {
         $pageW  = $this->GetPageWidth() - $this->lMargin - $this->rMargin;
         // Columnas fijas: sin AGREGA ni MERMA
-        $wFijas = $this->wFecha + $this->wTurno + $this->wNombre + $this->wStock + $this->wReserva;
+        $wFijas = $this->wFecha + $this->wTurno + $this->wStock + $this->wReserva;
         // Cada producto ocupa 4 columnas: Stock + Cant.Prod + M. + Ag.
         // wMA fijo en 10mm; wProd calculado con el espacio restante
         $wMATotal   = $numProductos > 0 ? $numProductos * 2 * $this->wMA : 0;
@@ -294,7 +322,6 @@ class ReporteLacteos extends FPDF
             $factor = $pageW / $totalUsado;
             $this->wFecha   = floor($this->wFecha   * $factor);
             $this->wTurno   = floor($this->wTurno   * $factor);
-            $this->wNombre  = floor($this->wNombre  * $factor);
             $this->wStock   = floor($this->wStock   * $factor);
             $this->wReserva = floor($this->wReserva * $factor);
             $this->wProd    = floor($this->wProd    * $factor);
@@ -307,7 +334,7 @@ class ReporteLacteos extends FPDF
     // -------------------------------------------------------------------------
     private function anchoTotal(int $numProductos): float
     {
-        return $this->wFecha + $this->wTurno + $this->wNombre + $this->wStock
+        return $this->wFecha + $this->wTurno + $this->wStock
              + $this->wReserva
              + ($numProductos * (2 * $this->wProd + 2 * $this->wMA));
     }
@@ -346,11 +373,10 @@ class ReporteLacteos extends FPDF
         $this->SetTextColor(255, 255, 255);
 
         $fijas = [
-            ['FECHA',     $this->wFecha],
-            ['TURNO',     $this->wTurno],
-            ['NOMBRE',    $this->wNombre],
-            ['STOCK (L)', $this->wStock],
-            ['RESERVA',   $this->wReserva],
+            ['FECHA',        $this->wFecha],
+            ['TURNO',        $this->wTurno],
+            ['CANT. LECHE',  $this->wStock],
+            ['RESERVA',      $this->wReserva],
         ];
 
         foreach ($fijas as [$label, $w]) {
@@ -458,9 +484,8 @@ class ReporteLacteos extends FPDF
         $this->SetFont('Arial', '', 7);
 
         $fecha = $esPrimerDelDia ? utf8_decode(date('d-M-y', strtotime($inv->created_at))) : '';
-        $this->Cell($this->wFecha,   $this->hRow, $fecha,                                              1, 0, 'C', true);
-        $this->Cell($this->wTurno,   $this->hRow, strtoupper($inv->turno ?? 'AM'),                     1, 0, 'C', true);
-        $this->Cell($this->wNombre,  $this->hRow, utf8_decode($this->truncar($inv->nombre ?? '', 18)), 1, 0, 'L', true);
+        $this->Cell($this->wFecha,   $this->hRow, $fecha,                                1, 0, 'C', true);
+        $this->Cell($this->wTurno,   $this->hRow, strtoupper($inv->turno ?? 'AM'),       1, 0, 'C', true);
 
         $this->SetFont('Arial', 'B', 7);
         $this->Cell($this->wStock,   $this->hRow, number_format($inv->stock   ?? 0, 2), 1, 0, 'C', true);
@@ -878,7 +903,6 @@ class ReporteLacteos extends FPDF
         $this->SetFont('Arial', 'B', 7);
         $this->Cell($this->wFecha,   $this->hRow, utf8_decode('TOTAL MES'), 1, 0, 'C', true);
         $this->Cell($this->wTurno,   $this->hRow, '', 1, 0, 'C', true);
-        $this->Cell($this->wNombre,  $this->hRow, '', 1, 0, 'C', true);
         $this->Cell($this->wStock,   $this->hRow, number_format($sumStock,   2), 1, 0, 'C', true);
         $this->Cell($this->wReserva, $this->hRow, number_format($sumReserva, 2), 1, 0, 'C', true);
 

@@ -144,7 +144,7 @@ class ExportacionExcelService
             $fechaB = date('Y-m-d', strtotime($b->created_at));
 
             if ($fechaA !== $fechaB) {
-                return strcmp($fechaB, $fechaA);
+                return strcmp($fechaA, $fechaB); // ascendente: más antiguo primero
             }
 
             $turnoOrden = ['AM' => 0, 'PM' => 1];
@@ -157,7 +157,7 @@ class ExportacionExcelService
                 return $ordenA <=> $ordenB;
             }
 
-            return strtotime($b->created_at) <=> strtotime($a->created_at);
+            return strtotime($a->created_at) <=> strtotime($b->created_at); // ascendente
         });
 
         return $inventarios;
@@ -266,7 +266,7 @@ class ExportacionExcelService
 
         $this->definirAnchos($productosUnicos);
 
-        $totalColumnas = 5 + (count($productosUnicos) * 4) - 1;
+        $totalColumnas = 4 + (count($productosUnicos) * 4) - 1;
         echo '<Row ss:Height="25">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="titulo"><Data ss:Type="String">REPORTE GENERAL</Data></Cell>';
         echo '</Row>' . "\n";
@@ -369,6 +369,9 @@ class ExportacionExcelService
 
         $style('header_ma', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuaves);
         $style('header_ma_sep', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuavesSep);
+        // Variantes con texto rotado 90° para nombres completos MERMA / AGREGA
+        $style('header_ma_rotado',     ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'rotate' => 90], null, $bordesSuaves);
+        $style('header_ma_sep_rotado', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'rotate' => 90], null, $bordesSuavesSep);
 
         $style('ma_amarillo', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuaves);
         $style('ma_amarillo_sep', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuavesSep);
@@ -477,8 +480,7 @@ class ExportacionExcelService
     {
         echo '<Column ss:Width="80"/>' . "\n";  // FECHA
         echo '<Column ss:Width="50"/>' . "\n";  // TURNO
-        echo '<Column ss:Width="120"/>' . "\n"; // NOMBRE
-        echo '<Column ss:Width="70"/>' . "\n";  // STOCK (L)
+        echo '<Column ss:Width="70"/>' . "\n";  // CANT. LECHE
         echo '<Column ss:Width="70"/>' . "\n";  // RESERVA
 
         // Columnas dinámicas de productos: Stock | Cant.Prod | Merma | Agrega
@@ -515,8 +517,7 @@ class ExportacionExcelService
         // Columnas fijas (sin AGREGA ni MERMA)
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">TURNO</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">NOMBRE</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">STOCK (L)</Data></Cell>';
+        echo '<Cell ss:StyleID="header"><Data ss:Type="String">CANT. LECHE</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
 
         // Columnas dinámicas: Stock | Cant.Prod | M. | Ag.
@@ -558,7 +559,7 @@ class ExportacionExcelService
             $datosPorMes[$mes][] = $dato;
         }
 
-        $totalColumnas = 5 + (count($productosUnicos) * 4) - 1;
+        $totalColumnas = 4 + (count($productosUnicos) * 4) - 1;
         $primerMes = true;
 
         foreach ($datosPorMes as $mes => $datosDelMes) {
@@ -632,7 +633,6 @@ class ExportacionExcelService
 
                 $turno = strtoupper($inv->turno ?? 'AM');
                 echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($turno, ENT_XML1) . '</Data></Cell>';
-                echo '<Cell ss:StyleID="' . $estiloCelda . '"><Data ss:Type="String">' . htmlspecialchars($inv->nombre ?? '', ENT_XML1) . '</Data></Cell>';
                 echo '<Cell ss:StyleID="' . $estiloNegrita . '"><Data ss:Type="Number">' . number_format($inv->stock ?? 0, 2, '.', '') . '</Data></Cell>';
                 echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($inv->reserva ?? 0, 2, '.', '') . '</Data></Cell>';
 
