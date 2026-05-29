@@ -369,6 +369,9 @@ class ExportacionExcelService
 
         $style('header_ma', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuaves);
         $style('header_ma_sep', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuavesSep);
+        // Variantes con texto rotado 90° para MERMA / AGREGA
+        $style('header_ma_rotado',     ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'verticalText' => true], null, $bordesSuaves);
+        $style('header_ma_sep_rotado', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'verticalText' => true], null, $bordesSuavesSep);
 
         $style('ma_amarillo', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuaves);
         $style('ma_amarillo_sep', ['size' => 9, 'color' => '#5A4A6A', 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuavesSep);
@@ -431,8 +434,14 @@ class ExportacionExcelService
             if (!empty($config['alignment']['wrapText'])) {
                 $attrs[] = 'ss:WrapText="1"';
             }
+            if (!empty($config['alignment']['verticalText'])) {
+                $attrs[] = 'ss:VerticalText="1"';
+            }
             if (isset($config['alignment']['rotate'])) {
                 $attrs[] = 'ss:Rotate="' . (int) $config['alignment']['rotate'] . '"';
+            }
+            if (isset($config['alignment']['textRotation'])) {
+                $attrs[] = 'ss:TextRotation="' . (int) $config['alignment']['textRotation'] . '"';
             }
             echo '<Alignment ' . implode(' ', $attrs) . '/>';
         }
@@ -512,7 +521,7 @@ class ExportacionExcelService
      */
     private function generarEncabezados($productosUnicos)
     {
-        echo '<Row ss:Height="50">' . "\n";
+        echo '<Row ss:Height="95">' . "\n";
 
         // Columnas fijas (sin AGREGA ni MERMA)
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
@@ -520,7 +529,7 @@ class ExportacionExcelService
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">CANT. LECHE</Data></Cell>';
         echo '<Cell ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
 
-        // Columnas dinámicas: Stock | Cant.Prod | MERMA | AGREGA (horizontal, wrap por palabra)
+        // Columnas dinámicas: Stock | Cant.Prod | MERMA | AGREGA (MERMA/AGREGA rotadas 90°)
         $totalProductos = count($productosUnicos);
         $indice = 0;
         foreach ($productosUnicos as $producto) {
@@ -529,9 +538,9 @@ class ExportacionExcelService
 
             echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Stock</Data></Cell>';
             echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Cant.Prod</Data></Cell>';
-            echo '<Cell ss:StyleID="header_ma"><Data ss:Type="String">MERMA</Data></Cell>';
+            echo '<Cell ss:StyleID="header_ma_rotado"><Data ss:Type="String">MERMA</Data></Cell>';
 
-            $estiloAg = $esUltimo ? 'header_ma' : 'header_ma_sep';
+            $estiloAg = $esUltimo ? 'header_ma_rotado' : 'header_ma_sep_rotado';
             echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">AGREGA</Data></Cell>';
 
             $indice++;
