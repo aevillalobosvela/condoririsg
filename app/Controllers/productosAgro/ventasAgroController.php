@@ -379,7 +379,7 @@ class ventasAgroController extends BaseController
         $sucursal = (int) session()->get('sucursal_id');
         $db = \Config\Database::connect();
         $q = $db->query(
-            'SELECT pa.*, u.nombre AS unidad_nombre
+            'SELECT pa.*, pa.imagen, u.nombre AS unidad_nombre
              FROM condoriri.productos_agro pa
              LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
              WHERE pa.fecha_delete IS NULL

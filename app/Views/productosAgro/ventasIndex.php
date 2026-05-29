@@ -230,11 +230,8 @@
           <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
           <select id="categoryFilter" class="form-select" style="max-width:160px;">
             <option value="">Todas las categorías</option>
-            <option value="TUBERCULOS">Tubérculos</option>
-            <option value="HORTALIZAS">Hortalizas</option>
-            <option value="DESHIDRATADOS">Deshidratados</option>
-            <option value="CEREALES">Cereales</option>
-            <option value="LEGUMINOSAS">Leguminosas</option>
+            <option value="AGRICOLA">Agrícola</option>
+            <option value="PECUARIO">Pecuario</option>
           </select>
         </div>
 
@@ -500,12 +497,9 @@
 
     // Colores por categoría (mismo esquema que el formulario)
     const CAT_COLORS = {
-      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
-      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
-      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
-      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
-      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
-      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+      'AGRICOLA':  { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'PECUARIO':  { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'DEFAULT':   { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
     };
     function getCatColor(cat) {
       return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
@@ -520,25 +514,25 @@
       'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
     };
 
+    // Base URL para imágenes subidas por usuario
+    const BASE_URL = '<?= base_url() ?>';
+
     // Nivel 4: ícono Remix Icon por categoría/nombre
     function getCategoryIcon(nombre, categoria) {
-      const n = (nombre || '').toUpperCase();
       const c = (categoria || '').toUpperCase();
-      if (c === 'TUBERCULOS')    return 'ri-plant-line';
-      if (c === 'HORTALIZAS')    return 'ri-leaf-line';
-      if (c === 'CEREALES')      return 'ri-seedling-line';
-      if (c === 'LEGUMINOSAS')   return 'ri-seedling-line';
-      if (c === 'DESHIDRATADOS') return 'ri-sun-line';
-      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return 'ri-bowl-line';
-      if (n.includes('LECHE'))                               return 'ri-drop-line';
-      if (n.includes('QUESO'))                               return 'ri-cake-2-line';
-      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return 'ri-cup-line';
-      return 'ri-shopping-basket-line';
+      if (c === 'AGRICOLA') return { type: 'ri', value: 'ri-plant-line' };
+      if (c === 'PECUARIO') return { type: 'ri', value: 'ri-bear-smile-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
     }
 
-    // Resuelve imagen con cadena de prioridad (niveles 2 y 4 para agro)
-    function getProductImage(nombre, categoria) {
+    // Resuelve imagen con cadena de prioridad (niveles 1, 2 y 4 para agro)
+    function getProductImage(nombre, categoria, imagenBD) {
       const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario (campo imagen en BD)
+      if (imagenBD && imagenBD !== null && imagenBD !== '') {
+        return { type: 'url', src: BASE_URL + imagenBD };
+      }
 
       // Nivel 2: imagen local por nombre
       if (LOCAL_IMAGE_MAP[key]) {
@@ -573,7 +567,7 @@
             <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
               ${
                 (() => {
-                  const img = getProductImage(p.producto, p.categoria);
+                  const img = getProductImage(p.producto, p.categoria, p.imagen ?? null);
                   if (img.type === 'url') {
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
                          style="width:72px;height:72px;background-color:${c.border};">
@@ -581,9 +575,13 @@
                            style="width:100%;height:100%;object-fit:cover;">
                     </div>`;
                   } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size:1.8rem;"></i>`;
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
                          style="width:72px;height:72px;background-color:${c.border};color:#fff;">
-                      <i class="${img.icon}" style="font-size:1.8rem;"></i>
+                      ${inner}
                     </div>`;
                   }
                 })()

@@ -576,14 +576,14 @@
       'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
     };
 
-    // Nivel 4: ícono Remix Icon por categoría/nombre
+    // Nivel 4: ícono/svg por categoría/nombre
     function getCategoryIcon(nombre) {
       const n = (nombre || '').toUpperCase();
-      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return 'ri-bowl-line';
-      if (n.includes('LECHE'))                               return 'ri-drop-line';
-      if (n.includes('QUESO'))                               return 'ri-cake-2-line';
-      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return 'ri-cup-line';
-      return 'ri-shopping-basket-line';
+      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return { type: 'ri', value: 'ri-bowl-line' };
+      if (n.includes('LECHE'))                               return { type: 'ri', value: 'ri-drop-line' };
+      if (n.includes('QUESO'))                               return { type: 'svg', value: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36"><path d="M2 19h20v2H2v-2zm1.5-9L12 3l8.5 7H3.5zm3.3 1a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm7 2a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0zm2-4a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg>' };
+      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return { type: 'ri', value: 'ri-cup-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
     }
 
     function probeImage(url) {
@@ -696,9 +696,13 @@
                            style="width: 100%; height: 100%; object-fit: cover;">
                     </div>`;
                   } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size: 2rem;"></i>`;
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
                        style="width: 90px; height: 90px; background-color: ${colors.border}; color: white;">
-                      <i class="${img.icon}" style="font-size: 2rem;"></i>
+                      ${inner}
                     </div>`;
                   }
                 })()

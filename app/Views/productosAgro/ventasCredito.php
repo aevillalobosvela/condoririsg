@@ -217,11 +217,8 @@
           <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
           <select id="categoryFilter" class="form-select" style="max-width:160px;">
             <option value="">Todas las categorías</option>
-            <option value="TUBERCULOS">Tubérculos</option>
-            <option value="HORTALIZAS">Hortalizas</option>
-            <option value="DESHIDRATADOS">Deshidratados</option>
-            <option value="CEREALES">Cereales</option>
-            <option value="LEGUMINOSAS">Leguminosas</option>
+            <option value="AGRICOLA">Agrícola</option>
+            <option value="PECUARIO">Pecuario</option>
           </select>
         </div>
    
@@ -659,15 +656,50 @@
 
     // Colores por categoría (mismo esquema que el formulario)
     const CAT_COLORS = {
-      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
-      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
-      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
-      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
-      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
-      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+      'AGRICOLA': { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'PECUARIO': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'DEFAULT':  { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
     };
     function getCatColor(cat) {
       return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
+    }
+
+    // Base URL para imágenes subidas por usuario
+    const BASE_URL = '<?= base_url() ?>';
+
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono Remix Icon por categoría
+    function getCategoryIcon(categoria) {
+      const c = (categoria || '').toUpperCase();
+      if (c === 'AGRICOLA') return { type: 'ri', value: 'ri-plant-line' };
+      if (c === 'PECUARIO') return { type: 'ri', value: 'ri-bear-smile-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
+    }
+
+    // Resuelve imagen con cadena de prioridad (niveles 1, 2 y 4)
+    function getProductImage(nombre, categoria, imagenBD) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario (campo imagen en BD)
+      if (imagenBD && imagenBD !== null && imagenBD !== '') {
+        return { type: 'url', src: BASE_URL + imagenBD };
+      }
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(categoria) };
     }
 
     // --- FUNCIONES DE PRODUCTOS Y CARRITO ---
@@ -694,15 +726,35 @@
              data-categoria="${(p.categoria||'').toUpperCase()}">
           <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
             <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
-              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width:56px;height:56px;background-color:${c.border};">
-                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
-              </div>
+              ${
+                (() => {
+                  const img = getProductImage(p.producto, p.categoria, p.imagen ?? null);
+                  if (img.type === 'url') {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
+                         style="width:72px;height:72px;background-color:${c.border};">
+                      <img src="${img.src}" alt="${p.producto}"
+                           style="width:100%;height:100%;object-fit:cover;">
+                    </div>`;
+                  } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size:1.8rem;"></i>`;
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                         style="width:72px;height:72px;background-color:${c.border};color:#fff;">
+                      ${inner}
+                    </div>`;
+                  }
+                })()
+              }
               <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.88rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
+              <div class="mb-1">
+                <span style="font-size:1.05rem;font-weight:700;color:${c.border};line-height:1;">${p.cantidad_inve}</span>
+                <span style="font-size:0.72rem;font-weight:400;color:${c.text};"> ${p.unidad_nombre || 'und'}</span>
+              </div>
             </div>
           </div>
         </div>`;
