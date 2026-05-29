@@ -117,6 +117,14 @@ class ExportacionExcelService
     }
 
     /**
+     * Productos "simples": una sola columna de cantidad_produccion, sin Stock, MERMA ni AGREGA.
+     */
+    private function esProductoSimple(string $nombre): bool
+    {
+        return strtoupper(trim($nombre)) === 'LECHE';
+    }
+
+    /**
      * Agrupar inventarios por día
      */
     private function agruparInventariosPorDia($inventarios)
@@ -266,7 +274,9 @@ class ExportacionExcelService
 
         $this->definirAnchos($productosUnicos);
 
-        $totalColumnas = 4 + (count($productosUnicos) * 4) - 1;
+        $simples   = array_filter($productosUnicos, fn($p) => $this->esProductoSimple($p));
+        $complejos = array_filter($productosUnicos, fn($p) => !$this->esProductoSimple($p));
+        $totalColumnas = 4 + count($simples) + (count($complejos) * 4) - 1;
         echo '<Row ss:Height="25">';
         echo '<Cell ss:MergeAcross="' . $totalColumnas . '" ss:StyleID="titulo"><Data ss:Type="String">REPORTE GENERAL</Data></Cell>';
         echo '</Row>' . "\n";
@@ -492,12 +502,16 @@ class ExportacionExcelService
         echo '<Column ss:Width="70"/>' . "\n";  // CANT. LECHE
         echo '<Column ss:Width="70"/>' . "\n";  // RESERVA
 
-        // Columnas dinámicas de productos: Stock | Cant.Prod | Merma | Agrega
+        // Columnas dinámicas: simples → 1 col, complejos → 4 cols (Stock | Cant.Prod | MERMA | AGREGA)
         foreach ($productosUnicos as $producto) {
-            echo '<Column ss:Width="65"/>' . "\n";  // Stock
-            echo '<Column ss:Width="65"/>' . "\n";  // Cant.Prod
-            echo '<Column ss:Width="52"/>' . "\n";  // MERMA
-            echo '<Column ss:Width="52"/>' . "\n";  // AGREGA
+            if ($this->esProductoSimple($producto)) {
+                echo '<Column ss:Width="65"/>' . "\n";  // LECHE (L)
+            } else {
+                echo '<Column ss:Width="65"/>' . "\n";  // Stock
+                echo '<Column ss:Width="65"/>' . "\n";  // Cant.Prod
+                echo '<Column ss:Width="52"/>' . "\n";  // MERMA
+                echo '<Column ss:Width="52"/>' . "\n";  // AGREGA
+            }
         }
     }
 
@@ -521,31 +535,50 @@ class ExportacionExcelService
      */
     private function generarEncabezados($productosUnicos)
     {
-        echo '<Row ss:Height="95">' . "\n";
+        // Fila 1 del encabezado
+        echo '<Row ss:Height="65">' . "\n";
 
-        // Columnas fijas (sin AGREGA ni MERMA)
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">TURNO</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">CANT. LECHE</Data></Cell>';
-        echo '<Cell ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
+        // Columnas fijas (sin AGREGA ni MERMA) - combinadas verticalmente
+        echo '<Cell ss:MergeDown="1" ss:StyleID="header"><Data ss:Type="String">FECHA</Data></Cell>';
+        echo '<Cell ss:MergeDown="1" ss:StyleID="header"><Data ss:Type="String">TURNO</Data></Cell>';
+        echo '<Cell ss:MergeDown="1" ss:StyleID="header"><Data ss:Type="String">CANT. LECHE</Data></Cell>';
+        echo '<Cell ss:MergeDown="1" ss:StyleID="header"><Data ss:Type="String">RESERVA</Data></Cell>';
 
-        // Columnas dinámicas: Stock | Cant.Prod | MERMA | AGREGA (MERMA/AGREGA rotadas 90°)
+        // Columnas dinámicas: simples → LECHE (L), complejos → Stock | Cant.Prod | MERMA | AGREGA
         $totalProductos = count($productosUnicos);
         $indice = 0;
         foreach ($productosUnicos as $producto) {
             $np = htmlspecialchars($producto, ENT_XML1);
             $esUltimo = ($indice === $totalProductos - 1);
 
-            echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Stock</Data></Cell>';
-            echo '<Cell ss:StyleID="header_producto"><Data ss:Type="String">' . $np . ' Cant.Prod</Data></Cell>';
-            echo '<Cell ss:StyleID="header_ma_rotado"><Data ss:Type="String">MERMA</Data></Cell>';
-
-            $estiloAg = $esUltimo ? 'header_ma_rotado' : 'header_ma_sep_rotado';
-            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">AGREGA</Data></Cell>';
+            if ($this->esProductoSimple($producto)) {
+                $estiloSimple = $esUltimo ? 'header_producto' : 'header_producto_sep';
+                echo '<Cell ss:MergeDown="1" ss:StyleID="' . $estiloSimple . '"><Data ss:Type="String">LECHE (L)</Data></Cell>';
+            } else {
+                // Producto complejo: nombre arriba combinando 2 columnas, y MERMA/AGREGA combinados verticalmente
+                echo '<Cell ss:MergeAcross="1" ss:StyleID="header_producto"><Data ss:Type="String">' . $np . '</Data></Cell>';
+                echo '<Cell ss:MergeDown="1" ss:StyleID="header_ma_rotado"><Data ss:Type="String">MERMA</Data></Cell>';
+                $estiloAg = $esUltimo ? 'header_ma_rotado' : 'header_ma_sep_rotado';
+                echo '<Cell ss:MergeDown="1" ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">AGREGA</Data></Cell>';
+            }
 
             $indice++;
         }
 
+        echo '</Row>' . "\n";
+
+        // Fila 2 del encabezado (solo subencabezados de productos complejos)
+        echo '<Row ss:Height="20">' . "\n";
+        $colIndex = 5; // Columns 1-4 are fixed (FECHA, TURNO, CANT. LECHE, RESERVA)
+        foreach ($productosUnicos as $producto) {
+            if ($this->esProductoSimple($producto)) {
+                $colIndex += 1;
+            } else {
+                echo '<Cell ss:Index="' . $colIndex . '" ss:StyleID="header_producto"><Data ss:Type="String">Leche utilizada</Data></Cell>';
+                echo '<Cell ss:Index="' . ($colIndex + 1) . '" ss:StyleID="header_producto"><Data ss:Type="String">Producción</Data></Cell>';
+                $colIndex += 4; // 2 product columns + 1 MERMA + 1 AGREGA
+            }
+        }
         echo '</Row>' . "\n";
     }
 
@@ -568,7 +601,9 @@ class ExportacionExcelService
             $datosPorMes[$mes][] = $dato;
         }
 
-        $totalColumnas = 4 + (count($productosUnicos) * 4) - 1;
+        $simples   = array_filter($productosUnicos, fn($p) => $this->esProductoSimple($p));
+        $complejos = array_filter($productosUnicos, fn($p) => !$this->esProductoSimple($p));
+        $totalColumnas = 4 + count($simples) + (count($complejos) * 4) - 1;
         $primerMes = true;
 
         foreach ($datosPorMes as $mes => $datosDelMes) {
@@ -654,40 +689,48 @@ class ExportacionExcelService
                 foreach ($productos as $nombreProducto => $datosProducto) {
                     $esUltimoProducto = ($indice === $totalProductos - 1);
 
-                    // Stock
-                    if ($datosProducto['stock'] === null) {
-                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                    if ($this->esProductoSimple($nombreProducto)) {
+                        // Producto simple: solo cantidad_produccion con separador si no es último
+                        $estiloCell = $esUltimoProducto ? $estiloNumero : ($estiloNumero . '_sep');
+                        if ($datosProducto['cantidad_produccion'] === null) {
+                            echo '<Cell ss:StyleID="' . $estiloCell . '"><Data ss:Type="String">-</Data></Cell>';
+                        } else {
+                            $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
+                            echo '<Cell ss:StyleID="' . $estiloCell . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                        }
                     } else {
-                        $sumProductos[$nombreProducto]['stock'] += (float)$datosProducto['stock'];
-                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
-                    }
+                        // Producto complejo: Leche utilizada (cantidad_produccion) | Producción (stock) | MERMA | AGREGA
+                        if ($datosProducto['cantidad_produccion'] === null) {
+                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                        } else {
+                            $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
+                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                        }
 
-                    // Cant.Prod
-                    if ($datosProducto['cantidad_produccion'] === null) {
-                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
-                    } else {
-                        $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
-                        echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
-                    }
+                        if ($datosProducto['stock'] === null) {
+                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                        } else {
+                            $sumProductos[$nombreProducto]['stock'] += (float)$datosProducto['stock'];
+                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
+                        }
 
-                    // Merma (compacta)
-                    $estiloMa     = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia'     : 'ma_amarillo')     : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia'     : 'ma_azul');
-                    $estiloMaSep  = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia_sep' : 'ma_amarillo_sep') : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia_sep' : 'ma_azul_sep');
+                        $estiloMa    = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia'     : 'ma_amarillo')     : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia'     : 'ma_azul');
+                        $estiloMaSep = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia_sep' : 'ma_amarillo_sep') : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia_sep' : 'ma_azul_sep');
 
-                    if ($datosProducto['merma'] === null) {
-                        echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="String">-</Data></Cell>';
-                    } else {
-                        $sumProductos[$nombreProducto]['merma'] += (float)$datosProducto['merma'];
-                        echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="Number">' . (int)$datosProducto['merma'] . '</Data></Cell>';
-                    }
+                        if ($datosProducto['merma'] === null) {
+                            echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="String">-</Data></Cell>';
+                        } else {
+                            $sumProductos[$nombreProducto]['merma'] += (float)$datosProducto['merma'];
+                            echo '<Cell ss:StyleID="' . $estiloMa . '"><Data ss:Type="Number">' . (int)$datosProducto['merma'] . '</Data></Cell>';
+                        }
 
-                    // Agrega (compacta, con separador si no es último)
-                    $estiloAg = $esUltimoProducto ? $estiloMa : $estiloMaSep;
-                    if ($datosProducto['agrega'] === null) {
-                        echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">-</Data></Cell>';
-                    } else {
-                        $sumProductos[$nombreProducto]['agrega'] += (float)$datosProducto['agrega'];
-                        echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$datosProducto['agrega'] . '</Data></Cell>';
+                        $estiloAg = $esUltimoProducto ? $estiloMa : $estiloMaSep;
+                        if ($datosProducto['agrega'] === null) {
+                            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="String">-</Data></Cell>';
+                        } else {
+                            $sumProductos[$nombreProducto]['agrega'] += (float)$datosProducto['agrega'];
+                            echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$datosProducto['agrega'] . '</Data></Cell>';
+                        }
                     }
 
                     $indice++;
@@ -701,7 +744,6 @@ class ExportacionExcelService
             echo '<Row ss:Height="' . self::ALTURA_FILA_CIERRE . '">' . "\n";
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String">TOTAL MES</Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
-            echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumStock, 2, '.', '') . '</Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumReserva, 2, '.', '') . '</Data></Cell>';
 
@@ -710,12 +752,17 @@ class ExportacionExcelService
             foreach ($productosUnicos as $nombreProducto) {
                 $esUltimo = ($indiceProducto === $totalProductosUnicos - 1);
 
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_ma"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['merma'] . '</Data></Cell>';
-
-                $estiloAg = $esUltimo ? 'total_mes_ma' : 'total_mes_ma_sep';
-                echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['agrega'] . '</Data></Cell>';
+                if ($this->esProductoSimple($nombreProducto)) {
+                    // Producto simple: solo cantidad_produccion
+                    $estiloTotal = $esUltimo ? 'total_mes_numero' : 'total_mes_numero_sep';
+                    echo '<Cell ss:StyleID="' . $estiloTotal . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                } else {
+                    echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="total_mes_ma"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['merma'] . '</Data></Cell>';
+                    $estiloAg = $esUltimo ? 'total_mes_ma' : 'total_mes_ma_sep';
+                    echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['agrega'] . '</Data></Cell>';
+                }
 
                 $indiceProducto++;
             }
