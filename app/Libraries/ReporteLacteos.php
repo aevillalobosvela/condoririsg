@@ -679,13 +679,14 @@ class ReporteLacteos extends FPDF
             $datoProd = $productos[$nombre] ?? ['stock' => null, 'cantidad_produccion' => null, 'merma' => null, 'agrega' => null];
 
             if ($this->esProductoSimple($nombre)) {
-                // Producto simple: solo cantidad_produccion en una celda
-                $textoProd = $datoProd['cantidad_produccion'] === null ? '-' : number_format($datoProd['cantidad_produccion'], 2);
+                // Producto simple: solo cantidad_produccion en una celda con 1 decimal
+                $textoProd = $datoProd['cantidad_produccion'] === null ? '-' : number_format($datoProd['cantidad_produccion'], 1);
                 $this->SetFont('Arial', '', 6);
                 $this->Cell($this->wProd, $this->hRow, $textoProd, 1, 0, 'C', true);
             } else {
-                $textoStock  = $datoProd['stock']               === null ? '-' : number_format($datoProd['stock'], 2);
-                $textoProd   = $datoProd['cantidad_produccion'] === null ? '-' : number_format($datoProd['cantidad_produccion'], 2);
+                // Producto complejo: Leche utilizada (1 decimal) | Producción (entero)
+                $textoStock  = $datoProd['stock']               === null ? '-' : (string)(int)round($datoProd['stock']);
+                $textoProd   = $datoProd['cantidad_produccion'] === null ? '-' : number_format($datoProd['cantidad_produccion'], 1);
                 $textoMerma  = $datoProd['merma']               === null ? '-' : (string)(int)$datoProd['merma'];
                 $textoAgrega = $datoProd['agrega']              === null ? '-' : (string)(int)$datoProd['agrega'];
 
@@ -1093,15 +1094,16 @@ class ReporteLacteos extends FPDF
         $this->Cell($this->wFecha,   $this->hRow, utf8_decode('TOTAL MES'), 1, 0, 'C', true);
         $this->Cell($this->wTurno,   $this->hRow, '', 1, 0, 'C', true);
         $this->Cell($this->wStock,   $this->hRow, number_format($sumStock,   2), 1, 0, 'C', true);
-        $this->Cell($this->wReserva, $this->hRow, number_format($sumReserva, 2), 1, 0, 'C', true);
+        $this->Cell($this->wReserva, $this->hRow, '', 1, 0, 'C', true); // Se elimina la sumatoria de Reserva
 
         foreach ($productosUnicos as $nombre) {
             if ($this->esProductoSimple($nombre)) {
-                // Producto simple: solo cantidad_produccion
-                $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['cantidad_produccion'] ?? 0, 2), 1, 0, 'C', true);
+                // Producto simple: solo cantidad_produccion con 1 decimal
+                $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['cantidad_produccion'] ?? 0, 1), 1, 0, 'C', true);
             } else {
-                $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['cantidad_produccion'] ?? 0, 2), 1, 0, 'C', true);
-                $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['stock']               ?? 0, 2), 1, 0, 'C', true);
+                // Producto complejo: Leche utilizada (1 decimal) | Producción (entero)
+                $this->Cell($this->wProd, $this->hRow, number_format($sumProductos[$nombre]['cantidad_produccion'] ?? 0, 1), 1, 0, 'C', true);
+                $this->Cell($this->wProd, $this->hRow, (string)(int)round($sumProductos[$nombre]['stock']               ?? 0), 1, 0, 'C', true);
                 $this->SetFont('Arial', 'B', 6);
                 $this->SetFillColor(238, 232, 245);
                 $this->Cell($this->wMA, $this->hRow, (string)(int)($sumProductos[$nombre]['merma']  ?? 0), 1, 0, 'C', true);

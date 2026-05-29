@@ -354,11 +354,34 @@ class ExportacionExcelService
         $style('numero_azul_bold', ['bold' => true, 'size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesSuaves);
         $style('numero_azul_dia_bold', ['bold' => true, 'size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesDia);
 
+        // Estilos para Leche Utilizada (1 decimal) y Producción (0 decimales)
+        $style('leche_amarillo', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesSuaves);
+        $style('leche_amarillo_sep', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesSuavesSep);
+        $style('leche_azul', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesSuaves);
+        $style('leche_azul_sep', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesSuavesSep);
+        $style('leche_amarillo_dia', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesDia);
+        $style('leche_amarillo_dia_sep', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesDiaSep);
+        $style('leche_azul_dia', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesDia);
+        $style('leche_azul_dia_sep', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesDiaSep);
+
+        $style('prod_amarillo', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuaves);
+        $style('prod_amarillo_sep', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuavesSep);
+        $style('prod_azul', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuaves);
+        $style('prod_azul_sep', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesSuavesSep);
+        $style('prod_amarillo_dia', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesDia);
+        $style('prod_amarillo_dia_sep', ['size' => 10, 'name' => 'Arial'], $fondoPar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesDiaSep);
+        $style('prod_azul_dia', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesDia);
+        $style('prod_azul_dia_sep', ['size' => 10, 'name' => 'Arial'], $fondoImpar, ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesDiaSep);
+
         $style('titulo_mes', ['bold' => true, 'size' => 12, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#6A7FA8', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center']);
 
         $style('total_mes_label', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], null, $bordesTotal);
         $style('total_mes_numero', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesTotal);
         $style('total_mes_numero_sep', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesTotalSep);
+        $style('total_mes_leche', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesTotal);
+        $style('total_mes_leche_sep', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.0', $bordesTotalSep);
+        $style('total_mes_prod', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesTotal);
+        $style('total_mes_prod_sep', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#FFFDE7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesTotalSep);
 
         $style('resumen_titulo', ['bold' => true, 'size' => 13, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#4D6A83', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center']);
         $style('resumen_header', ['bold' => true, 'size' => 10, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#6E8EA3', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], null, $bordesResumen);
@@ -688,30 +711,32 @@ class ExportacionExcelService
                 $indice = 0;
                 foreach ($productos as $nombreProducto => $datosProducto) {
                     $esUltimoProducto = ($indice === $totalProductos - 1);
+                    $estiloLeche = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'leche_amarillo_dia' : 'leche_amarillo') : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'leche_azul_dia' : 'leche_azul');
+                    $estiloProd  = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'prod_amarillo_dia'  : 'prod_amarillo')  : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'prod_azul_dia'  : 'prod_azul');
 
                     if ($this->esProductoSimple($nombreProducto)) {
-                        // Producto simple: solo cantidad_produccion con separador si no es último
-                        $estiloCell = $esUltimoProducto ? $estiloNumero : ($estiloNumero . '_sep');
+                        // Producto simple: solo cantidad_produccion (1 decimal) con separador si no es último
+                        $estiloCell = $esUltimoProducto ? $estiloLeche : ($estiloLeche . '_sep');
                         if ($datosProducto['cantidad_produccion'] === null) {
                             echo '<Cell ss:StyleID="' . $estiloCell . '"><Data ss:Type="String">-</Data></Cell>';
                         } else {
                             $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
-                            echo '<Cell ss:StyleID="' . $estiloCell . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                            echo '<Cell ss:StyleID="' . $estiloCell . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 1, '.', '') . '</Data></Cell>';
                         }
                     } else {
-                        // Producto complejo: Leche utilizada (cantidad_produccion) | Producción (stock) | MERMA | AGREGA
+                        // Producto complejo: Leche utilizada (1 decimal) | Producción (entero) | MERMA | AGREGA
                         if ($datosProducto['cantidad_produccion'] === null) {
-                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                            echo '<Cell ss:StyleID="' . $estiloLeche . '"><Data ss:Type="String">-</Data></Cell>';
                         } else {
                             $sumProductos[$nombreProducto]['cantidad_produccion'] += (float)$datosProducto['cantidad_produccion'];
-                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                            echo '<Cell ss:StyleID="' . $estiloLeche . '"><Data ss:Type="Number">' . number_format($datosProducto['cantidad_produccion'], 1, '.', '') . '</Data></Cell>';
                         }
 
                         if ($datosProducto['stock'] === null) {
-                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="String">-</Data></Cell>';
+                            echo '<Cell ss:StyleID="' . $estiloProd . '"><Data ss:Type="String">-</Data></Cell>';
                         } else {
                             $sumProductos[$nombreProducto]['stock'] += (float)$datosProducto['stock'];
-                            echo '<Cell ss:StyleID="' . $estiloNumero . '"><Data ss:Type="Number">' . number_format($datosProducto['stock'], 2, '.', '') . '</Data></Cell>';
+                            echo '<Cell ss:StyleID="' . $estiloProd . '"><Data ss:Type="Number">' . (int)round($datosProducto['stock']) . '</Data></Cell>';
                         }
 
                         $estiloMa    = $esAmarillo ? ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_amarillo_dia'     : 'ma_amarillo')     : ($esPrimerRegistroDelDia && $diaAnterior !== null ? 'ma_azul_dia'     : 'ma_azul');
@@ -745,7 +770,7 @@ class ExportacionExcelService
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String">TOTAL MES</Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>';
             echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumStock, 2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumReserva, 2, '.', '') . '</Data></Cell>';
+            echo '<Cell ss:StyleID="total_mes_label"><Data ss:Type="String"></Data></Cell>'; // Sumatoria de Reserva eliminada
 
             $totalProductosUnicos = count($productosUnicos);
             $indiceProducto = 0;
@@ -753,12 +778,13 @@ class ExportacionExcelService
                 $esUltimo = ($indiceProducto === $totalProductosUnicos - 1);
 
                 if ($this->esProductoSimple($nombreProducto)) {
-                    // Producto simple: solo cantidad_produccion
-                    $estiloTotal = $esUltimo ? 'total_mes_numero' : 'total_mes_numero_sep';
-                    echo '<Cell ss:StyleID="' . $estiloTotal . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
+                    // Producto simple: solo cantidad_produccion (1 decimal)
+                    $estiloTotal = $esUltimo ? 'total_mes_leche' : 'total_mes_leche_sep';
+                    echo '<Cell ss:StyleID="' . $estiloTotal . '"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 1, '.', '') . '</Data></Cell>';
                 } else {
-                    echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 2, '.', '') . '</Data></Cell>';
-                    echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['stock'], 2, '.', '') . '</Data></Cell>';
+                    // Producto complejo: Leche utilizada (1 decimal) | Producción (entero) | MERMA | AGREGA
+                    echo '<Cell ss:StyleID="total_mes_leche"><Data ss:Type="Number">' . number_format($sumProductos[$nombreProducto]['cantidad_produccion'], 1, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="total_mes_prod"><Data ss:Type="Number">' . (int)round($sumProductos[$nombreProducto]['stock']) . '</Data></Cell>';
                     echo '<Cell ss:StyleID="total_mes_ma"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['merma'] . '</Data></Cell>';
                     $estiloAg = $esUltimo ? 'total_mes_ma' : 'total_mes_ma_sep';
                     echo '<Cell ss:StyleID="' . $estiloAg . '"><Data ss:Type="Number">' . (int)$sumProductos[$nombreProducto]['agrega'] . '</Data></Cell>';
