@@ -719,49 +719,57 @@ class ReporteLacteos extends FPDF
 
     private function generarResumen(array $datosConProductos, array $productosUnicos): void
     {
-        // ── Construir datos mensuales (misma lógica que ExportacionExcelService) ──
+        $db = \Config\Database::connect();
+
+        // ── 1. Inicializar estructura mensual ──────────────────────────────────
         $mensual = [];
         foreach ($datosConProductos as $dato) {
             $inv = $dato['inventario'];
             $mes = date('Y-m', strtotime($inv->created_at));
-            $dia = date('Y-m-d', strtotime($inv->created_at));
 
             if (!isset($mensual[$mes])) {
                 $mensual[$mes] = [
-                    'mes'   => $mes,
-                    'leche' => ['litros_usados' => 0.0, 'dias' => []],
+                    'mes'       => $mes,
+                    'leche'     => ['litros_recibidos' => 0.0],
                     'productos' => [],
                 ];
                 foreach ($productosUnicos as $p) {
-                    $mensual[$mes]['productos'][$p] = [
-                        'producido'          => 0.0, 'merma'           => 0.0,
-                        'agrega'             => 0.0, 'vendido'         => 0.0,
-                        'vendido_contado'    => 0.0, 'vendido_credito' => 0.0,
-                        'ingresos'           => 0.0, 'ingresos_contado'=> 0.0,
-                        'ingresos_credito'   => 0.0,
+                    $pNorm = $this->normalizarNombre($p);
+                    $mensual[$mes]['productos'][$pNorm] = [
+                        'producido'       => 0.0, 'merma'           => 0.0,
+                        'agrega'          => 0.0, 'oruro'           => 0.0,
+                        'contado'         => 0.0, 'credito'         => 0.0,
+                        'vendido'         => 0.0, 'vendido_contado' => 0.0,
+                        'vendido_credito' => 0.0, 'ingresos'        => 0.0,
+                        'ingresos_contado'=> 0.0, 'ingresos_credito'=> 0.0,
                     ];
                 }
             }
 
-            $mensual[$mes]['leche']['dias'][$dia] = true;
-
+            // Acumular produccion usando stock (unidades fisicas)
             foreach ($dato['productos'] as $nombre => $vals) {
-                if ($vals['cantidad_produccion'] === null) continue;
-                $litros = (float)($vals['cantidad_produccion'] ?? 0) * 0; // litros_usados no disponible aquí
-                $mensual[$mes]['productos'][$nombre]['producido'] += (float)($vals['cantidad_produccion'] ?? 0);
-                $mensual[$mes]['productos'][$nombre]['merma']     += (float)($vals['merma']  ?? 0);
-                $mensual[$mes]['productos'][$nombre]['agrega']    += (float)($vals['agrega'] ?? 0);
+                $nNorm = $this->normalizarNombre($nombre);
+                if (!isset($mensual[$mes]['productos'][$nNorm])) continue;
+                if ($vals['stock'] !== null) {
+                    $mensual[$mes]['productos'][$nNorm]['producido'] += (float)$vals['stock'];
+                }
+                if ($vals['merma'] !== null) {
+                    $mensual[$mes]['productos'][$nNorm]['merma'] += (float)$vals['merma'];
+                }
+                if ($vals['agrega'] !== null) {
+                    $mensual[$mes]['productos'][$nNorm]['agrega'] += (float)$vals['agrega'];
+                }
             }
         }
 
-        // ── Query de ventas reales ────────────────────────────────────────────
+        // ── 2. Ventas en planta (sucursal_id = 4) ────────────────────────────
         $mesesKeys = array_keys($mensual);
         if (!empty($mesesKeys)) {
             sort($mesesKeys);
             $fechaDesde = $mesesKeys[0] . '-01 00:00:00';
             $fechaHasta = date('Y-m-t 23:59:59', strtotime(end($mesesKeys) . '-01'));
-            $db  = \Config\Database::connect();
-            $sql = "
+
+            $sqlPlanta = "
                 SELECT TO_CHAR(v.created_at,'YYYY-MM') AS mes,
                        p.nombre AS producto, v.tipo_pago,
                        SUM(dv.cantidad) AS vendido, SUM(dv.subtotal) AS ingresos
@@ -772,9 +780,8 @@ class ReporteLacteos extends FPDF
                   AND dv.producto_agro_id IS NULL
                   AND v.created_at >= ? AND v.created_at <= ?
                 GROUP BY TO_CHAR(v.created_at,'YYYY-MM'), p.nombre, v.tipo_pago
-                ORDER BY mes, p.nombre
             ";
-            foreach ($db->query($sql, [$fechaDesde, $fechaHasta])->getResult() as $venta) {
+            foreach ($db->query($sqlPlanta, [$fechaDesde, $fechaHasta])->getResult() as $venta) {
                 $mes  = $venta->mes;
                 $prod = $this->normalizarNombre(trim($venta->producto ?? ''));
                 if (!isset($mensual[$mes]['productos'][$prod])) continue;
@@ -782,211 +789,174 @@ class ReporteLacteos extends FPDF
                 $mensual[$mes]['productos'][$prod]['vendido']  += (float)$venta->vendido;
                 $mensual[$mes]['productos'][$prod]['ingresos'] += (float)$venta->ingresos;
                 if ($esContado) {
+                    $mensual[$mes]['productos'][$prod]['contado']          += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$prod]['vendido_contado']  += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$prod]['ingresos_contado'] += (float)$venta->ingresos;
                 } else {
+                    $mensual[$mes]['productos'][$prod]['credito']          += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$prod]['vendido_credito']  += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$prod]['ingresos_credito'] += (float)$venta->ingresos;
                 }
             }
+
+            // ── 3. Ventas en Oruro (stock_sucursales, sucursal_id = 2) ────────
+            $sqlOruro = "
+                SELECT TO_CHAR(created_at,'YYYY-MM') AS mes,
+                       producto,
+                       SUM(cantidad) - SUM(stock) AS vendido
+                FROM condoriri.stock_sucursales
+                WHERE sucursal_id = 2
+                  AND created_at >= ? AND created_at <= ?
+                GROUP BY TO_CHAR(created_at,'YYYY-MM'), producto
+            ";
+            foreach ($db->query($sqlOruro, [$fechaDesde, $fechaHasta])->getResult() as $vo) {
+                $mes  = $vo->mes;
+                $prod = $this->normalizarNombre(trim($vo->producto ?? ''));
+                if (!isset($mensual[$mes]['productos'][$prod])) continue;
+                $mensual[$mes]['productos'][$prod]['oruro'] += (float)$vo->vendido;
+            }
+
+            // ── 4. Litros de leche cruda mensual ─────────────────────────────
+            $sqlLeche = "
+                SELECT TO_CHAR(created_at,'YYYY-MM') AS mes, SUM(stock) AS litros
+                FROM condoriri.inventarios
+                WHERE deleted_at IS NULL AND UPPER(TRIM(nombre)) = 'LECHE'
+                  AND created_at >= ? AND created_at <= ?
+                GROUP BY TO_CHAR(created_at,'YYYY-MM')
+            ";
+            foreach ($db->query($sqlLeche, [$fechaDesde, $fechaHasta])->getResult() as $lm) {
+                if (isset($mensual[$lm->mes])) {
+                    $mensual[$lm->mes]['leche']['litros_recibidos'] = (float)$lm->litros;
+                }
+            }
         }
+
         ksort($mensual);
 
-        // ── Colores reutilizables ─────────────────────────────────────────────
-        $azulOsc  = [31,  78, 121];   // encabezado título bloque
-        $azulMed  = [46, 117, 182];   // encabezado columnas
-        $amarillo = [255, 253, 231];  // subtotal mes
-        $verdePar = [222, 234, 246];  // fila par
-        $grisImpar= [245, 251, 255];  // fila impar
-        $azulTotal= [31,  78, 121];   // fila total general
+        // ── Colores ───────────────────────────────────────────────────────────
+        $azulOsc  = [31,  78, 121];
+        $azulMed  = [46, 117, 182];
+        $amarillo = [255, 253, 231];
+        $verdePar = [222, 234, 246];
+        $grisImpar= [245, 251, 255];
 
-        // ── BLOQUE 1 — Desglose por mes → producto ────────────────────────────
+        // ── BLOQUE BALANCE GENERAL — un sub-bloque por mes ───────────────────
+        $colsB = [
+            utf8_decode('DETALLE')    => 55,
+            utf8_decode('PROD/MES')   => 22,
+            utf8_decode('MERMA')      => 18,
+            utf8_decode('ORURO')      => 22,
+            utf8_decode('CONTADO')    => 22,
+            utf8_decode('CREDITO')    => 22,
+            utf8_decode('TOTAL')      => 22,
+            utf8_decode('OBSERVACION')=> 35,
+        ];
+        $anchosTotalB = array_sum($colsB);
+
         $this->AddPage();
         $this->Ln(2);
-        $this->resumenTitulo(utf8_decode('PRODUCCION Y VENTAS  DESGLOSE POR MES'), $azulOsc);
-
-        // Columnas: MES(35) | PRODUCTO(50) | PROD(22) | MERMA(18) | AGREGA(18) |
-        //           VTA.CO(22) | VTA.CR(22) | TOT.VTA(22) | ING.CO(30) | ING.CR(30) | TOT.ING(30)
-        $cols1 = [
-            utf8_decode('MES')            => 35,
-            utf8_decode('PRODUCTO')       => 50,
-            utf8_decode('PRODUCIDO')      => 22,
-            utf8_decode('MERMA')          => 18,
-            utf8_decode('AGREGA')         => 18,
-            utf8_decode('VTA. CONTADO')   => 22,
-            utf8_decode('VTA. CREDITO')   => 22,
-            utf8_decode('TOTAL VENDIDO')  => 22,
-            utf8_decode('ING. CONTADO')   => 30,
-            utf8_decode('ING. CREDITO')   => 30,
-            utf8_decode('TOTAL INGRESOS') => 30,
-        ];
-        $this->resumenEncabezadoColumnas($cols1, $azulMed);
-
-        $totGral1 = array_fill_keys(['producido','merma','agrega','vendido','vendido_contado','vendido_credito','ingresos','ingresos_contado','ingresos_credito'], 0.0);
-        $par = true;
-        $primerMes = true;
 
         foreach ($mensual as $item) {
-            $mesTexto = $this->textoMesCorto($item['mes']);
-            $totMes   = array_fill_keys(array_keys($totGral1), 0.0);
-            $hayFilas = false;
+            $mesTexto = strtoupper($this->textoMesCorto($item['mes']));
 
+            // Titulo del bloque mensual
+            if ($this->GetY() + 40 > $this->GetPageHeight() - 15) { $this->AddPage(); }
+            $this->SetFont('Arial', 'B', 10);
+            $this->SetFillColor(...$azulOsc);
+            $this->SetTextColor(255, 255, 255);
+            $this->Cell($anchosTotalB, 7, utf8_decode('BALANCE GENERAL MES ' . $mesTexto), 1, 1, 'C', true);
+            $this->SetTextColor(0, 0, 0);
+            $this->Ln(1);
+
+            $this->resumenEncabezadoColumnas($colsB, $azulMed);
+
+            $par = true;
             foreach ($productosUnicos as $prod) {
-                $p = $item['productos'][$prod];
-                if ($p['producido'] <= 0 && $p['vendido'] <= 0 && $p['merma'] <= 0 && $p['agrega'] <= 0) continue;
+                $pNorm = $this->normalizarNombre($prod);
+                if (!isset($item['productos'][$pNorm])) continue;
+                $p = $item['productos'][$pNorm];
 
-                // Separador visual entre meses
-                $bordeTop = !$primerMes && !$hayFilas;
+                $producido = (int)round($p['producido']);
+                $merma     = (int)round($p['merma']);
+                $oruro     = (int)round($p['oruro']);
+                $contado   = (int)round($p['contado']);
+                $credito   = (int)round($p['credito']);
+                $total     = $oruro + $contado + $credito + $merma;
+
+                if ($producido === 0 && $merma === 0 && $oruro === 0 && $contado === 0 && $credito === 0) continue;
+
                 $rgb = $par ? $verdePar : $grisImpar;
                 $this->resumenFila([
-                    $mesTexto,
-                    utf8_decode($this->truncar($prod, 28)),
-                    number_format($p['producido'],       2),
-                    number_format($p['merma'],           2),
-                    number_format($p['agrega'],          2),
-                    number_format($p['vendido_contado'], 2),
-                    number_format($p['vendido_credito'], 2),
-                    number_format($p['vendido'],         2),
-                    number_format($p['ingresos_contado'],2),
-                    number_format($p['ingresos_credito'],2),
-                    number_format($p['ingresos'],        2),
-                ], array_values($cols1), $rgb, $bordeTop ? 2 : 0.2);
-
-                foreach (array_keys($totMes) as $k) { $totMes[$k] += $p[$k]; }
+                    utf8_decode($this->truncar($prod, 30)),
+                    (string)$producido,
+                    (string)$merma,
+                    (string)$oruro,
+                    (string)$contado,
+                    (string)$credito,
+                    (string)$total,
+                    '',
+                ], array_values($colsB), $rgb, 0.2);
                 $par = !$par;
-                $hayFilas = true;
-                $primerMes = false;
             }
 
-            if ($hayFilas) {
-                // Subtotal mes
-                $this->resumenFila([
-                    utf8_decode('TOTAL ' . strtoupper($mesTexto)), '',
-                    number_format($totMes['producido'],       2),
-                    number_format($totMes['merma'],           2),
-                    number_format($totMes['agrega'],          2),
-                    number_format($totMes['vendido_contado'], 2),
-                    number_format($totMes['vendido_credito'], 2),
-                    number_format($totMes['vendido'],         2),
-                    number_format($totMes['ingresos_contado'],2),
-                    number_format($totMes['ingresos_credito'],2),
-                    number_format($totMes['ingresos'],        2),
-                ], array_values($cols1), $amarillo, 0.2, true);
-                foreach (array_keys($totGral1) as $k) { $totGral1[$k] += $totMes[$k]; }
-            }
+            // Fila "leche producida:" combinada
+            $lecheLitros = (int)round($item['leche']['litros_recibidos'] ?? 0);
+            if ($this->GetY() + 6 > $this->GetPageHeight() - 15) { $this->AddPage(); }
+            $this->SetFillColor(...$amarillo);
+            $this->SetFont('Arial', 'B', 7);
+            $this->Cell($anchosTotalB, 6, utf8_decode('leche producida: ' . $lecheLitros), 1, 1, 'L', true);
+            $this->Ln(4);
         }
-        // Total general bloque 1
-        $this->resumenFilaTotal([
-            utf8_decode('TOTAL GENERAL'), '',
-            number_format($totGral1['producido'],       2),
-            number_format($totGral1['merma'],           2),
-            number_format($totGral1['agrega'],          2),
-            number_format($totGral1['vendido_contado'], 2),
-            number_format($totGral1['vendido_credito'], 2),
-            number_format($totGral1['vendido'],         2),
-            number_format($totGral1['ingresos_contado'],2),
-            number_format($totGral1['ingresos_credito'],2),
-            number_format($totGral1['ingresos'],        2),
-        ], array_values($cols1), $azulTotal);
 
-        // ── BLOQUE 2 — Consolidado por producto ───────────────────────────────
-        $this->Ln(8);
+        // ── BLOQUE CONSOLIDADO POR PRODUCTO ───────────────────────────────────
         if ($this->GetY() + 60 > $this->GetPageHeight() - 15) { $this->AddPage(); }
+        $this->Ln(4);
 
-        // Calcular rango de meses
         $mesesKeys = array_keys($mensual);
         $rangoMes  = $this->textoRangoPdf($mesesKeys);
 
-        $this->resumenTitulo(utf8_decode('PRODUCCION Y VENTAS  CONSOLIDADO POR PRODUCTO'), $azulOsc);
-        $this->resumenEncabezadoColumnas($cols1, $azulMed);
+        $colsC = [
+            utf8_decode('PRODUCTO')      => 55,
+            utf8_decode('PRODUCIDO')     => 22,
+            utf8_decode('MERMA')         => 18,
+            utf8_decode('AGREGA')        => 18,
+            utf8_decode('CONTADO')       => 22,
+            utf8_decode('CREDITO')       => 22,
+            utf8_decode('VENDIDO')       => 22,
+            utf8_decode('CONT. (Bs)')    => 30,
+            utf8_decode('CRED. (Bs)')    => 30,
+            utf8_decode('TOTAL (Bs)')    => 30,
+        ];
 
-        $totGral2 = array_fill_keys(array_keys($totGral1), 0.0);
+        $this->resumenTitulo(utf8_decode('PRODUCCION Y VENTAS  CONSOLIDADO POR PRODUCTO (' . $rangoMes . ')'), $azulOsc);
+        $this->resumenEncabezadoColumnas($colsC, $azulMed);
+
         $par = true;
-
         foreach ($productosUnicos as $prod) {
-            $acc = array_fill_keys(array_keys($totGral1), 0.0);
+            $pNorm = $this->normalizarNombre($prod);
+            $acc = array_fill_keys(['producido','merma','agrega','vendido','vendido_contado','vendido_credito','ingresos','ingresos_contado','ingresos_credito'], 0.0);
             foreach ($mensual as $item) {
-                $p = $item['productos'][$prod];
+                if (!isset($item['productos'][$pNorm])) continue;
+                $p = $item['productos'][$pNorm];
                 foreach (array_keys($acc) as $k) { $acc[$k] += $p[$k]; }
             }
             if ($acc['producido'] <= 0 && $acc['vendido'] <= 0 && $acc['merma'] <= 0 && $acc['agrega'] <= 0) continue;
 
             $rgb = $par ? $verdePar : $grisImpar;
             $this->resumenFila([
-                utf8_decode($rangoMes),
-                utf8_decode($this->truncar($prod, 28)),
-                number_format($acc['producido'],       2),
-                number_format($acc['merma'],           2),
-                number_format($acc['agrega'],          2),
-                number_format($acc['vendido_contado'], 2),
-                number_format($acc['vendido_credito'], 2),
-                number_format($acc['vendido'],         2),
+                utf8_decode($this->truncar($prod, 30)),
+                number_format($acc['producido'],       0, '.', ''),
+                number_format($acc['merma'],           0, '.', ''),
+                number_format($acc['agrega'],          0, '.', ''),
+                number_format($acc['vendido_contado'], 0, '.', ''),
+                number_format($acc['vendido_credito'], 0, '.', ''),
+                number_format($acc['vendido'],         0, '.', ''),
                 number_format($acc['ingresos_contado'],2),
                 number_format($acc['ingresos_credito'],2),
                 number_format($acc['ingresos'],        2),
-            ], array_values($cols1), $rgb, 0.2);
-
-            foreach (array_keys($totGral2) as $k) { $totGral2[$k] += $acc[$k]; }
+            ], array_values($colsC), $rgb, 0.2);
             $par = !$par;
         }
-        $this->resumenFilaTotal([
-            utf8_decode('TOTAL GENERAL'), '',
-            number_format($totGral2['producido'],       2),
-            number_format($totGral2['merma'],           2),
-            number_format($totGral2['agrega'],          2),
-            number_format($totGral2['vendido_contado'], 2),
-            number_format($totGral2['vendido_credito'], 2),
-            number_format($totGral2['vendido'],         2),
-            number_format($totGral2['ingresos_contado'],2),
-            number_format($totGral2['ingresos_credito'],2),
-            number_format($totGral2['ingresos'],        2),
-        ], array_values($cols1), $azulTotal);
-
-        // ── BLOQUE 3 — Consolidado por mes ────────────────────────────────────
-        $this->Ln(8);
-        if ($this->GetY() + 60 > $this->GetPageHeight() - 15) { $this->AddPage(); }
-
-        $this->resumenTitulo(utf8_decode(' CONSOLIDADO POR MES'), $azulOsc);
-
-        $cols3 = [
-            utf8_decode('MES')                  => 40,
-            utf8_decode('UNIDADES PRODUCIDAS')  => 35,
-            utf8_decode('ING. CONTADO (Bs)')    => 38,
-            utf8_decode('ING. CREDITO (Bs)')    => 38,
-            utf8_decode('TOTAL INGRESOS (Bs)')  => 38,
-        ];
-        $this->resumenEncabezadoColumnas($cols3, $azulMed);
-
-        $totLitros = 0.0; $totProd3 = 0.0; $totCo3 = 0.0; $totCr3 = 0.0;
-        $par = true;
-
-        foreach ($mensual as $item) {
-            $producido  = 0.0; $ingCo = 0.0; $ingCr = 0.0;
-            foreach ($productosUnicos as $prod) {
-                $p = $item['productos'][$prod];
-                $producido += $p['producido'];
-                $ingCo     += $p['ingresos_contado'];
-                $ingCr     += $p['ingresos_credito'];
-            }
-            $totProd3 += $producido; $totCo3 += $ingCo; $totCr3 += $ingCr;
-
-            $rgb = $par ? $verdePar : $grisImpar;
-            $this->resumenFila([
-                utf8_decode($this->textoMesCorto($item['mes'])),
-                number_format($producido,        2),
-                number_format($ingCo,            2),
-                number_format($ingCr,            2),
-                number_format($ingCo + $ingCr,   2),
-            ], array_values($cols3), $rgb, 0.2);
-            $par = !$par;
-        }
-        $this->resumenFilaTotal([
-            utf8_decode('TOTAL GENERAL'),
-            number_format($totProd3,          2),
-            number_format($totCo3,            2),
-            number_format($totCr3,            2),
-            number_format($totCo3 + $totCr3,  2),
-        ], array_values($cols3), $azulTotal);
     }
 
     // ── Helpers de renderizado para el resumen ────────────────────────────────

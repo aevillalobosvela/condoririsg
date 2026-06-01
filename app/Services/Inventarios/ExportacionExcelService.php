@@ -114,8 +114,9 @@ class ExportacionExcelService
      */
     private function normalizarNombreProducto($nombre)
     {
+        $nombreUpper = strtoupper(trim($nombre ?? ''));
         // Caso especial: unificar variantes de yogurt griego 250 gramos
-        if ($nombre === 'YOGURT GRIEGO (250 GRAMOS)') {
+        if ($nombreUpper === 'YOGURT GRIEGO' || $nombreUpper === 'YOGURT GRIEGO (250 GRAMOS)' || $nombreUpper === 'YOGURT GRIEGO 250 GRAMOS') {
             return 'YOGURT GRIEGO 250 GRAMOS';
         }
         
@@ -391,8 +392,8 @@ class ExportacionExcelService
 
         $style('resumen_titulo', ['bold' => true, 'size' => 13, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#4D6A83', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center']);
         $style('resumen_header', ['bold' => true, 'size' => 10, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#6E8EA3', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], null, $bordesResumen);
-        $style('resumen_par', ['size' => 10, 'name' => 'Arial'], ['color' => '#EEF4F1', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesResumen);
-        $style('resumen_impar', ['size' => 10, 'name' => 'Arial'], ['color' => '#F4F5F7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesResumen);
+        $style('resumen_par', ['size' => 10, 'name' => 'Arial'], ['color' => '#EEF4F1', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesResumen);
+        $style('resumen_impar', ['size' => 10, 'name' => 'Arial'], ['color' => '#F4F5F7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesResumen);
         $style('resumen_nombre', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#EEF4F1', 'pattern' => 'Solid'], ['horizontal' => 'Left', 'vertical' => 'Center'], null, $bordesResumen);
         $style('resumen_nombre_impar', ['bold' => true, 'size' => 10, 'name' => 'Arial'], ['color' => '#F4F5F7', 'pattern' => 'Solid'], ['horizontal' => 'Left', 'vertical' => 'Center'], null, $bordesResumen);
 
@@ -403,7 +404,7 @@ class ExportacionExcelService
         $style('resumen_sep_par',          ['size' => 10,                  'name' => 'Arial'], ['color' => '#EEF4F1', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesSep);
         $style('resumen_sep_impar',        ['size' => 10,                  'name' => 'Arial'], ['color' => '#F4F5F7', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesSep);
 
-        $style('resumen_total', ['bold' => true, 'size' => 11, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#4D6A83', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0.00', $bordesResumenTotal);
+        $style('resumen_total', ['bold' => true, 'size' => 11, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#4D6A83', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center'], '0', $bordesResumenTotal);
         $style('resumen_total_label', ['bold' => true, 'size' => 11, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#4D6A83', 'pattern' => 'Solid'], ['horizontal' => 'Left', 'vertical' => 'Center'], null, $bordesResumenTotal);
 
         $style('header_ma', ['bold' => true, 'size' => 9, 'color' => '#FFFFFF', 'name' => 'Arial'], ['color' => '#7A6A8A', 'pattern' => 'Solid'], ['horizontal' => 'Center', 'vertical' => 'Center', 'wrapText' => true], null, $bordesSuaves);
@@ -805,82 +806,85 @@ class ExportacionExcelService
 
     /**
      * Construir datos mensuales para la hoja Resumen Detallado.
-     * Agrega producción por inventario y ventas reales por producto/mes.
+     * Agrega producción por inventario y ventas reales
      */
     private function construirResumenDetalladoMensual(array $datosConProductos, array $productosUnicos): array
     {
         $mensual = [];
 
-        // ── 1. Acumular datos de producción (inventarios + productos) ──────────
+        // ── 1. Inicializar la estructura mensual ──────────
         foreach ($datosConProductos as $dato) {
             $inv = $dato['inventario'];
             $mes = date('Y-m', strtotime($inv->created_at));
-            $dia = date('Y-m-d', strtotime($inv->created_at));
 
             if (!isset($mensual[$mes])) {
                 $mensual[$mes] = [
-                    'mes'      => $mes,
-                    'leche'    => [
+                    'mes'       => $mes,
+                    'leche'     => [
                         'litros_recibidos' => 0.0,
-                        'litros_usados'    => 0.0,
-                        'dias'             => [],
                     ],
                     'productos' => [],
                 ];
                 foreach ($productosUnicos as $producto) {
-                    $mensual[$mes]['productos'][$producto] = [
-                        'producido'           => 0.0,
-                        'litros_usados'       => 0.0,
-                        'merma'               => 0.0,
-                        'agrega'              => 0.0,
-                        'vendido'             => 0.0,
-                        'vendido_contado'     => 0.0,
-                        'vendido_credito'     => 0.0,
-                        'ingresos'            => 0.0,
-                        'ingresos_contado'    => 0.0,
-                        'ingresos_credito'    => 0.0,
-                        'precio_prom'         => 0.0,
-                        '_precio_sum'         => 0.0,
-                        '_precio_count'       => 0,
+                    $productoNorm = $this->normalizarNombreProducto($producto);
+                    $mensual[$mes]['productos'][$productoNorm] = [
+                        'mes_ant'          => 0.0,
+                        'producido'        => 0.0,
+                        'merma'            => 0.0,
+                        'agrega'           => 0.0,
+                        'oruro'            => 0.0,
+                        'contado'          => 0.0,
+                        'credito'          => 0.0,
+                        'en_almacen'       => 0.0,
+                        // Campos consolidados
+                        'vendido'          => 0.0,
+                        'ingresos'         => 0.0,
+                        'vendido_contado'  => 0.0,
+                        'ingresos_contado' => 0.0,
+                        'vendido_credito'  => 0.0,
+                        'ingresos_credito' => 0.0,
                     ];
                 }
             }
+        }
 
-            $mensual[$mes]['leche']['litros_recibidos'] += (float)($inv->stock ?? 0);
-            $mensual[$mes]['leche']['dias'][$dia] = true;
+        // ── 2. Acumular datos de producción (usando stock para producido, merma para merma, y agrega para agrega) ──
+        foreach ($datosConProductos as $dato) {
+            $inv = $dato['inventario'];
+            $mes = date('Y-m', strtotime($inv->created_at));
 
             foreach ($dato['productos'] as $producto => $valores) {
-                if ($valores['cantidad_produccion'] === null) {
+                $productoNorm = $this->normalizarNombreProducto($producto);
+                if (!isset($mensual[$mes]['productos'][$productoNorm])) {
                     continue;
                 }
-                $unidades     = (float)$valores['cantidad_produccion'];
-                $litrosUsados = (float)($valores['litros_usados'] ?? 0);
 
-                $mensual[$mes]['productos'][$producto]['producido']     += $unidades;
-                $mensual[$mes]['productos'][$producto]['litros_usados'] += $litrosUsados;
-                $mensual[$mes]['productos'][$producto]['merma']         += (float)($valores['merma'] ?? 0);
-                $mensual[$mes]['productos'][$producto]['agrega']        += (float)($valores['agrega'] ?? 0);
-
-                $mensual[$mes]['leche']['litros_usados'] += $litrosUsados;
+                if ($valores['stock'] !== null) {
+                    $mensual[$mes]['productos'][$productoNorm]['producido'] += (float)$valores['stock'];
+                }
+                if ($valores['merma'] !== null) {
+                    $mensual[$mes]['productos'][$productoNorm]['merma'] += (float)$valores['merma'];
+                }
+                if ($valores['agrega'] !== null) {
+                    $mensual[$mes]['productos'][$productoNorm]['agrega'] += (float)$valores['agrega'];
+                }
             }
         }
 
-        // ── 2. Cruzar con ventas reales (sucursal_id = 4, planta) ─────────────
-        // Obtener rango de fechas cubierto por los datos
+        // ── 3. Cruzar con ventas reales en planta (sucursal_id = 4) ─────────────
         $mesesKeys = array_keys($mensual);
         if (!empty($mesesKeys)) {
             sort($mesesKeys);
             $fechaDesde = $mesesKeys[0] . '-01 00:00:00';
             $fechaHasta = date('Y-m-t 23:59:59', strtotime(end($mesesKeys) . '-01'));
 
-            $sql = "
+            $sqlVentasPlanta = "
                 SELECT
                     TO_CHAR(v.created_at, 'YYYY-MM')  AS mes,
                     p.nombre                           AS producto,
                     v.tipo_pago                        AS tipo_pago,
                     SUM(dv.cantidad)                   AS vendido,
-                    SUM(dv.subtotal)                   AS ingresos,
-                    AVG(dv.precio_unitario)            AS precio_prom
+                    SUM(dv.subtotal)                   AS ingresos
                 FROM condoriri.ventas v
                 JOIN condoriri.detalle_venta dv
                     ON dv.venta_id = v.id AND dv.deleted_at IS NULL
@@ -892,91 +896,188 @@ class ExportacionExcelService
                   AND v.created_at >= ?
                   AND v.created_at <= ?
                 GROUP BY TO_CHAR(v.created_at, 'YYYY-MM'), p.nombre, v.tipo_pago
-                ORDER BY mes, p.nombre
             ";
 
-            $ventas = $this->db->query($sql, [$fechaDesde, $fechaHasta])->getResult();
+            $ventasPlanta = $this->db->query($sqlVentasPlanta, [$fechaDesde, $fechaHasta])->getResult();
 
-            foreach ($ventas as $venta) {
+            foreach ($ventasPlanta as $venta) {
                 $mes      = $venta->mes;
                 $producto = $this->normalizarNombreProducto(trim($venta->producto ?? ''));
 
-                if (!isset($mensual[$mes])) {
-                    continue; // mes fuera del rango de inventarios filtrados
-                }
-                if (!isset($mensual[$mes]['productos'][$producto])) {
-                    continue; // producto no está en los inventarios del reporte
+                if (!isset($mensual[$mes]) || !isset($mensual[$mes]['productos'][$producto])) {
+                    continue;
                 }
 
                 $mensual[$mes]['productos'][$producto]['vendido']  += (float)$venta->vendido;
                 $mensual[$mes]['productos'][$producto]['ingresos'] += (float)$venta->ingresos;
-                // Separar contado / crédito
+
                 if (strtolower($venta->tipo_pago ?? '') === 'contado') {
+                    $mensual[$mes]['productos'][$producto]['contado']          += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$producto]['vendido_contado']  += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$producto]['ingresos_contado'] += (float)$venta->ingresos;
                 } else {
+                    $mensual[$mes]['productos'][$producto]['credito']          += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$producto]['vendido_credito']  += (float)$venta->vendido;
                     $mensual[$mes]['productos'][$producto]['ingresos_credito'] += (float)$venta->ingresos;
                 }
-                // Acumular para promedio ponderado
-                $mensual[$mes]['productos'][$producto]['_precio_sum']   += (float)$venta->precio_prom * (float)$venta->vendido;
-                $mensual[$mes]['productos'][$producto]['_precio_count']  += (float)$venta->vendido;
             }
 
-            // Calcular precio promedio ponderado final
-            foreach ($mensual as $mes => &$item) {
-                foreach ($item['productos'] as $producto => &$p) {
-                    $p['precio_prom'] = $p['_precio_count'] > 0
-                        ? $p['_precio_sum'] / $p['_precio_count']
-                        : 0.0;
-                    unset($p['_precio_sum'], $p['_precio_count']);
+            // ── 4. Cruzar con ventas en Oruro (stock_sucursales, sucursal_id = 2) ──
+            $sqlVentasOruro = "
+                SELECT
+                    TO_CHAR(created_at, 'YYYY-MM') AS mes,
+                    producto,
+                    SUM(cantidad) - SUM(stock) AS vendido
+                FROM condoriri.stock_sucursales
+                WHERE sucursal_id = 2
+                  AND created_at >= ?
+                  AND created_at <= ?
+                GROUP BY TO_CHAR(created_at, 'YYYY-MM'), producto
+            ";
+
+            $ventasOruro = $this->db->query($sqlVentasOruro, [$fechaDesde, $fechaHasta])->getResult();
+
+            foreach ($ventasOruro as $vo) {
+                $mes      = $vo->mes;
+                $producto = $this->normalizarNombreProducto(trim($vo->producto ?? ''));
+
+                if (!isset($mensual[$mes]) || !isset($mensual[$mes]['productos'][$producto])) {
+                    continue;
                 }
-                unset($p);
+
+                $mensual[$mes]['productos'][$producto]['oruro'] += (float)$vo->vendido;
             }
-            unset($item);
+
+            // ── 5. Consultar litros de leche cruda mensuales (inventarios stock where nombre = 'LECHE') ──
+            $sqlLeche = "
+                SELECT
+                    TO_CHAR(created_at, 'YYYY-MM') AS mes,
+                    SUM(stock) AS litros
+                FROM condoriri.inventarios
+                WHERE deleted_at IS NULL
+                  AND UPPER(TRIM(nombre)) = 'LECHE'
+                  AND created_at >= ?
+                  AND created_at <= ?
+                GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+            ";
+
+            $lecheMensual = $this->db->query($sqlLeche, [$fechaDesde, $fechaHasta])->getResult();
+
+            foreach ($lecheMensual as $lm) {
+                $mes = $lm->mes;
+                if (isset($mensual[$mes])) {
+                    $mensual[$mes]['leche']['litros_recibidos'] = (float)$lm->litros;
+                }
+            }
         }
 
         ksort($mensual);
+
         return $mensual;
     }
 
     private function generarWorksheetResumenDetallado(array $mensual, array $productosUnicos, $fecha_inicio, $fecha_fin): void
     {
-        // 11 columnas: MES | PRODUCTO | PRODUCIDO | MERMA | AGREGA | VTA.CO | VTA.CR | TOTAL VTA | ING.CO | ING.CR | TOTAL ING
-        $columnas = 11;
+        // 8 columnas: DETALLE | PROD/MES | MERMA | ORURO | CONTADO | CRÉDITO | TOTAL | OBSERVACION
+        $columnas = 8;
 
-        echo '<Worksheet ss:Name="Resumen Detallado">' . "\n";
+        echo '<Worksheet ss:Name="Balance General">' . "\n";
         echo '<Table>' . "\n";
 
-        $anchos = [140, 155, 90, 80, 80, 90, 90, 90, 110, 110, 110];
+        // Anchos de columna
+        $anchos = [180, 80, 80, 80, 80, 80, 80, 120];
         foreach ($anchos as $ancho) {
             echo '<Column ss:Width="' . $ancho . '"/>' . "\n";
         }
 
-        $merge = $columnas - 1;
-        echo '<Row ss:Height="26"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="titulo"><Data ss:Type="String">RESUMEN DETALLADO</Data></Cell></Row>' . "\n";
-        echo '<Row ss:Height="20"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="subtitulo"><Data ss:Type="String">' . htmlspecialchars($this->obtenerTextoFechas($fecha_inicio, $fecha_fin), ENT_XML1) . '</Data></Cell></Row>' . "\n";
+        $primerMes = true;
+
+        foreach ($mensual as $mes => $item) {
+            // Fila separadora vacía entre meses (excepto antes del primero)
+            if (!$primerMes) {
+                echo '<Row></Row>' . "\n";
+            }
+            $primerMes = false;
+
+            // Título del bloque mensual
+            $tituloBloque = 'BALANCE GENERAL MES ' . strtoupper($this->textoMes($mes));
+
+            echo '<Row ss:Height="26">';
+            echo '<Cell ss:MergeAcross="7" ss:StyleID="titulo_mes"><Data ss:Type="String">' . htmlspecialchars($tituloBloque, ENT_XML1) . '</Data></Cell>';
+            echo '</Row>' . "\n";
+
+            // Encabezados de columnas
+            $headers = [
+                'DETALLE', 'PROD/MES', 'MERMA', 'ORURO', 'CONTADO', 'CRÉDITO', 'TOTAL', 'OBSERVACION'
+            ];
+            echo '<Row ss:Height="20">';
+            foreach ($headers as $h) {
+                echo '<Cell ss:StyleID="resumen_header"><Data ss:Type="String">' . $h . '</Data></Cell>';
+            }
+            echo '</Row>' . "\n";
+
+            // Filas de productos
+            $par = true;
+            foreach ($productosUnicos as $producto) {
+                $productoNorm = $this->normalizarNombreProducto($producto);
+                if (!isset($item['productos'][$productoNorm])) {
+                    continue;
+                }
+
+                $p = $item['productos'][$productoNorm];
+
+                $valProducido = (int)round($p['producido']);
+                $valMerma     = (int)round($p['merma']);
+                $valOruro     = (int)round($p['oruro']);
+                $valContado   = (int)round($p['contado']);
+                $valCredito   = (int)round($p['credito']);
+                $valTotal     = $valOruro + $valContado + $valCredito + $valMerma;
+
+                // Omitir productos sin ninguna actividad en el mes
+                if ($valProducido === 0 && $valMerma === 0 && $valOruro === 0 && $valContado === 0 && $valCredito === 0) {
+                    continue;
+                }
+
+                $styleNombre = $par ? 'resumen_nombre' : 'resumen_nombre_impar';
+                $styleDato   = $par ? 'resumen_par'    : 'resumen_impar';
+
+                echo '<Row ss:Height="18">';
+                echo '<Cell ss:StyleID="' . $styleNombre . '"><Data ss:Type="String">' . htmlspecialchars($productoNorm, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valProducido . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valMerma . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valOruro . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valContado . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valCredito . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="Number">' . $valTotal . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $styleDato . '"/>'; // OBSERVACION
+                echo '</Row>' . "\n";
+
+                $par = !$par;
+            }
+
+            // Fila LECHE (litros) - combinada horizontalmente
+            $lecheLitros = (int)round($item['leche']['litros_recibidos'] ?? 0);
+
+            echo '<Row ss:Height="18">';
+            echo '<Cell ss:MergeAcross="7" ss:StyleID="total_mes_label"><Data ss:Type="String">leche producida: ' . $lecheLitros . '</Data></Cell>';
+            echo '</Row>' . "\n";
+        }
+
+        // Fila separadora vacía antes del bloque consolidado
         echo '<Row></Row>' . "\n";
 
-        $this->renderBloqueProduccionVentasPorMes($mensual, $productosUnicos, $columnas);
-        echo '<Row></Row>' . "\n";
-        $this->renderBloqueProduccionVentasPorProducto($mensual, $productosUnicos, $columnas);
-        echo '<Row></Row>' . "\n";
-        $this->renderBloqueConsolidadoPorMes($mensual, $productosUnicos, $columnas);
+        // Renderizar bloque consolidado al final (usa 8 columnas)
+        $this->renderBloqueProduccionVentasPorProducto($mensual, $productosUnicos, 8);
 
         echo '</Table></Worksheet>' . "\n";
     }
 
-    /**
-     * Encabezados de columnas compartidos por ambos bloques.
-     * Columnas: MES | PRODUCTO | PRODUCIDO | MERMA | AGREGA | VENDIDO | STOCK RESTANTE | INGRESOS (Bs) | P. PROM. VENTA
-     */
     private function renderEncabezadosProduccionVentas(): void
     {
         $headers = [
-            'MES', 'PRODUCTO', 'PRODUCIDO', 'MERMA', 'AGREGA',
-            'VENDIDO CONTADO', 'VENDIDO CRÉDITO', 'TOTAL VENDIDO',
-            'INGRESOS CONTADO (Bs)', 'INGRESOS CRÉDITO (Bs)', 'TOTAL INGRESOS (Bs)',
+            'PRODUCTO', 'PRODUCIDO', 'MERMA', 'AGREGA',
+            'CONTADO', 'CRÉDITO', 'VENDIDO',
+            'CONTADO (Bs)', 'CRÉDITO (Bs)', 'TOTAL (Bs)',
         ];
         echo '<Row ss:Height="20">';
         foreach ($headers as $h) {
@@ -985,245 +1086,54 @@ class ExportacionExcelService
         echo '</Row>' . "\n";
     }
 
-    /**
-     * Fila de totales compartida por ambos bloques.
-     */
-    private function renderFilaTotalesProduccionVentas(array $totales): void
-    {
-        echo '<Row ss:Height="20">';
-        echo '<Cell ss:MergeAcross="1" ss:StyleID="resumen_total_label"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['producido'],        2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['merma'],            2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['agrega'],           2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['vendido_contado'],  2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['vendido_credito'],  2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['vendido'],          2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['ingresos_contado'], 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['ingresos_credito'], 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totales['ingresos'],         2, '.', '') . '</Data></Cell>';
-        echo '</Row>' . "\n";
-    }
-
-    /**
-     * Renderiza una fila de datos de producción/ventas.
-     * $esFilaSeparador: true cuando es la primera fila de un nuevo grupo (mes o producto),
-     * activa el borde superior grueso como separador visual.
-     */
     private function renderFilaProduccionVentas(
-        string $colA,
-        string $colB,
+        string $producto,
         array  $p,
         bool   $par,
         bool   $esFilaSeparador
     ): void {
-
-        // Estilos base alternados
         $styleNombre = $par ? 'resumen_nombre'      : 'resumen_nombre_impar';
         $styleDato   = $par ? 'resumen_par'         : 'resumen_impar';
 
-        // En la primera fila de cada grupo usamos estilos con borde superior grueso
         if ($esFilaSeparador) {
             $styleNombre = $par ? 'resumen_sep_nombre'      : 'resumen_sep_nombre_impar';
             $styleDato   = $par ? 'resumen_sep_par'         : 'resumen_sep_impar';
         }
 
         echo '<Row ss:Height="18">';
-        echo '<Cell ss:StyleID="' . $styleNombre . '"><Data ss:Type="String">' . htmlspecialchars($colA, ENT_XML1) . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleNombre . '"><Data ss:Type="String">' . htmlspecialchars($colB, ENT_XML1) . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['producido'],        2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['merma'],            2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['agrega'],           2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['vendido_contado'],  2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['vendido_credito'],  2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['vendido'],          2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['ingresos_contado'], 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['ingresos_credito'], 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($p['ingresos'],         2, '.', '') . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleNombre . '"><Data ss:Type="String">' . htmlspecialchars($producto, ENT_XML1) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['producido']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['merma']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['agrega']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['vendido_contado']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['vendido_credito']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['vendido']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['ingresos_contado']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['ingresos_credito']) . '</Data></Cell>';
+        echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . (int)round($p['ingresos']) . '</Data></Cell>';
         echo '</Row>' . "\n";
     }
 
-    /**
-     * Bloque 1 — Desglose por MES → producto.
-     * Agrupa las filas por mes; cada cambio de mes lleva separador visual (borde superior grueso).
-     */
-    private function renderBloqueProduccionVentasPorMes(array $mensual, array $productosUnicos, int $columnas): void
-    {
-        $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">) PRODUCCION Y VENTAS — DESGLOSE POR MES</Data></Cell></Row>' . "\n";
-        $this->renderEncabezadosProduccionVentas();
-
-        $totalesGral = ['producido' => 0.0, 'merma' => 0.0, 'agrega' => 0.0, 'vendido' => 0.0, 'vendido_contado' => 0.0, 'vendido_credito' => 0.0, 'ingresos' => 0.0, 'ingresos_contado' => 0.0, 'ingresos_credito' => 0.0];
-        $par         = true;
-        $primerGrupo = true;
-
-        foreach ($mensual as $item) {
-            $mesTexto       = $this->textoMes($item['mes']);
-            $primeraFilaMes = true;
-            $totalesMes     = ['producido' => 0.0, 'merma' => 0.0, 'agrega' => 0.0, 'vendido' => 0.0, 'vendido_contado' => 0.0, 'vendido_credito' => 0.0, 'ingresos' => 0.0, 'ingresos_contado' => 0.0, 'ingresos_credito' => 0.0];
-
-            foreach ($productosUnicos as $producto) {
-                $p = $item['productos'][$producto];
-                if ($p['producido'] <= 0 && $p['vendido'] <= 0 && $p['merma'] <= 0 && $p['agrega'] <= 0) {
-                    continue;
-                }
-
-                // Separador: primera fila de cada mes (excepto el primero)
-                $esSeparador = $primeraFilaMes && !$primerGrupo;
-
-                $this->renderFilaProduccionVentas($mesTexto, $producto, $p, $par, $esSeparador);
-
-                $stockFila = $p['producido'] + $p['agrega'] - $p['merma'] - $p['vendido'];
-
-                $totalesMes['producido']        += $p['producido'];
-                $totalesMes['merma']            += $p['merma'];
-                $totalesMes['agrega']           += $p['agrega'];
-                $totalesMes['vendido']          += $p['vendido'];
-                $totalesMes['vendido_contado']  += $p['vendido_contado'];
-                $totalesMes['vendido_credito']  += $p['vendido_credito'];
-                $totalesMes['ingresos']         += $p['ingresos'];
-                $totalesMes['ingresos_contado'] += $p['ingresos_contado'];
-                $totalesMes['ingresos_credito'] += $p['ingresos_credito'];
-
-                $par            = !$par;
-                $primeraFilaMes = false;
-                $primerGrupo    = false;
-            }
-
-            // Fila subtotal del mes (solo si hubo al menos una fila de datos)
-            if (!$primeraFilaMes) {
-                echo '<Row ss:Height="18">';
-                echo '<Cell ss:MergeAcross="1" ss:StyleID="total_mes_label"><Data ss:Type="String">TOTAL ' . htmlspecialchars(strtoupper($mesTexto), ENT_XML1) . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['producido'],        2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['merma'],            2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['agrega'],           2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['vendido_contado'],  2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['vendido_credito'],  2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['vendido'],          2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['ingresos_contado'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['ingresos_credito'], 2, '.', '') . '</Data></Cell>';
-                echo '<Cell ss:StyleID="total_mes_numero"><Data ss:Type="Number">' . number_format($totalesMes['ingresos'],         2, '.', '') . '</Data></Cell>';
-                echo '</Row>' . "\n";
-
-                $totalesGral['producido']        += $totalesMes['producido'];
-                $totalesGral['merma']            += $totalesMes['merma'];
-                $totalesGral['agrega']           += $totalesMes['agrega'];
-                $totalesGral['vendido']          += $totalesMes['vendido'];
-                $totalesGral['vendido_contado']  += $totalesMes['vendido_contado'];
-                $totalesGral['vendido_credito']  += $totalesMes['vendido_credito'];
-                $totalesGral['ingresos']         += $totalesMes['ingresos'];
-                $totalesGral['ingresos_contado'] += $totalesMes['ingresos_contado'];
-                $totalesGral['ingresos_credito'] += $totalesMes['ingresos_credito'];
-            }
-        }
-
-        $this->renderFilaTotalesProduccionVentas($totalesGral);
-    }
-
-    /**
-     * Bloque 2 — Desglose por PRODUCTO → mes.
-     * Agrupa las filas por nombre de producto; cada cambio de producto lleva separador visual.
-     */
-    /**
-     * Bloque 2 — Consolidado por mes (una fila por mes).
-     * Columnas: MES | LITROS USADOS | UNIDADES PRODUCIDAS | INGRESOS CONTADO | INGRESOS CRÉDITO | TOTAL INGRESOS
-     */
-    private function renderBloqueConsolidadoPorMes(array $mensual, array $productosUnicos, int $columnas): void
-    {
-        $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String"> CONSOLIDADO POR MES</Data></Cell></Row>' . "\n";
-
-        // Encabezados propios (6 columnas de datos, resto vacío)
-        $headers    = ['MES', 'LITROS USADOS', 'UNIDADES PRODUCIDAS', 'INGRESOS CONTADO (Bs)', 'INGRESOS CRÉDITO (Bs)', 'TOTAL INGRESOS (Bs)'];
-        $colsBloque = count($headers);
-        echo '<Row ss:Height="20">';
-        foreach ($headers as $h) {
-            echo '<Cell ss:StyleID="resumen_header"><Data ss:Type="String">' . $h . '</Data></Cell>';
-        }
-        for ($i = $colsBloque; $i < $columnas; $i++) {
-            echo '<Cell ss:StyleID="resumen_header"><Data ss:Type="String"></Data></Cell>';
-        }
-        echo '</Row>' . "\n";
-
-        $totLitros   = 0.0;
-        $totProd     = 0.0;
-        $totContado  = 0.0;
-        $totCredito  = 0.0;
-        $par         = true;
-
-        foreach ($mensual as $item) {
-            // Sumar todos los productos del mes
-            $litrosUsados  = (float)$item['leche']['litros_usados'];
-            $producido     = 0.0;
-            $ingContado    = 0.0;
-            $ingCredito    = 0.0;
-
-            foreach ($productosUnicos as $producto) {
-                $p          = $item['productos'][$producto];
-                $producido  += $p['producido'];
-                $ingContado += $p['ingresos_contado'];
-                $ingCredito += $p['ingresos_credito'];
-            }
-
-            $totalIngresos = $ingContado + $ingCredito;
-
-            $totLitros  += $litrosUsados;
-            $totProd    += $producido;
-            $totContado += $ingContado;
-            $totCredito += $ingCredito;
-
-            $styleNombre = $par ? 'resumen_nombre' : 'resumen_nombre_impar';
-            $styleDato   = $par ? 'resumen_par'    : 'resumen_impar';
-
-            echo '<Row ss:Height="18">';
-            echo '<Cell ss:StyleID="' . $styleNombre . '"><Data ss:Type="String">' . htmlspecialchars($this->textoMes($item['mes']), ENT_XML1) . '</Data></Cell>';
-            echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($litrosUsados,  2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($producido,     2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($ingContado,    2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($ingCredito,    2, '.', '') . '</Data></Cell>';
-            echo '<Cell ss:StyleID="' . $styleDato   . '"><Data ss:Type="Number">' . number_format($totalIngresos, 2, '.', '') . '</Data></Cell>';
-            for ($i = $colsBloque; $i < $columnas; $i++) {
-                echo '<Cell ss:StyleID="' . $styleDato . '"><Data ss:Type="String"></Data></Cell>';
-            }
-            echo '</Row>' . "\n";
-
-            $par = !$par;
-        }
-
-        // Fila totales
-        $totTotal = $totContado + $totCredito;
-        echo '<Row ss:Height="20">';
-        echo '<Cell ss:StyleID="resumen_total_label"><Data ss:Type="String">TOTAL GENERAL</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totLitros,  2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totProd,    2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totContado, 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totCredito, 2, '.', '') . '</Data></Cell>';
-        echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="Number">' . number_format($totTotal,   2, '.', '') . '</Data></Cell>';
-        for ($i = $colsBloque; $i < $columnas; $i++) {
-            echo '<Cell ss:StyleID="resumen_total"><Data ss:Type="String"></Data></Cell>';
-        }
-        echo '</Row>' . "\n";
-    }
-
-    /**
-     * Bloque 3 — Consolidado por producto (una fila por producto, todos los meses sumados).
-     * La columna MES muestra el rango cubierto, p.ej. "Enero – Mayo 2026".
-     * El precio promedio de venta se pondera por unidades vendidas en todos los meses.
-     */
     private function renderBloqueProduccionVentasPorProducto(array $mensual, array $productosUnicos, int $columnas): void
     {
         $merge = $columnas - 1;
-        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">) PRODUCCION Y VENTAS — CONSOLIDADO POR PRODUCTO</Data></Cell></Row>' . "\n";
-        $this->renderEncabezadosProduccionVentas();
-
-        // ── Calcular rango de meses del reporte ───────────────────────────────
         $mesesKeys = array_keys($mensual);
         sort($mesesKeys);
         $rangoMes = $this->textoRangoMeses($mesesKeys);
 
-        // ── Consolidar por producto ───────────────────────────────────────────
-        $consolidado = [];
+        echo '<Row ss:Height="22"><Cell ss:MergeAcross="' . $merge . '" ss:StyleID="resumen_titulo"><Data ss:Type="String">PRODUCCION Y VENTAS — CONSOLIDADO POR PRODUCTO (' . $rangoMes . ')</Data></Cell></Row>' . "\n";
+        $this->renderEncabezadosProduccionVentas();
+
+        $productosNormUnicos = [];
         foreach ($productosUnicos as $producto) {
-            $acc = [
+            $productoNorm = $this->normalizarNombreProducto($producto);
+            $productosNormUnicos[$productoNorm] = true;
+        }
+        $productosNormUnicos = array_keys($productosNormUnicos);
+
+        $consolidado = [];
+        foreach ($productosNormUnicos as $productoNorm) {
+            $consolidado[$productoNorm] = [
                 'producido'          => 0.0,
                 'merma'              => 0.0,
                 'agrega'             => 0.0,
@@ -1233,60 +1143,36 @@ class ExportacionExcelService
                 'ingresos'           => 0.0,
                 'ingresos_contado'   => 0.0,
                 'ingresos_credito'   => 0.0,
-                'precio_prom'        => 0.0,
-                '_precio_sum'        => 0.0,
-                '_precio_count'      => 0.0,
             ];
 
             foreach ($mensual as $item) {
-                $p = $item['productos'][$producto];
-                $acc['producido']         += $p['producido'];
-                $acc['merma']             += $p['merma'];
-                $acc['agrega']            += $p['agrega'];
-                $acc['vendido']           += $p['vendido'];
-                $acc['vendido_contado']   += $p['vendido_contado'];
-                $acc['vendido_credito']   += $p['vendido_credito'];
-                $acc['ingresos']          += $p['ingresos'];
-                $acc['ingresos_contado']  += $p['ingresos_contado'];
-                $acc['ingresos_credito']  += $p['ingresos_credito'];
-                // Acumular para promedio ponderado
-                $acc['_precio_sum']   += $p['precio_prom'] * $p['vendido'];
-                $acc['_precio_count'] += $p['vendido'];
+                if (!isset($item['productos'][$productoNorm])) {
+                    continue;
+                }
+                $p = $item['productos'][$productoNorm];
+                $consolidado[$productoNorm]['producido']         += $p['producido'];
+                $consolidado[$productoNorm]['merma']             += $p['merma'];
+                $consolidado[$productoNorm]['agrega']            += $p['agrega'];
+                $consolidado[$productoNorm]['vendido']           += $p['vendido'];
+                $consolidado[$productoNorm]['vendido_contado']   += $p['vendido_contado'];
+                $consolidado[$productoNorm]['vendido_credito']   += $p['vendido_credito'];
+                $consolidado[$productoNorm]['ingresos']          += $p['ingresos'];
+                $consolidado[$productoNorm]['ingresos_contado']  += $p['ingresos_contado'];
+                $consolidado[$productoNorm]['ingresos_credito']  += $p['ingresos_credito'];
             }
-
-            // Omitir productos sin ningún dato en el período
-            if ($acc['producido'] <= 0 && $acc['vendido'] <= 0 && $acc['merma'] <= 0 && $acc['agrega'] <= 0) {
-                continue;
-            }
-
-            $acc['precio_prom'] = $acc['_precio_count'] > 0
-                ? $acc['_precio_sum'] / $acc['_precio_count']
-                : 0.0;
-
-            $consolidado[$producto] = $acc;
         }
 
-        // ── Renderizar filas ──────────────────────────────────────────────────
-        $totales = ['producido' => 0.0, 'merma' => 0.0, 'agrega' => 0.0, 'vendido' => 0.0, 'vendido_contado' => 0.0, 'vendido_credito' => 0.0, 'ingresos' => 0.0, 'ingresos_contado' => 0.0, 'ingresos_credito' => 0.0];
         $par = true;
 
         foreach ($consolidado as $producto => $p) {
-            $this->renderFilaProduccionVentas($rangoMes, $producto, $p, $par, false);
+            if ($p['producido'] <= 0 && $p['vendido'] <= 0 && $p['merma'] <= 0 && $p['agrega'] <= 0) {
+                continue;
+            }
 
-            $totales['producido']        += $p['producido'];
-            $totales['merma']            += $p['merma'];
-            $totales['agrega']           += $p['agrega'];
-            $totales['vendido']          += $p['vendido'];
-            $totales['vendido_contado']  += $p['vendido_contado'];
-            $totales['vendido_credito']  += $p['vendido_credito'];
-            $totales['ingresos']         += $p['ingresos'];
-            $totales['ingresos_contado'] += $p['ingresos_contado'];
-            $totales['ingresos_credito'] += $p['ingresos_credito'];
+            $this->renderFilaProduccionVentas($producto, $p, $par, false);
 
             $par = !$par;
         }
-
-        $this->renderFilaTotalesProduccionVentas($totales);
     }
 
     /**
