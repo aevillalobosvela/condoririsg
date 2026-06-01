@@ -160,6 +160,12 @@
           </button>
         </div>
         <div id="personalInfo" class="mt-3"></div>
+        <div id="panelSaldoCredito" style="display:none; background:#fffbeb; border-left:4px solid #f97316; border-radius:4px; padding:8px 12px; margin-top:8px; font-size:12px;">
+          <div style="font-weight:600; color:#92400e; margin-bottom:4px;">CRÉDITO PERIODO <span id="saldoPeriodo" style="font-weight:400;"></span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Saldo anterior:</span><span id="saldoAnteriorVal">Bs. 0.00</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Esta venta:</span><span id="saldoEstaVenta">Bs. 0.00</span></div>
+          <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px dashed #f97316; margin-top:4px; padding-top:4px;"><span>Total a descontar:</span><span id="saldoTotalDescontar">Bs. 0.00</span></div>
+        </div>
         <!-- Panel de edición inline cliente externo -->
         <div id="clienteExternoEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
           <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
@@ -211,11 +217,8 @@
           <input type="text" id="productFilter" class="form-control" placeholder="Filtrar por nombre...">
           <select id="categoryFilter" class="form-select" style="max-width:160px;">
             <option value="">Todas las categorías</option>
-            <option value="TUBERCULOS">Tubérculos</option>
-            <option value="HORTALIZAS">Hortalizas</option>
-            <option value="DESHIDRATADOS">Deshidratados</option>
-            <option value="CEREALES">Cereales</option>
-            <option value="LEGUMINOSAS">Leguminosas</option>
+            <option value="AGRICOLA">Agrícola</option>
+            <option value="PECUARIO">Pecuario</option>
           </select>
         </div>
    
@@ -329,6 +332,33 @@
         <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
           <i class="ri-pencil-line me-1"></i> Corregir esta venta
         </button>
+        <button type="button" class="btn btn-outline-danger w-100 mt-1 btn-sm" id="btnEliminarVenta">
+          <i class="ri-delete-bin-line me-1"></i> Eliminar esta venta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación eliminar última venta -->
+<div class="modal fade" id="modalEliminarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="ri-delete-bin-line me-1"></i>Eliminar venta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="elimVentaError" class="alert alert-danger d-none mb-2"></div>
+        <p class="mb-1">¿Eliminar la venta <strong id="elimVentaCode"></strong>?</p>
+        <p class="text-muted small mb-0">Monto: <strong id="elimVentaMonto"></strong></p>
+        <p class="text-muted small mt-2">El stock de los productos será repuesto automáticamente. Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarEliminar">
+          <i class="ri-delete-bin-line me-1"></i>Sí, eliminar
+        </button>
       </div>
     </div>
   </div>
@@ -344,16 +374,27 @@
       </div>
       <div class="modal-body">
         <div id="nuevoExternoError" class="alert alert-danger d-none"></div>
-        <div class="mb-3">
-          <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" id="extNombre" placeholder="Ej. JUAN PEREZ MAMANI">
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extApellidoPaterno"
+            style="text-transform:uppercase" placeholder="Ej: MAMANI">
         </div>
-        <div class="mb-3">
-          <label class="form-label">DIP / CI <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Apellido Materno</label>
+          <input type="text" class="form-control" id="extApellidoMaterno"
+            style="text-transform:uppercase" placeholder="Ej: QUISPE">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="extNombres"
+            style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">DIP / CI <span class="text-danger">*</span></label>
           <input type="text" class="form-control" id="extDip" placeholder="Ej. 7456123">
         </div>
-        <div class="mb-3">
-          <label class="form-label">Segmento <span class="text-danger">*</span></label>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Segmento <span class="text-danger">*</span></label>
           <select class="form-select" id="extSegmento">
             <option value="">Seleccione...</option>
             <option value="SEGURO_UNIV">Seguro Universitario</option>
@@ -451,6 +492,27 @@
     const modalNuevoExterno = new bootstrap.Modal(document.getElementById('modalNuevoExterno'));
 
     let searchTimeout;
+    let saldoAnteriorActual = 0;
+
+    function fetchSaldoCredito(tipo, id) {
+      fetch(`<?= base_url('productosagro/saldoCredito') ?>?tipo=${tipo}&id=${id}`)
+        .then(r => r.json())
+        .then(data => {
+          saldoAnteriorActual = parseFloat(data.saldo_anterior) || 0;
+          const estaVenta = parseFloat(totalDisplay.textContent.replace('Bs. ', '')) || 0;
+          document.getElementById('saldoPeriodo').textContent = data.periodo ? '(' + data.periodo + ')' : '';
+          document.getElementById('saldoAnteriorVal').textContent = 'Bs. ' + saldoAnteriorActual.toFixed(2);
+          document.getElementById('saldoEstaVenta').textContent = 'Bs. ' + estaVenta.toFixed(2);
+          document.getElementById('saldoTotalDescontar').textContent = 'Bs. ' + (saldoAnteriorActual + estaVenta).toFixed(2);
+          document.getElementById('panelSaldoCredito').style.display = 'block';
+        })
+        .catch(() => {});
+    }
+
+    function ocultarPanelSaldo() {
+      saldoAnteriorActual = 0;
+      document.getElementById('panelSaldoCredito').style.display = 'none';
+    }
 
     dipSearch.addEventListener('input', function() {
       clearTimeout(searchTimeout);
@@ -459,6 +521,7 @@
       clienteIdInput.value = '';
       tipoReceptorInput.value = '';
       selectedPersonal = null;
+      ocultarPanelSaldo();
       if (dip.length < 3) return;
       searchTimeout = setTimeout(() => {
         fetch(`<?= base_url('productosagro/buscarPersonalUto') ?>?dip=${encodeURIComponent(dip)}`)
@@ -494,6 +557,7 @@
                 selectedPersonal = { nombre: el.dataset.nombre, dip: el.dataset.dip, tipo: el.dataset.tipo };
                 clienteIdInput.value    = el.dataset.id;
                 tipoReceptorInput.value = el.dataset.tipo;
+                fetchSaldoCredito(el.dataset.tipo, el.dataset.id);
 
                 const panel = document.getElementById('clienteExternoEditPanel');
                 if (el.dataset.tipo === 'externo') {
@@ -529,13 +593,15 @@
     });
 
     document.getElementById('btnGuardarExterno').addEventListener('click', function() {
-      const nombre   = document.getElementById('extNombre').value.trim();
+      const apellidoPaterno = document.getElementById('extApellidoPaterno').value.trim().toUpperCase();
+      const apellidoMaterno = document.getElementById('extApellidoMaterno').value.trim().toUpperCase();
+      const nombres         = document.getElementById('extNombres').value.trim().toUpperCase();
       const dip      = document.getElementById('extDip').value.trim();
       const segmento = document.getElementById('extSegmento').value;
       const errDiv   = document.getElementById('nuevoExternoError');
 
-      if (!nombre || !dip || !segmento) {
-        errDiv.textContent = 'Todos los campos son obligatorios.';
+      if (!apellidoPaterno || !nombres || !dip || !segmento) {
+        errDiv.textContent = 'Apellido paterno, nombre(s), DIP y segmento son obligatorios.';
         errDiv.classList.remove('d-none');
         return;
       }
@@ -544,7 +610,12 @@
       fetch('<?= base_url('productosagro/guardarClienteExterno') ?>', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-        body: new URLSearchParams({ nombre, dip, segmento, '<?= csrf_token() ?>': '<?= csrf_hash() ?>' })
+        body: new URLSearchParams({
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
+          nombres, dip, segmento,
+          '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+        })
       })
       .then(r => r.json())
       .then(res => {
@@ -569,8 +640,11 @@
             <strong>Seleccionado:</strong> ${c.nombre} — DIP: ${c.dip}
             <span class="badge bg-warning text-dark ms-2">Externo</span>
           </div>`;
+        fetchSaldoCredito('externo', c.id);
         modalNuevoExterno.hide();
-        document.getElementById('extNombre').value    = '';
+        document.getElementById('extApellidoPaterno').value = '';
+        document.getElementById('extApellidoMaterno').value = '';
+        document.getElementById('extNombres').value = '';
         document.getElementById('extDip').value       = '';
         document.getElementById('extSegmento').value  = '';
       })
@@ -582,15 +656,50 @@
 
     // Colores por categoría (mismo esquema que el formulario)
     const CAT_COLORS = {
-      'TUBERCULOS':    { bg: '#fde68a', border: '#d97706', text: '#78350f' },
-      'HORTALIZAS':    { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
-      'DESHIDRATADOS': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
-      'CEREALES':      { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
-      'LEGUMINOSAS':   { bg: '#e9d5ff', border: '#7c3aed', text: '#4c1d95' },
-      'DEFAULT':       { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
+      'AGRICOLA': { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
+      'PECUARIO': { bg: '#fed7aa', border: '#ea580c', text: '#7c2d12' },
+      'DEFAULT':  { bg: '#f1f5f9', border: '#64748b', text: '#1e293b' },
     };
     function getCatColor(cat) {
       return CAT_COLORS[(cat || '').toUpperCase()] || CAT_COLORS['DEFAULT'];
+    }
+
+    // Base URL para imágenes subidas por usuario
+    const BASE_URL = '<?= base_url() ?>';
+
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono Remix Icon por categoría
+    function getCategoryIcon(categoria) {
+      const c = (categoria || '').toUpperCase();
+      if (c === 'AGRICOLA') return { type: 'ri', value: 'ri-plant-line' };
+      if (c === 'PECUARIO') return { type: 'ri', value: 'ri-bear-smile-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
+    }
+
+    // Resuelve imagen con cadena de prioridad (niveles 1, 2 y 4)
+    function getProductImage(nombre, categoria, imagenBD) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario (campo imagen en BD)
+      if (imagenBD && imagenBD !== null && imagenBD !== '') {
+        return { type: 'url', src: BASE_URL + imagenBD };
+      }
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(categoria) };
     }
 
     // --- FUNCIONES DE PRODUCTOS Y CARRITO ---
@@ -617,15 +726,35 @@
              data-categoria="${(p.categoria||'').toUpperCase()}">
           <div class="card h-100 shadow-sm border-0" style="border-left:4px solid ${c.border} !important; cursor:pointer;">
             <div class="card-body text-center p-3" style="background:linear-gradient(135deg,${c.bg} 0%,#ffffff 100%);">
-              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
-                   style="width:56px;height:56px;background-color:${c.border};">
-                <span class="fw-bold" style="color:#fff;font-size:0.85rem;">${p.producto.substring(0,2)}</span>
-              </div>
+              ${
+                (() => {
+                  const img = getProductImage(p.producto, p.categoria, p.imagen ?? null);
+                  if (img.type === 'url') {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
+                         style="width:72px;height:72px;background-color:${c.border};">
+                      <img src="${img.src}" alt="${p.producto}"
+                           style="width:100%;height:100%;object-fit:cover;">
+                    </div>`;
+                  } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size:1.8rem;"></i>`;
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                         style="width:72px;height:72px;background-color:${c.border};color:#fff;">
+                      ${inner}
+                    </div>`;
+                  }
+                })()
+              }
               <h6 class="card-title mb-1" style="color:${c.text};font-size:0.82rem;">${p.producto}</h6>
               <p class="card-text mb-1">
-                <span class="fw-bold" style="color:${c.border};font-size:0.85rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
+                <span class="fw-bold" style="color:${c.border};font-size:0.88rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </p>
-              <span class="badge" style="background-color:${c.border};font-size:0.62rem;">${p.cantidad_inve} ${p.unidad_nombre || 'und'}</span>
+              <div class="mb-1">
+                <span style="font-size:1.05rem;font-weight:700;color:${c.border};line-height:1;">${p.cantidad_inve}</span>
+                <span style="font-size:0.72rem;font-weight:400;color:${c.text};"> ${p.unidad_nombre || 'und'}</span>
+              </div>
             </div>
           </div>
         </div>`;
@@ -743,6 +872,10 @@
       discountDisplay.textContent = `- Bs. ${totalDiscount.toFixed(2)}`;
       totalDisplay.textContent = `Bs. ${total.toFixed(2)}`;
       updateChange();
+      if (document.getElementById('panelSaldoCredito').style.display !== 'none') {
+        document.getElementById('saldoEstaVenta').textContent = 'Bs. ' + total.toFixed(2);
+        document.getElementById('saldoTotalDescontar').textContent = 'Bs. ' + (saldoAnteriorActual + total).toFixed(2);
+      }
     }
 
     function updateChange() {
@@ -815,6 +948,7 @@
         clienteIdInput.value = '';
         montoRecibidoInput.value = '';
         cambioInput.value = 'Bs. 0.00';
+        ocultarPanelSaldo();
       }
     });
 
@@ -1008,6 +1142,49 @@
       })
       .catch(() => {});
   }
+
+  // --- Abrir modal de confirmación de eliminación ---
+  document.getElementById('btnEliminarVenta').addEventListener('click', function () {
+    if (!uvData) return;
+    document.getElementById('elimVentaCode').textContent  = uvData.venta.code;
+    document.getElementById('elimVentaMonto').textContent = 'Bs. ' + parseFloat(uvData.venta.monto_total).toFixed(2);
+    document.getElementById('elimVentaError').classList.add('d-none');
+    const btn = document.getElementById('btnConfirmarEliminar');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    new bootstrap.Modal(document.getElementById('modalEliminarVenta')).show();
+  });
+
+  // --- Confirmar eliminación ---
+  document.getElementById('btnConfirmarEliminar').addEventListener('click', function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...';
+    const params = new URLSearchParams({ venta_id: uvData.venta.id });
+    fetch('<?= base_url('productosagro/deleteUltimaVenta') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEliminarVenta')).hide();
+        window.location.reload();
+      } else {
+        document.getElementById('elimVentaError').textContent = data.error;
+        document.getElementById('elimVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+      }
+    })
+    .catch(() => {
+      document.getElementById('elimVentaError').textContent = 'Error de conexión.';
+      document.getElementById('elimVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    });
+  });
 
   document.getElementById('btnCorregirVenta').addEventListener('click', function() {
     if (!uvData) return;

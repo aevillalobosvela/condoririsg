@@ -193,6 +193,12 @@ class CierreVentaBasePdf extends FPDF
                 $this->Cell($w[1], 5, '', 1, 0, 'L', true);
                 $this->Cell($w[2], 5, utf8_decode('Sección:'), 1, 0, 'R', true);
                 $this->Cell($w[3], 5, utf8_decode($venta['seccion']), 1, 1, 'L', true);
+                if (!empty($venta['receptor_categoria'])) {
+                    $this->Cell($w[0], 5, '', 1, 0, 'R', true);
+                    $this->Cell($w[1], 5, '', 1, 0, 'L', true);
+                    $this->Cell($w[2], 5, utf8_decode('Categoría:'), 1, 0, 'R', true);
+                    $this->Cell($w[3], 5, utf8_decode($venta['receptor_categoria']), 1, 1, 'L', true);
+                }
             }
 
             $this->SetFont('Arial', 'B', 9);
@@ -227,6 +233,124 @@ class CierreVentaBasePdf extends FPDF
             }
 
             $this->Ln(6);
+        }
+    }
+
+    /**
+     * Renderiza el resumen financiero al final del reporte.
+     * Solo debe llamarse para tipo 'contado' o 'credito', nunca para 'general'.
+     *
+     * @param array $ventasAgrupadas  Array de ventas ya procesadas (con 'cliente', 'total_venta', 'items')
+     * @param array $productosUnicos  Array de productos únicos (con 'total_cantidad')
+     * @param float $totalGeneralBs   Monto total del reporte
+     */
+    protected function renderResumenFinanciero(
+        array $ventasAgrupadas,
+        array $productosUnicos,
+        float $totalGeneralBs
+    ): void {
+        if (empty($ventasAgrupadas)) return;
+
+        $pageW = $this->GetPageWidth() - $this->lMargin - $this->rMargin;
+
+        // ── Calcular indicadores desde datos en memoria ───────────────────────
+        $nVentas    = count($ventasAgrupadas);
+        $ticketProm = $nVentas > 0 ? $totalGeneralBs / $nVentas : 0;
+        $montos     = array_column($ventasAgrupadas, 'total_venta');
+        $ventaMin   = !empty($montos) ? min($montos) : 0;
+        $ventaMax   = !empty($montos) ? max($montos) : 0;
+
+        // Producto más vendido por cantidad
+        $prodMaxCant  = '';
+        $prodMaxQ     = 0;
+        foreach ($productosUnicos as $nombre => $info) {
+            if ($info['total_cantidad'] > $prodMaxQ) {
+                $prodMaxQ    = $info['total_cantidad'];
+                $prodMaxCant = $nombre;
+            }
+        }
+
+        // Top 5 clientes por monto acumulado
+        $topClientes = [];
+        foreach ($ventasAgrupadas as $venta) {
+            $nombre = $venta['cliente'] ?: 'Consumidor Final';
+            if (!isset($topClientes[$nombre])) {
+                $topClientes[$nombre] = ['n' => 0, 'monto' => 0.0];
+            }
+            $topClientes[$nombre]['n']++;
+            $topClientes[$nombre]['monto'] += $venta['total_venta'];
+        }
+        uasort($topClientes, fn($a, $b) => $b['monto'] <=> $a['monto']);
+        $topClientes = array_slice($topClientes, 0, 5, true);
+
+        // ── Salto de página si no hay espacio suficiente ──────────────────────
+        $alturaEstimada = 10 + 8 * 6 + 8 + (count($topClientes) + 1) * 6;
+        if ($this->GetY() + $alturaEstimada > $this->GetPageHeight() - 20) {
+            $this->AddPage($this->CurOrientation);
+        }
+
+        $this->Ln(6);
+
+        // ── BLOQUE 1 — Indicadores de ventas ─────────────────────────────────
+        $this->SetFont('Arial', 'B', 9);
+        $this->SetFillColor(46, 80, 144); // azul institucional
+        $this->SetTextColor(255, 255, 255);
+        $this->Cell($pageW, 6, utf8_decode('  RESUMEN FINANCIERO'), 0, 1, 'L', true);
+        $this->SetTextColor(0, 0, 0);
+        $this->Ln(2);
+
+        $wLabel = (int)round($pageW * 0.45);
+        $wVal   = $pageW - $wLabel;
+
+        $indicadores = [
+            [utf8_decode('N° de ventas'),                    (string)$nVentas],
+            [utf8_decode('Monto total'),                     'Bs. ' . number_format($totalGeneralBs, 2, ',', '.')],
+            [utf8_decode('Ticket promedio'),                 'Bs. ' . number_format($ticketProm, 2, ',', '.')],
+            [utf8_decode('Venta mínima'),                    'Bs. ' . number_format($ventaMin, 2, ',', '.')],
+            [utf8_decode('Venta máxima'),                    'Bs. ' . number_format($ventaMax, 2, ',', '.')],
+            [utf8_decode('Producto más vendido (cantidad)'), utf8_decode($prodMaxCant) . ' (' . $prodMaxQ . ' uds)'],
+        ];
+
+        $par = false;
+        foreach ($indicadores as [$label, $valor]) {
+            $this->SetFillColor($par ? 245 : 255, $par ? 245 : 255, $par ? 245 : 255);
+            $this->SetFont('Arial', 'B', 8);
+            $this->Cell($wLabel, 5, $label, 1, 0, 'L', true);
+            $this->SetFont('Arial', '', 8);
+            $this->Cell($wVal,   5, $valor, 1, 1, 'R', true);
+            $par = !$par;
+        }
+
+        $this->Ln(4);
+
+        // ── BLOQUE 2 — Top 5 clientes ─────────────────────────────────────────
+        $this->SetFont('Arial', 'B', 9);
+        $this->SetFillColor(46, 80, 144);
+        $this->SetTextColor(255, 255, 255);
+        $this->Cell($pageW, 6, utf8_decode('  TOP 5 CLIENTES POR MONTO'), 0, 1, 'L', true);
+        $this->SetTextColor(0, 0, 0);
+        $this->Ln(1);
+
+        $wNombre  = (int)round($pageW * 0.60);
+        $wNVentas = (int)round($pageW * 0.15);
+        $wMonto   = $pageW - $wNombre - $wNVentas;
+
+        // Encabezado
+        $this->SetFont('Arial', 'B', 8);
+        $this->SetFillColor(220, 220, 220);
+        $this->Cell($wNombre,  5, utf8_decode('CLIENTE'),    1, 0, 'C', true);
+        $this->Cell($wNVentas, 5, utf8_decode('N° VENTAS'),  1, 0, 'C', true);
+        $this->Cell($wMonto,   5, utf8_decode('MONTO (Bs.)'),1, 1, 'C', true);
+
+        // Filas
+        $this->SetFont('Arial', '', 8);
+        $par = false;
+        foreach ($topClientes as $nombre => $data) {
+            $this->SetFillColor($par ? 245 : 255, $par ? 245 : 255, $par ? 245 : 255);
+            $this->Cell($wNombre,  5, utf8_decode(substr($nombre, 0, 45)), 1, 0, 'L', true);
+            $this->Cell($wNVentas, 5, (string)$data['n'],                  1, 0, 'C', true);
+            $this->Cell($wMonto,   5, number_format($data['monto'], 2, ',', '.'), 1, 1, 'R', true);
+            $par = !$par;
         }
     }
 

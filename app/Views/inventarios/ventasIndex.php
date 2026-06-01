@@ -229,6 +229,8 @@
             </button>
           </div>
          <div id="clientResults" class="list-group"></div>
+          <!-- Indicador de cliente seleccionado -->
+          <div id="clienteSeleccionadoInfo" class="mt-2"></div>
           <!-- Panel de edición inline -->
           <div id="clientEditPanel" class="border rounded p-3 mt-2 bg-light" style="display:none;">
             <div class="alert alert-info py-2 px-3 mb-2" style="font-size:0.82rem;">
@@ -392,6 +394,33 @@
         <button type="button" class="btn btn-warning w-100 mt-2 btn-sm" id="btnCorregirVenta">
           <i class="ri-pencil-line me-1"></i> Corregir esta venta
         </button>
+        <button type="button" class="btn btn-outline-danger w-100 mt-1 btn-sm" id="btnEliminarVenta">
+          <i class="ri-delete-bin-line me-1"></i> Eliminar esta venta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación eliminar última venta -->
+<div class="modal fade" id="modalEliminarVenta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="ri-delete-bin-line me-1"></i>Eliminar venta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="elimVentaError" class="alert alert-danger d-none mb-2"></div>
+        <p class="mb-1">¿Eliminar la venta <strong id="elimVentaCode"></strong>?</p>
+        <p class="text-muted small mb-0">Monto: <strong id="elimVentaMonto"></strong></p>
+        <p class="text-muted small mt-2">El stock de los productos será repuesto automáticamente. Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarEliminar">
+          <i class="ri-delete-bin-line me-1"></i>Sí, eliminar
+        </button>
       </div>
     </div>
   </div>
@@ -401,19 +430,31 @@
 <div class="modal fade" id="newClientModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form action="<?= base_url('inventarios/registerClienteInve') ?>" method="post">
+      <form id="formNuevoCliente" action="<?= base_url('inventarios/registerClienteInve') ?>" method="post">
         <div class="modal-header">
           <h5 class="modal-title">Registrar Nuevo Cliente</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="nombre_completo" class="form-label">Nombre Completo</label>
-            <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" required>
+          <div id="nuevoClienteError" class="alert alert-danger d-none"></div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="apellido_paterno" required
+              style="text-transform:uppercase" placeholder="Ej: MAMANI">
           </div>
-          <div class="mb-3">
-            <label for="ci_nit" class="form-label">CI / NIT</label>
-            <input type="text" class="form-control" id="ci_nit" name="ci_nit" required>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Apellido Materno</label>
+            <input type="text" class="form-control" name="apellido_materno"
+              style="text-transform:uppercase" placeholder="Ej: QUISPE">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="nombres" required
+              style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">CI / NIT <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="ci_nit" required placeholder="Ej: 7456123">
           </div>
         </div>
         <div class="modal-footer">
@@ -524,6 +565,25 @@
 
     const resolvedImages = {};
 
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono/svg por categoría/nombre
+    function getCategoryIcon(nombre) {
+      const n = (nombre || '').toUpperCase();
+      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return { type: 'ri', value: 'ri-bowl-line' };
+      if (n.includes('LECHE'))                               return { type: 'ri', value: 'ri-drop-line' };
+      if (n.includes('QUESO'))                               return { type: 'svg', value: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36"><path d="M2 19h20v2H2v-2zm1.5-9L12 3l8.5 7H3.5zm3.3 1a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm7 2a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0zm2-4a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg>' };
+      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return { type: 'ri', value: 'ri-cup-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
+    }
+
     function probeImage(url) {
       return new Promise(resolve => {
         const img = new Image();
@@ -542,9 +602,28 @@
       }));
     }
 
-    function getProductImage(nombre) {
-      const num = IMAGE_MAP[nombre.toUpperCase().trim()];
-      return num ? (resolvedImages[num] ?? null) : null;
+    // Resuelve imagen con cadena de prioridad de 4 niveles
+    function getProductImage(nombre, imagenBD) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario en BD
+      if (imagenBD && imagenBD !== 'jpg') {
+        return { type: 'url', src: '<?= base_url() ?>' + imagenBD };
+      }
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 3: imagen servidor externo UTO
+      const num = IMAGE_MAP[key];
+      if (num && resolvedImages[num]) {
+        return { type: 'url', src: resolvedImages[num] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(nombre) };
     }
 
     function getProductColors(productName) {
@@ -602,30 +681,35 @@
             <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%);">
               ${
                 (() => {
-                  const imgUrl = getProductImage(p.nombre || p.nombre_completo || '');
-                  if (imgUrl) {
+                  const img = getProductImage(p.nombre || p.nombre_completo || '', p.imagen ?? null);
+                  if (img.type === 'url') {
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
                        style="width: 90px; height: 90px; background-color: ${colors.border};">
-                      <img src="${imgUrl}" alt="${p.nombre || p.nombre_completo}"
+                      <img src="${img.src}" alt="${p.nombre || p.nombre_completo}"
                            style="width: 100%; height: 100%; object-fit: cover;">
                     </div>`;
                   } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size: 2rem;"></i>`;
                     return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
                        style="width: 90px; height: 90px; background-color: ${colors.border}; color: white;">
-                      <span class="fw-bold" style="font-size: 0.9rem;">${(p.nombre || 'SN').substring(0,2)}</span>
+                      ${inner}
                     </div>`;
                   }
                 })()
               }
               
-              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
+              <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.82rem; line-height: 1.2;">${p.nombre || p.nombre_completo || 'Sin nombre'}</h6>
               
-              <div class="mb-2">
-                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
+              <div class="mb-1">
+                <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.88rem;">Bs. ${parseFloat(p.precio_contado || 0).toFixed(2)}</span>
               </div>
               
               <div class="mb-2">
-                <span class="badge" style="background-color: ${colors.border}; font-size: 0.65rem;">${p.stock_inve || 0} ${p.unidad_nombre || 'und'}</span>
+                <span style="font-size: 1.05rem; font-weight: 700; color: ${colors.badge}; line-height: 1;">${p.stock_inve || 0}</span>
+                <span style="font-size: 0.72rem; font-weight: 400; color: ${colors.text};"> ${p.unidad_nombre || 'und'}</span>
               </div>
               
               ${createdDate ? `<div class="text-muted" style="font-size: 0.65rem;"><i class="ri-calendar-line"></i> ${createdDate}</div>` : ''}
@@ -800,6 +884,22 @@
       clienteIdInput.value = client.id;
       document.getElementById('clientResults').style.display = 'none';
 
+      // Indicador de cliente seleccionado
+      const infoEl = document.getElementById('clienteSeleccionadoInfo');
+      if (client.id && parseInt(client.id) > 0) {
+        infoEl.innerHTML = `
+          <div class="alert alert-success py-2 mb-0">
+            <i class="ri-user-check-line me-1"></i>
+            <strong>Cliente:</strong> ${client.name}${client.ci ? ' — CI: ' + client.ci : ''}
+          </div>`;
+      } else {
+        infoEl.innerHTML = `
+          <div class="alert alert-secondary py-2 mb-0">
+            <i class="ri-user-line me-1"></i>
+            <strong>Consumidor Final</strong> — sin CI registrado
+          </div>`;
+      }
+
       const panel = document.getElementById('clientEditPanel');
       const clientDate = client.created_at ? client.created_at.substring(0, 10) : '';
       if (parseInt(client.user_id) === SESSION_USER_ID && clientDate === TODAY) {
@@ -887,6 +987,8 @@
             renderCart();
             updateSummary();
             clientSearch.value = '';
+            document.getElementById('clienteSeleccionadoInfo').innerHTML = '';
+            document.getElementById('clientEditPanel').style.display = 'none';
             montoRecibidoInput.value = '';
             cambioInput.value = 'Bs. 0.00';
             clienteIdInput.value = '';
@@ -1143,6 +1245,49 @@
       })
       .catch(() => {});
   }
+
+  // --- Abrir modal de confirmación de eliminación ---
+  document.getElementById('btnEliminarVenta').addEventListener('click', function () {
+    if (!uvData) return;
+    document.getElementById('elimVentaCode').textContent  = uvData.venta.code;
+    document.getElementById('elimVentaMonto').textContent = 'Bs. ' + parseFloat(uvData.venta.monto_total).toFixed(2);
+    document.getElementById('elimVentaError').classList.add('d-none');
+    const btn = document.getElementById('btnConfirmarEliminar');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    new bootstrap.Modal(document.getElementById('modalEliminarVenta')).show();
+  });
+
+  // --- Confirmar eliminación ---
+  document.getElementById('btnConfirmarEliminar').addEventListener('click', function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...';
+    const params = new URLSearchParams({ venta_id: uvData.venta.id });
+    fetch('<?= base_url('inventarios/deleteUltimaVenta') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEliminarVenta')).hide();
+        window.location.reload();
+      } else {
+        document.getElementById('elimVentaError').textContent = data.error;
+        document.getElementById('elimVentaError').classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+      }
+    })
+    .catch(() => {
+      document.getElementById('elimVentaError').textContent = 'Error de conexión.';
+      document.getElementById('elimVentaError').classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i>Sí, eliminar';
+    });
+  });
 
   document.getElementById('btnCorregirVenta').addEventListener('click', function() {
     if (!uvData) return;

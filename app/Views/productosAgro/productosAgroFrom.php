@@ -151,7 +151,7 @@
         : base_url('productosagro/store');
     ?>
 
-    <form action="<?= $action ?>" method="post" id="formProductoAgro" autocomplete="off">
+    <form action="<?= $action ?>" method="post" id="formProductoAgro" autocomplete="off" enctype="multipart/form-data">
       <?= csrf_field() ?>
 
       <div class="form-panel">
@@ -259,11 +259,28 @@
               </div>
             </div>
 
+            <!-- Imagen del producto (opcional) -->
+            <div class="mb-3">
+              <label for="imagen" class="form-label">
+                Imagen del Producto
+                <span style="color:#9ca3af; font-weight:400;">(opcional)</span>
+              </label>
+              <input type="file" class="form-control" id="imagen" name="imagen"
+                     accept="image/jpeg,image/jpg,image/png,image/gif" tabindex="8">
+              <div class="form-text" style="font-size:0.72rem;">JPG, PNG o GIF. Máx. 2MB. Solo se usa en la pantalla de ventas.</div>
+              <div class="mt-2 text-center">
+                <img id="imagen-preview"
+                     src="<?= isset($producto) && !empty($producto->imagen) ? base_url($producto->imagen) : 'https://placehold.co/160x120/f0fdf4/16a34a?text=Sin+imagen' ?>"
+                     alt="Vista previa"
+                     style="max-width:160px; max-height:120px; border-radius:8px; border:1px solid #e2e8f0; object-fit:cover;">
+              </div>
+            </div>
+
             <div class="d-flex justify-content-end gap-2 mt-4 pt-3" style="border-top:1px solid #e2e8f0;">
-              <a href="<?= base_url('productosagro') ?>" class="btn btn-cancelar" tabindex="9">
+              <a href="<?= base_url('productosagro') ?>" class="btn btn-cancelar" tabindex="10">
                 <i class="ri-close-line me-1"></i> Cancelar
               </a>
-              <button type="submit" class="btn btn-guardar" tabindex="8">
+              <button type="submit" class="btn btn-guardar" tabindex="9">
                 <i class="ri-save-3-line me-1"></i>
                 <?= isset($producto) ? 'Actualizar' : 'Registrar' ?>
               </button>
@@ -501,6 +518,20 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('nuevaUnidadNombre').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('btnGuardarUnidadRapida').click();
   });
+
+  // Preview de imagen en tiempo real
+  const imagenInput   = document.getElementById('imagen');
+  const imagenPreview = document.getElementById('imagen-preview');
+  if (imagenInput && imagenPreview) {
+    imagenInput.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => { imagenPreview.src = e.target.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 
 });
 </script>

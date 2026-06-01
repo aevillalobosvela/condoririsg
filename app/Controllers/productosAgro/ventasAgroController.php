@@ -208,6 +208,35 @@ class ventasAgroController extends BaseController
     }
 
 
+    public function saldoCredito()
+    {
+        $tipo = $this->request->getGet('tipo');
+        $id   = (int) $this->request->getGet('id');
+
+        if (!in_array($tipo, ['uto', 'externo']) || $id <= 0) {
+            return $this->response->setJSON(['saldo_anterior' => 0, 'periodo' => '']);
+        }
+
+        $saldo = $this->ventaModel->getAcumuladoCreditoPeriodo($tipo, $id);
+        $hoy   = new \DateTime();
+        $dia   = (int) $hoy->format('d');
+        if ($dia >= 11) {
+            $ini = (new \DateTime($hoy->format('Y-m-11')))->format('d/m');
+            $fin = (new \DateTime($hoy->format('Y-m-11') . ' +1 month'))
+                ->modify('-1 day')->format('d/m');
+        } else {
+            $prev = (clone $hoy)->modify('-1 month');
+            $ini  = (new \DateTime($prev->format('Y-m-11')))->format('d/m');
+            $fin  = (new \DateTime($hoy->format('Y-m-10')))->format('d/m');
+        }
+
+        return $this->response->setJSON([
+            'saldo_anterior' => $saldo,
+            'periodo'        => $ini . ' al ' . $fin,
+        ]);
+    }
+
+
     public function credito()
     {
         $sucursal = (int) session()->get('sucursal_id');
@@ -238,7 +267,7 @@ class ventasAgroController extends BaseController
         $pattern = '%' . $termino . '%';
 
         $sqlUto = "
-            SELECT
+            SELECT DISTINCT ON (p.id_persona)
                 p.id_persona,
                 p.nombre AS nombre,
                 p.dip,
@@ -248,12 +277,12 @@ class ventasAgroController extends BaseController
                 s.seccion,
                 'uto' AS tipo
             FROM public.personas p
-            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\")
-            LEFT JOIN rrhh.cargos c    ON (e.id_cargo = c.id_cargo)
-            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
+            JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+            LEFT JOIN rrhh.cargos c    ON c.id_cargo = e.id_cargo
+            LEFT JOIN rrhh.secciones s ON s.id_seccion = e.id_seccion
             WHERE p.\"id_estado\" = true
-              AND e.\"id_estado\" = true
               AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
+            ORDER BY p.id_persona, e.fec_ingreso DESC NULLS LAST, e.id_empleado DESC
             LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
@@ -287,13 +316,21 @@ class ventasAgroController extends BaseController
             return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
         }
 
-        $nombre   = strtoupper(trim($this->request->getPost('nombre') ?? ''));
-        $dip      = trim($this->request->getPost('dip') ?? '');
-        $segmento = trim($this->request->getPost('segmento') ?? '');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $dip             = trim($this->request->getPost('dip') ?? '');
+        $segmento        = trim($this->request->getPost('segmento') ?? '');
 
-        if (empty($nombre) || empty($dip) || empty($segmento)) {
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        }
+
+        if (empty($dip) || empty($segmento)) {
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
         }
+
+        $nombre = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $existente = $this->clienteExternoModel
             ->where('dip', $dip)
@@ -342,7 +379,7 @@ class ventasAgroController extends BaseController
         $sucursal = (int) session()->get('sucursal_id');
         $db = \Config\Database::connect();
         $q = $db->query(
-            'SELECT pa.*, u.nombre AS unidad_nombre
+            'SELECT pa.*, pa.imagen, u.nombre AS unidad_nombre
              FROM condoriri.productos_agro pa
              LEFT JOIN condoriri.unidades u ON u.id = pa.unidad_id
              WHERE pa.fecha_delete IS NULL
@@ -731,6 +768,15 @@ class ventasAgroController extends BaseController
             $cliente = $this->clienteModel->find($venta->cliente_id);
         }
 
+        $acumuladoCredito = 0.0;
+        $saldoAnterior    = 0.0;
+        if (strtolower(trim($venta->tipo_pago)) === 'credito') {
+            $tipoReceptor = !empty($venta->personal_uto_id) ? 'uto' : 'externo';
+            $receptorId = !empty($venta->personal_uto_id) ? (int)$venta->personal_uto_id : (int)$venta->cliente_externo_id;
+            $acumuladoCredito = $this->ventaModel->getAcumuladoCreditoPeriodo($tipoReceptor, $receptorId);
+            $saldoAnterior    = max(0.0, $acumuladoCredito - (float)$venta->monto_total);
+        }
+
         $data = [
             'title'          => 'Recibo de Venta #' . $ventaId,
             'venta'          => $venta,
@@ -738,6 +784,8 @@ class ventasAgroController extends BaseController
             'cliente'        => $cliente,
             'personal'       => $personal,
             'clienteExterno' => $clienteExterno,
+            'acumuladoCredito' => $acumuladoCredito,
+            'saldoAnterior'    => $saldoAnterior,
         ];
 
         return view('productosAgro/recibo_print', $data);
@@ -965,6 +1013,90 @@ class ventasAgroController extends BaseController
                 'nuevo_monto' => $nuevoTotal,
                 'recibo_url'  => base_url('productosagro/recibo/' . $ventaId),
             ]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Elimina la última venta del usuario hoy (módulo agropecuario).
+     * Devuelve cantidad_inve y hace soft-delete de detalles + soft-delete de la venta.
+     */
+    public function deleteUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = (int)session()->get('sucursal_id');
+        $db         = \Config\Database::connect();
+
+        $ventaId = (int)$this->request->getPost('venta_id');
+        if ($ventaId <= 0) {
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de venta inválido.']);
+        }
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no eliminable.']);
+        }
+
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede eliminar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detalles = $db->query("
+                SELECT dv.id, dv.producto_agro_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver cantidad_inve
+            foreach ($detalles as $det) {
+                $db->query("
+                    UPDATE condoriri.productos_agro SET cantidad_inve = cantidad_inve + ? WHERE id = ?
+                ", [$det->cantidad, $det->producto_agro_id]);
+            }
+
+            // 3. Soft-delete de detalles
+            foreach ($detalles as $det) {
+                $this->detalleModel->delete($det->id);
+            }
+
+            // 4. Soft-delete de la venta
+            $db->query("UPDATE condoriri.ventas SET deleted_at = NOW() WHERE id = ?", [$ventaId]);
+
+            $db->transCommit();
+            return $this->response->setJSON(['success' => true]);
         } catch (\Exception $e) {
             $db->transRollback();
             return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);

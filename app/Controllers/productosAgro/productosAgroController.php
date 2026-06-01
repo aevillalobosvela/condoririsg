@@ -169,7 +169,25 @@ class ProductosAgroController extends BaseController
                 'sucursal_id'   => $sucursal,
                 'user_id'       => $userId,
                 'estado'        => true,
+                'imagen'        => null,
             ];
+
+            // Manejar subida de imagen (opcional)
+            $imagenFile = $this->request->getFile('imagen');
+            if ($imagenFile && $imagenFile->isValid() && !$imagenFile->hasMoved()) {
+                $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (!in_array($imagenFile->getMimeType(), $allowedTypes)) {
+                    return redirect()->back()->withInput()->with('error', 'La imagen debe ser JPG, PNG o GIF.');
+                }
+                if ($imagenFile->getSize() > 2048000) {
+                    return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+                }
+                $newName = $imagenFile->getRandomName();
+                if (!$imagenFile->move(ROOTPATH . 'public/uploads', $newName)) {
+                    return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+                }
+                $data['imagen'] = 'uploads/' . $newName;
+            }
 
             if (!$this->productoModel->save($data)) {
                 throw new \Exception('Validation Failed');
@@ -270,6 +288,28 @@ class ProductosAgroController extends BaseController
             'user_id'        => (int) $producto->user_id,
             'estado'         => true,
         ];
+
+        // Manejar subida de imagen (opcional)
+        $imagenFile = $this->request->getFile('imagen');
+        if ($imagenFile && $imagenFile->isValid() && !$imagenFile->hasMoved()) {
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!in_array($imagenFile->getMimeType(), $allowedTypes)) {
+                return redirect()->back()->withInput()->with('error', 'La imagen debe ser JPG, PNG o GIF.');
+            }
+            if ($imagenFile->getSize() > 2048000) {
+                return redirect()->back()->withInput()->with('error', 'La imagen no puede superar los 2MB.');
+            }
+            // Eliminar imagen anterior si existe
+            if (!empty($producto->imagen) && file_exists(ROOTPATH . 'public/' . $producto->imagen)) {
+                @unlink(ROOTPATH . 'public/' . $producto->imagen);
+            }
+            $newName = $imagenFile->getRandomName();
+            if (!$imagenFile->move(ROOTPATH . 'public/uploads', $newName)) {
+                return redirect()->back()->withInput()->with('error', 'Error al subir la imagen.');
+            }
+            $data['imagen'] = 'uploads/' . $newName;
+        }
+        // Si no se subió nueva imagen, no se modifica el campo (mantiene el valor existente)
 
         if ($this->productoModel->skipValidation(true)->update($id, $data)) {
             return redirect()->to('/productosagro')->with('success', "✅ Producto actualizado: {$producto->code}");

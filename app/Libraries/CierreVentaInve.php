@@ -21,7 +21,7 @@ class CierreVentaInve extends CierreVentaBasePdf
             default                       => 'VENTAS GENERALES',
         };
         $this->setReporteTitle($tituloTipo . ' - LACTEOS');
-        $this->AddPage('P', 'A4');
+        $this->AddPage('L', 'A4');
         $this->SetMargins(10, 10, 10);
         $this->AliasNbPages();
 
@@ -62,7 +62,23 @@ class CierreVentaInve extends CierreVentaBasePdf
             if (!isset($ventasAgrupadas[$ventaId])) {
                 $cliente = $item->cliente_nombre ?? 'Consumidor Final';
                 if (stripos($cliente, 'Sin Nombre') !== false) $cliente = '';
-                $ventasAgrupadas[$ventaId] = ['cliente' => utf8_decode($cliente), 'code' => $codigoVenta, 'total_venta' => 0, 'items' => []];
+                $fechaVenta = !empty($item->fecha_venta)
+                    ? date('d/m/Y', strtotime($item->fecha_venta))
+                    : '';
+                $origenMap = [
+                    'ORURO-VENTAS' => 'SUC. CENTRO',
+                    'LACTEOS'      => 'PLANTA PROD.',
+                ];
+                $origen = $origenMap[$item->sucursal_nombre ?? ''] ?? 'OTRO';
+                $ventasAgrupadas[$ventaId] = [
+                    'cliente'            => utf8_decode($cliente),
+                    'code'               => $codigoVenta,
+                    'fecha_venta'        => $fechaVenta,
+                    'origen'             => $origen,
+                    'total_venta'        => 0,
+                    'receptor_categoria' => $item->receptor_categoria ?? null,
+                    'items'              => [],
+                ];
             }
 
             if (!isset($ventasAgrupadas[$ventaId]['items'][$prodNombre])) {
@@ -102,9 +118,24 @@ class CierreVentaInve extends CierreVentaBasePdf
         $this->Ln(2);
 
         $wNro       = 8;
-        $labelWidth = 50;
         $numProds   = count($productosUnicos);
-        $colWidth   = $numProds > 0 ? min(25, ($this->GetPageWidth() - 20 - $wNro - $labelWidth - 30) / $numProds) : 25;
+        $esCredito  = ($tipo === 'credito');
+        $wCategoria = $esCredito ? 22 : 0;
+
+        // labelWidth dinámico: ancho justo para el nombre más largo del reporte
+        $this->SetFont('Arial', '', 7);
+        $maxNombreW = 40;
+        foreach ($ventasAgrupadas as $venta) {
+            $w = $this->GetStringWidth($venta['cliente']) + 4;
+            if ($w > $maxNombreW) $maxNombreW = $w;
+        }
+        $labelWidth = min(70, max(40, $maxNombreW));
+
+        // Columnas fijas: wNro + wNota + wFecha + wOrigen + wCategoria + wTotal
+        $wFijos   = $wNro + 22 + 18 + 22 + $wCategoria + 10;
+        $colWidth = $numProds > 0
+            ? ($this->GetPageWidth() - 20 - $labelWidth - $wFijos) / $numProds
+            : 20;
 
         $this->SetFillColor(220, 220, 220);
         $this->SetFont('Arial', 'B', 7);
@@ -162,7 +193,7 @@ class CierreVentaInve extends CierreVentaBasePdf
 
         $this->Ln(5);
 
-        $wNota = 22; $wTotal = 10; $subColW = $colWidth / 2;
+        $wNota = 22; $wFecha = 18; $wOrigen = 22; $wTotal = 10; $subColW = $colWidth / 2;
         $this->SetFillColor(200, 200, 200);
         $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
         $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -170,14 +201,19 @@ class CierreVentaInve extends CierreVentaBasePdf
             $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
             $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
         }
-        $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-        $this->Cell($wTotal, 5, 'T', 1, 1, 'C', true);
+        $this->Cell($wNota,      5, 'Nro. Venta', 1, 0, 'C', true);
+        $this->Cell($wFecha,     5, 'Fecha',       1, 0, 'C', true);
+        $this->Cell($wOrigen,    5, 'Origen',      1, 0, 'C', true);
+        if ($esCredito) {
+            $this->Cell($wCategoria, 5, utf8_decode('Categoría'), 1, 0, 'C', true);
+        }
+        $this->Cell($wTotal,     5, 'T',           1, 1, 'C', true);
 
-        $this->SetFont('Arial', '', 7);
+        $this->SetFont('Arial', '', 6);
         $nro = 1;
         foreach ($ventasAgrupadas as $venta) {
             if ($this->GetY() > $this->GetPageHeight() - 20) {
-                $this->AddPage();
+                $this->AddPage('L', 'A4');
                 $this->SetFillColor(200, 200, 200);
                 $this->Cell($wNro, 5, 'N°', 1, 0, 'C', true);
                 $this->Cell($labelWidth, 5, 'APELLIDOS Y NOMBRES:', 1, 0, 'L', true);
@@ -185,8 +221,13 @@ class CierreVentaInve extends CierreVentaBasePdf
                     $this->Cell($subColW, 5, 'Q', 1, 0, 'C', true);
                     $this->Cell($subColW, 5, 'Bs', 1, 0, 'C', true);
                 }
-                $this->Cell($wNota, 5, 'Nro. Venta', 1, 0, 'C', true);
-                $this->Cell($wTotal, 5, 'T', 1, 1, 'C', true);
+                $this->Cell($wNota,      5, 'Nro. Venta', 1, 0, 'C', true);
+                $this->Cell($wFecha,     5, 'Fecha',       1, 0, 'C', true);
+                $this->Cell($wOrigen,    5, 'Origen',      1, 0, 'C', true);
+                if ($esCredito) {
+                    $this->Cell($wCategoria, 5, utf8_decode('Categoría'), 1, 0, 'C', true);
+                }
+                $this->Cell($wTotal,     5, 'T',           1, 1, 'C', true);
             }
 
             $this->Cell($wNro, 5, $nro++, 1, 0, 'C');
@@ -202,13 +243,24 @@ class CierreVentaInve extends CierreVentaBasePdf
                     $this->Cell($subColW, 5, '', 1, 0, 'C');
                 }
             }
-            $this->Cell($wNota, 5, $venta['code'], 1, 0, 'C');
-            $this->Cell($wTotal, 5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R');
+            $this->Cell($wNota,   5, $venta['code'],        1, 0, 'C');
+            $this->Cell($wFecha,  5, $venta['fecha_venta'], 1, 0, 'C');
+            $this->Cell($wOrigen, 5, $venta['origen'],      1, 0, 'C');
+            if ($esCredito) {
+                $cat = utf8_decode($venta['receptor_categoria'] ?? '');
+                $this->Cell($wCategoria, 5, $cat, 1, 0, 'C');
+            }
+            $this->Cell($wTotal,  5, number_format($venta['total_venta'], 2, ',', '.'), 1, 1, 'R');
         }
 
         $this->Ln(5);
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(0, 6, 'TOTAL ' . $tituloTipo . ': ' . $this->numeroALiteral($totalGeneralBs) . ' BOLIVIANOS', 0, 1, 'L');
+
+        // Resumen financiero — solo contado y crédito
+        if ($tipo !== 'general') {
+            $this->renderResumenFinanciero($ventasAgrupadas, $productosUnicos, $totalGeneralBs);
+        }
 
         $nombreUsuario = utf8_decode($filters['nombre_usuario'] ?? 'Usuario');
         $this->Ln(15);

@@ -232,7 +232,8 @@ class VentaModel extends Model
             COALESCE(pa.producto, ss.producto) AS producto_nombre,
             COALESCE(p.nombre, ce.nombre, 'No asignado') AS personal_nombre,
             COALESCE(p.dip, ce.dip) AS personal_dip,
-            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion,
+            COALESCE(te.tipo_empleado, ce.segmento, NULL) AS receptor_categoria
         FROM
             condoriri.ventas v
         LEFT JOIN
@@ -251,6 +252,8 @@ class VentaModel extends Model
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN
             rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = true
+        LEFT JOIN
+            rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN
             rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
@@ -466,7 +469,8 @@ class VentaModel extends Model
             -- Datos del personal UTO / cliente externo
             COALESCE(p.nombre, ce.nombre, 'No asignado') AS personal_nombre,
             COALESCE(p.dip, ce.dip) AS personal_dip,
-            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion
+            COALESCE(se.seccion, ce.segmento, 'Sin sección') AS personal_seccion,
+            COALESCE(te.tipo_empleado, ce.segmento, NULL) AS receptor_categoria
         FROM
             condoriri.ventas v
         LEFT JOIN
@@ -484,6 +488,8 @@ class VentaModel extends Model
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN
             rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado
+        LEFT JOIN
+            rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN
             rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
@@ -1110,7 +1116,8 @@ public function getDailySalesReportDataAdmin(
             END AS producto_nombre,
             COALESCE(p.nombre, 'No asignado') AS personal_nombre,
             p.dip AS personal_dip,
-            COALESCE(se.seccion, 'Sin sección') AS personal_seccion
+            COALESCE(se.seccion, 'Sin sección') AS personal_seccion,
+            te.tipo_empleado AS receptor_categoria
         FROM
             condoriri.ventas v
         LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
@@ -1121,6 +1128,7 @@ public function getDailySalesReportDataAdmin(
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -1142,7 +1150,44 @@ public function getDailySalesReportDataAdmin(
     return $query->getResult();
 }
 
+    /**
+     * Calcula el monto acumulado en ventas a crédito para un receptor (uto o externo)
+     * en el período activo (del día 11 de un mes al día 10 del mes siguiente).
+     *
+     * @param string $tipoReceptor 'uto' o 'externo'
+     * @param int $receptorId ID de la persona o del cliente externo
+     * @return float
+     */
+    public function getAcumuladoCreditoPeriodo(string $tipoReceptor, int $receptorId): float
+    {
+        $today = new \DateTime();
+        $day = (int)$today->format('d');
+        if ($day >= 11) {
+            $inicio = $today->format('Y-m-11 00:00:00');
+            $nextMonth = clone $today;
+            $nextMonth->modify('+1 month');
+            $fin = $nextMonth->format('Y-m-10 23:59:59');
+        } else {
+            $prevMonth = clone $today;
+            $prevMonth->modify('-1 month');
+            $inicio = $prevMonth->format('Y-m-11 00:00:00');
+            $fin = $today->format('Y-m-10 23:59:59');
+        }
 
-
-
+        $db = \Config\Database::connect();
+        
+        $campoId = ($tipoReceptor === 'uto') ? 'personal_uto_id' : 'cliente_externo_id';
+        
+        $sql = "SELECT COALESCE(SUM(monto_total), 0) as total
+                FROM condoriri.ventas
+                WHERE {$campoId} = ?
+                  AND LOWER(tipo_pago) = 'credito'
+                  AND deleted_at IS NULL
+                  AND created_at BETWEEN ? AND ?";
+                  
+        $query = $db->query($sql, [$receptorId, $inicio, $fin]);
+        $row = $query->getRow();
+        
+        return (float)($row ? $row->total : 0.0);
+    }
 }

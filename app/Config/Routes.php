@@ -135,6 +135,7 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->get('arqueo/pdf', 'inventarios\inventariosController::exportarArqueoPdf', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('credito', 'inventarios\inventariosController::credito', ['filter' => 'role:admin,almacen']);
     $routes->get('buscarPersonalUto', 'inventarios\inventariosController::buscarPersonalUto', ['filter' => 'role:admin,almacen']);
+    $routes->get('saldoCredito', 'inventarios\inventariosController::saldoCredito', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarClienteExterno', 'inventarios\inventariosController::guardarClienteExterno', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarVenta', 'inventarios\inventariosController::guardarVenta', ['filter' => 'role:admin,almacen']);
     $routes->post('guardarCreditoVenta', 'inventarios\inventariosController::guardarCreditoVenta', ['filter' => 'role:admin,almacen']);
@@ -145,12 +146,14 @@ $routes->group('inventarios', ['filter' => 'auth'], function ($routes) {
     $routes->post('guardar-calidad/(:num)', 'inventarios\inventariosController::guardarCalidad/$1', ['filter' => 'role:admin,almacen']);
     $routes->post('update-cantidad/(:num)', 'inventarios\inventariosController::updateCantidad/$1', ['filter' => 'role:admin,almacen']);
     $routes->post('update-calidad/(:num)', 'inventarios\inventariosController::updateCalidad/$1', ['filter' => 'role:admin,almacen']);
-    $routes->get('control-calidad-pdf/(:num)', 'inventarios\inventariosController::controlCalidadPdf/$1', ['filter' => 'role:admin,almacen']);
+    $routes->post('deleteUltimo', 'inventarios\inventariosController::deleteUltimoInventario', ['filter' => 'role:admin,almacen']);
+    $routes->get('control-calidad-pdf/(:num)', 'inventarios\inventariosController::controlCalidadPdf/$1', ['filter' => 'role:admin,almacen,contabilidad']);
     $routes->get('control-calidad-excel/(:num)', 'inventarios\inventariosController::controlCalidadExcel/$1', ['filter' => 'role:admin,almacen,contabilidad']);
 
     // Edición última venta
     $routes->get('ultimaVenta', 'inventarios\inventariosController::ultimaVenta', ['filter' => 'role:admin,almacen']);
     $routes->post('updateUltimaVenta', 'inventarios\inventariosController::updateUltimaVenta', ['filter' => 'role:admin,almacen']);
+    $routes->post('deleteUltimaVenta', 'inventarios\inventariosController::deleteUltimaVenta', ['filter' => 'role:admin,almacen']);
 });
 
 // Productos Terminados (quesos, yogurt, etc.)
@@ -167,6 +170,7 @@ $routes->group('productos', ['filter' => 'auth'], function ($routes) {
     $routes->post('agregar/(:num)', 'productos\productosController::agregar/$1', ['filter' => 'role:admin,almacen']);
     $routes->post('subproducto', 'productos\productosController::subproducto', ['filter' => 'role:admin,almacen']);
     $routes->post('createSuero', 'productos\productosController::createSuero', ['filter' => 'role:admin,almacen']);
+    $routes->post('deleteUltimo', 'productos\productosController::deleteUltimo', ['filter' => 'role:admin,almacen']);
 });
 
 // ============================================================================
@@ -205,6 +209,7 @@ $routes->group('envios', ['filter' => 'auth'], function ($routes) {
     // Reportes y devoluciones
     $routes->get('reporte', 'envios\enviosController::generarReporte', ['filter' => 'role:admin,almacen,ganaderia,agropecuario,vendedor']);
     $routes->get('exportarExcelEnvio/(:num)', 'envios\enviosController::exportarExcelEnvio/$1', ['filter' => 'role:admin,almacen,ganaderia,agropecuario,vendedor']);
+    $routes->get('exportarExcelEnvios', 'envios\enviosController::exportarExcelEnvios', ['filter' => 'role:admin,almacen,ganaderia,agropecuario,vendedor']);
     $routes->get('devoluciones', 'envios\enviosController::devIndex', ['filter' => 'role:admin,vendedor,almacen,ganaderia,agropecuario']);
     $routes->get('devoluciones/show/(:num)', 'envios\enviosController::devShow/$1', ['filter' => 'role:admin,vendedor,almacen']);
 });
@@ -254,9 +259,10 @@ $routes->group('devoluciones', ['filter' => 'auth'], function ($routes) {
 $routes->group('cliente', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'ventas\ventasController::index', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia']);
     $routes->post('create', 'cliente\clienteController::create', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
-    $routes->get('lista', 'cliente\clienteController::index', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia']);
+    $routes->get('lista', 'cliente\clienteController::index', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     $routes->get('get/(:num)', 'cliente\clienteController::get/$1', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     $routes->post('update', 'cliente\clienteController::update', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
+    $routes->post('updateAdmin', 'cliente\clienteController::updateAdmin', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
     $routes->post('updateExterno', 'cliente\clienteController::updateExterno', ['filter' => 'role:admin,vendedor,agropecuario,ganaderia,almacen']);
 });
 
@@ -275,6 +281,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     
     // Funciones auxiliares
     $routes->get('buscarPersonalUto', 'ventas\ventasController::buscarPersonalUto', ['filter' => 'role:admin,vendedor']);
+    $routes->get('saldoCredito', 'ventas\ventasController::saldoCredito', ['filter' => 'role:admin,vendedor']);
     $routes->post('guardarClienteExterno', 'ventas\ventasController::guardarClienteExterno', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-clientes', 'ventas\ventasController::buscarClientes', ['filter' => 'role:admin,vendedor']);
     $routes->get('buscar-productos', 'ventas\ventasController::buscarProductos', ['filter' => 'role:admin,vendedor']);
@@ -291,6 +298,7 @@ $routes->group('ventas', ['filter' => 'auth'], function ($routes) {
     // Edición última venta
     $routes->get('ultimaVenta', 'ventas\ventasController::ultimaVenta', ['filter' => 'role:admin,vendedor']);
     $routes->post('updateUltimaVenta', 'ventas\ventasController::updateUltimaVenta', ['filter' => 'role:admin,vendedor']);
+    $routes->post('deleteUltimaVenta', 'ventas\ventasController::deleteUltimaVenta', ['filter' => 'role:admin,vendedor']);
 });
 
 // ============================================================================
@@ -317,6 +325,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     
     // Funciones auxiliares
     $routes->get('buscarPersonalUto', 'productosAgro\ventasAgroController::buscarPersonalUto', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->get('saldoCredito', 'productosAgro\ventasAgroController::saldoCredito', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->post('guardarClienteExterno', 'productosAgro\ventasAgroController::guardarClienteExterno', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->get('credito', 'productosAgro\ventasAgroController::credito', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->get('recibo/(:num)', 'productosAgro\ventasAgroController::generarRecibo/$1');
@@ -328,6 +337,7 @@ $routes->group('productosagro', ['filter' => 'auth'], function ($routes) {
     // Edición última venta
     $routes->get('ultimaVenta', 'productosAgro\ventasAgroController::ultimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
     $routes->post('updateUltimaVenta', 'productosAgro\ventasAgroController::updateUltimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
+    $routes->post('deleteUltimaVenta', 'productosAgro\ventasAgroController::deleteUltimaVenta', ['filter' => 'role:admin,ganaderia,agropecuario,vendedor,almacen']);
 });
 
 // ============================================================================
@@ -369,6 +379,14 @@ $routes->group('baja', ['filter' => 'auth'], function($routes) {
     $routes->post('store', 'baja\bajaController::store', ['filter' => 'role:admin,almacen']);
     $routes->get('reportePDF', 'baja\bajaController::reportePDF', ['filter' => 'role:admin,almacen']);
     $routes->get('exportarExcel', 'baja\bajaController::exportarExcel', ['filter' => 'role:admin,almacen']);
+});
+
+// ============================================================================
+// RESUMEN GLOBAL
+// ============================================================================
+$routes->group('resumen-global', ['filter' => 'auth'], function ($routes) {
+    $routes->get('exportar',    'reportes\ResumenGlobalController::exportar',    ['filter' => 'role:admin,almacen']);
+    $routes->get('exportarPdf', 'reportes\ResumenGlobalController::exportarPdf', ['filter' => 'role:admin,almacen']);
 });
 
 // ============================================================================

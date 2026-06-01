@@ -16,6 +16,8 @@
   .btn-primary:hover { background-color: #218838 !important; border-color: #1e7e34 !important; }
   .btn-secondary { background-color: #6c757d !important; border-color: #6c757d !important; }
   .btn-soft-warning { background-color: #fff3cd !important; color: #856404 !important; border: 1px solid #ffeaa7; }
+  .btn-soft-danger  { background-color: #f8d7da !important; color: #721c24 !important; border: 1px solid #f5c6cb; }
+  .btn-soft-danger:hover { background-color: #f1aeb5 !important; color: #721c24 !important; }
 
   /* Tarjetas */
   .card { border: 1px solid #e0f0e9; box-shadow: 0 0.125rem 0.25rem rgba(40, 167, 69, 0.08); }
@@ -26,16 +28,17 @@
   .product-tree ul { list-style: none; padding-left: 20px; margin: 0; }
   .product-tree li { margin: 8px 0; padding: 8px; border-radius: 4px; background-color: #f8fdfa; border-left: 3px solid #28a745; position: relative; }
   .product-tree li li { background-color: #f1f8f5; border-left-color: #6c757d; }
-  .product-actions { float: right; margin-top: -6px; display: flex; gap: 4px; }
+  .product-actions { float: right; margin-top: -6px; display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
   
   /* Ajuste responsivo para el árbol */
   @media (max-width: 768px) {
     .product-actions { 
       float: none; 
-      display: block; 
-      margin-top: 5px; 
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
     }
-    .product-actions .btn-sm { margin-right: 5px; margin-bottom: 5px; }
   }
 </style>
 <?= $this->endSection() ?>
@@ -113,14 +116,14 @@
                     </dl>
 
                     <?php if ($puedeEditarCantidad): ?>
-                    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.85rem;">
+                    <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
                         <i class="ri-edit-line me-1"></i>
-                        Puede corregir la cantidad de este inventario porque es el último que registró hoy y aún no tiene productos asociados.
+                        Puede corregir o eliminar este inventario porque es el último que registró hoy y aún no tiene productos asociados.
                     </div>
                     <form method="post" action="<?= base_url('inventarios/update-cantidad/' . $inventario->id) ?>">
                         <?= csrf_field() ?>
-                        <div class="input-group input-group-sm mb-3">
-                            <span class="input-group-text">Nueva cantidad</span>
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text"><i class="ri-edit-line"></i>&nbsp;Cantidad</span>
                             <input type="number" step="0.01" min="0" name="stock"
                                    class="form-control"
                                    value="<?= esc($inventario->stock) ?>"
@@ -130,10 +133,16 @@
                             </button>
                         </div>
                     </form>
+                    <button type="button"
+                            class="btn btn-soft-danger btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalConfirmarEliminar">
+                        <i class="ri-delete-bin-line me-1"></i> Eliminar este inventario
+                    </button>
                     <?php elseif ($esUltimoDelUsuario && $esDehoy && $tieneProductos): ?>
                     <div class="alert alert-secondary py-2 px-3" style="font-size:0.82rem;">
                         <i class="ri-lock-line me-1"></i>
-                        La cantidad no puede editarse porque ya existen productos registrados bajo este inventario.
+                        La cantidad no puede editarse ni eliminarse porque ya existen productos registrados bajo este inventario.
                     </div>
                     <?php endif; ?>
 
@@ -283,7 +292,7 @@
                         </div>
                     <?php else: ?>
                         <div class="product-tree">
-                            <?= renderProductTree($productos) ?>
+                            <?= renderProductTree($productos, 0, $ultimoProducto ? $ultimoProducto->id : null) ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -508,13 +517,90 @@
   </div>
 </div>
 
+<!-- Modal confirmación eliminar producto -->
+<?php if ($puedeEliminarProducto && $ultimoProducto): ?>
+<div class="modal fade" id="modalConfirmarEliminarProducto" tabindex="-1" aria-labelledby="modalConfirmarEliminarProductoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header" style="background-color:#f8d7da; border-bottom:1px solid #f5c6cb;">
+        <h5 class="modal-title text-danger" id="modalConfirmarEliminarProductoLabel">
+          <i class="ri-delete-bin-line me-1"></i> Confirmar eliminación de producto
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Está a punto de eliminar el producto:</p>
+        <p class="fw-bold mb-1" id="modalProductoNombre"><?= esc($ultimoProducto->nombre) ?></p>
+        <p class="mb-3 text-muted" style="font-size:0.88rem;">
+          Stock: <?= esc($ultimoProducto->stock_inve) ?> &nbsp;|&nbsp;
+          Litros/unidad: <?= esc($ultimoProducto->cantidad_unidad) ?>
+        </p>
+        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:0.85rem;">
+          <i class="ri-information-line me-1"></i>
+          Esta acción no se puede deshacer. Se restaurarán <strong><?= esc($ultimoProducto->cantidad_unidad) ?></strong> litros a la reserva del inventario.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="ri-close-line me-1"></i> Cancelar
+        </button>
+        <form method="post" action="<?= base_url('productos/deleteUltimo') ?>" class="d-inline">
+          <?= csrf_field() ?>
+          <input type="hidden" name="producto_id" value="<?= esc($ultimoProducto->id) ?>">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="ri-delete-bin-line me-1"></i> Sí, eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- Modal confirmación eliminar inventario -->
+<?php if ($puedeEditarCantidad): ?>
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-labelledby="modalConfirmarEliminarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header" style="background-color:#f8d7da; border-bottom:1px solid #f5c6cb;">
+        <h5 class="modal-title text-danger" id="modalConfirmarEliminarLabel">
+          <i class="ri-delete-bin-line me-1"></i> Confirmar eliminación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Está a punto de eliminar el inventario:</p>
+        <p class="fw-bold mb-1"><?= esc($inventario->nombre) ?> — <span class="text-muted"><?= esc($inventario->code) ?></span></p>
+        <p class="mb-3 text-muted" style="font-size:0.88rem;">Cantidad: <?= esc($inventario->stock) ?> L &nbsp;|&nbsp; Turno: <?= esc($inventario->turno) ?></p>
+        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:0.85rem;">
+          <i class="ri-information-line me-1"></i>
+          Esta acción no se puede deshacer. Solo es posible porque es su último inventario registrado hoy y no tiene productos asociados.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="ri-close-line me-1"></i> Cancelar
+        </button>
+        <form method="post" action="<?= base_url('inventarios/deleteUltimo') ?>" class="d-inline">
+          <?= csrf_field() ?>
+          <input type="hidden" name="inventario_id" value="<?= esc($inventario->id) ?>">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="ri-delete-bin-line me-1"></i> Sí, eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
 
   <?php
-  function renderProductTree($productos, $nivel = 0)
+  function renderProductTree($productos, $nivel = 0, $ultimoProductoId = null)
   {
     $html = '';
     foreach ($productos as $producto) {
@@ -522,8 +608,6 @@
       $stockClass = $producto->stock_inve > 0 ? 'bg-soft-stock' : 'bg-soft-no-stock';
       $estadoClass = $producto->estado ? 'bg-soft-activo' : 'bg-soft-inactivo';
       $estadoText = $producto->estado ? 'Activo' : 'Inactivo';
-      // $categoriasSelect = $producto->categoria_id ? 'bg-soft-Categoria' : 'bg-soft-Categoria';
-
 
       $html .= '<li>';
       $html .= '<div class="product-info">';
@@ -548,38 +632,58 @@
       $html .= '</small>';
       // Botones de acción
       $html .= '<div class="product-actions">';
-      $html .= '<a href="' . base_url('productos/edit/' . $producto->id) . '" class="btn btn-soft-warning btn-sm" title="Editar">';
-      $html .= '<i class="ri-pencil-fill"></i>';
-      $html .= '</a> ';
 
-      $html .= '<button type="button" class="btn btn-danger btn-sm" 
+      // Editar
+      $html .= '<a href="' . base_url('productos/edit/' . $producto->id) . '" class="btn btn-soft-warning btn-sm" title="Editar producto">';
+      $html .= '<i class="ri-pencil-fill me-1"></i>Editar';
+      $html .= '</a>';
+
+      // Merma
+      $html .= '<button type="button" class="btn btn-outline-danger btn-sm"
                   data-bs-toggle="modal" data-bs-target="#modalMerma"
                   data-producto-id="' . $producto->id . '"
-                  data-producto-nombre="' . esc($producto->nombre) . '">';
-      $html .= '<i class="ri-subtract-line"></i>';
-      $html .= '</button> ';
+                  data-producto-nombre="' . esc($producto->nombre) . '"
+                  title="Registrar merma">';
+      $html .= '<i class="ri-subtract-line me-1"></i>Merma';
+      $html .= '</button>';
 
-      $html .= '<button type="button" class="btn btn-success btn-sm" 
+      // Agregar stock
+      $html .= '<button type="button" class="btn btn-outline-success btn-sm"
                   data-bs-toggle="modal" data-bs-target="#modalAgregar"
                   data-producto-id="' . $producto->id . '"
-                  data-producto-nombre="' . esc($producto->nombre) . '">';
-      $html .= '<i class="ri-add-line"></i>';
-      $html .= '</button> ';
+                  data-producto-nombre="' . esc($producto->nombre) . '"
+                  title="Agregar stock">';
+      $html .= '<i class="ri-add-line me-1"></i>Agregar';
+      $html .= '</button>';
 
-      // ✅ Botón para agregar subproducto
-      $html .= '<button type="button" class="btn btn-info btn-sm ms-1"
+      // Subproducto
+      $html .= '<button type="button" class="btn btn-outline-info btn-sm"
                   data-bs-toggle="modal" data-bs-target="#modalSubproducto"
                   data-parent-id="' . $producto->id . '"
                   data-parent-nombre="' . esc($producto->nombre) . '"
                   data-parent-stock="' . $producto->stock_inve . '"
                   title="Agregar subproducto">';
-      $html .= '<i class="ri-node-tree"></i>';
+      $html .= '<i class="ri-node-tree me-1"></i>Subproducto';
       $html .= '</button>';
+
+      // Eliminar — solo para el último producto del usuario hoy sin ventas ni subproductos
+      if ($ultimoProductoId && (int)$producto->id === (int)$ultimoProductoId) {
+          $html .= '<button type="button" class="btn btn-soft-danger btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalConfirmarEliminarProducto"
+                      data-producto-id="' . $producto->id . '"
+                      data-producto-nombre="' . esc($producto->nombre) . '"
+                      data-producto-stock="' . esc($producto->stock_inve) . '"
+                      title="Eliminar este producto">';
+          $html .= '<i class="ri-delete-bin-line me-1"></i>Eliminar';
+          $html .= '</button>';
+      }
+
       $html .= '</div>';
 
       // Subproductos
       if (!empty($producto->subproductos)) {
-        $html .= '<ul>' . renderProductTree($producto->subproductos, $nivel + 1) . '</ul>';
+        $html .= '<ul>' . renderProductTree($producto->subproductos, $nivel + 1, $ultimoProductoId) . '</ul>';
       }
 
       $html .= '</li>';

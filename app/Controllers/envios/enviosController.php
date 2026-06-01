@@ -43,31 +43,56 @@ class EnviosController extends BaseController
 
     public function index()
     {
-        // Obtener el tipo de la URL o por defecto 'envio'
+        // Tipo de registro
         $tipo = $this->request->getGet('tipo') ?? 'envio';
-        
-        // Validar que el tipo sea válido
         if (!in_array($tipo, ['envio', 'devolucion'])) {
             $tipo = 'envio';
         }
 
-        // Obtener la sucursal del usuario en sesión
+        // Parámetros de filtro del formulario
+        $sucursalOrigenId  = $this->request->getGet('sucursal_origen_id');
+        $sucursalDestinoId = $this->request->getGet('sucursal_destino_id');
+        $estadoId          = $this->request->getGet('estado_id');
+        $fechaInicio       = $this->request->getGet('fecha_inicio');
+        $fechaFin          = $this->request->getGet('fecha_fin');
+
+        // Sucursal del usuario en sesión (siempre se aplica como base)
         $userSucursalId = session()->get('sucursal_id');
-        
-        // Filtrar envíos solo de la sucursal del usuario y por tipo
+
         $this->envioModel->where('tipo', $tipo);
-        
+
         if ($userSucursalId) {
             $this->envioModel->where('sucursal_origen_id', $userSucursalId);
         }
-        
+
+        // Filtros opcionales del formulario
+        if (!empty($sucursalOrigenId)) {
+            $this->envioModel->where('sucursal_origen_id', (int)$sucursalOrigenId);
+        }
+
+        if (!empty($sucursalDestinoId)) {
+            $this->envioModel->where('sucursal_destino_id', (int)$sucursalDestinoId);
+        }
+
+        if (!empty($estadoId)) {
+            $this->envioModel->where('estado_id', (int)$estadoId);
+        }
+
+        if (!empty($fechaInicio)) {
+            $this->envioModel->where('fecha_envio >=', $fechaInicio . ' 00:00:00');
+        }
+
+        if (!empty($fechaFin)) {
+            $this->envioModel->where('fecha_envio <=', $fechaFin . ' 23:59:59');
+        }
+
         $envios = $this->envioModel->findAll();
-        
+
         $data = [
-            'envios' => $envios,
-            'title'  => ucfirst($tipo) . 's', // 'Envios' o 'Devolucions' (ajustaremos el título en la vista si es necesario)
-            'tipo'   => $tipo,
-            'productos' => $this->productosModel->getAllProductosWithRelations(),
+            'envios'     => $envios,
+            'title'      => ucfirst($tipo) . 's',
+            'tipo'       => $tipo,
+            'productos'  => $this->productosModel->getAllProductosWithRelations(),
             'sucursales' => $this->sucursalModel->findAll(),
         ];
 
@@ -650,6 +675,238 @@ public function confirmarEnvio(): RedirectResponse
         }
     }
 
+    /**
+     * Exportar Excel global de envíos con los mismos filtros del índice.
+     * Incluye subfilas de productos y nombre completo del transportista.
+     * Acepta: tipo, sucursal_origen_id, sucursal_destino_id, estado_id,
+     *         fecha_inicio, fecha_fin, sort_by (fecha|codigo|estado), sort_dir (asc|desc)
+     */
+    public function exportarExcelEnvios()
+    {
+        // ── Parámetros ────────────────────────────────────────────────────────
+        $tipo              = $this->request->getGet('tipo')              ?? 'envio';
+        $sucursalOrigenId  = $this->request->getGet('sucursal_origen_id');
+        $sucursalDestinoId = $this->request->getGet('sucursal_destino_id');
+        $estadoId          = $this->request->getGet('estado_id');
+        $fechaInicio       = $this->request->getGet('fecha_inicio');
+        $fechaFin          = $this->request->getGet('fecha_fin');
+        $sortBy            = $this->request->getGet('sort_by')  ?? 'fecha';
+        $sortDir           = strtolower($this->request->getGet('sort_dir') ?? 'desc');
+
+        if (!in_array($tipo, ['envio', 'devolucion']))  $tipo    = 'envio';
+        if (!in_array($sortDir, ['asc', 'desc']))       $sortDir = 'desc';
+
+        // ── Query principal ───────────────────────────────────────────────────
+        $builder = $this->envioModel->builder();
+        $builder->select("
+            condoriri.envios.*,
+            so.nombre                              AS sucursal_origen_nombre,
+            sd.nombre                              AS sucursal_destino_nombre,
+            TRIM(ut.nombre || ' ' || ut.apellidos) AS transporte_nombre_completo,
+            e.nombre                               AS estado_nombre
+        ");
+        $builder->join('condoriri.sucursales as so', 'so.id = condoriri.envios.sucursal_origen_id',  'left');
+        $builder->join('condoriri.sucursales as sd', 'sd.id = condoriri.envios.sucursal_destino_id', 'left');
+        $builder->join('condoriri.usuarios   as ut', 'ut.id = condoriri.envios.user_transporte_id',  'left');
+        $builder->join('condoriri.estados    as e',  'e.id  = condoriri.envios.estado_id',           'left');
+        $builder->where('condoriri.envios.deleted_at IS NULL');
+        $builder->where('condoriri.envios.tipo', $tipo);
+
+        $userSucursalId = session()->get('sucursal_id');
+        if ($userSucursalId) {
+            $builder->where('condoriri.envios.sucursal_origen_id', $userSucursalId);
+        }
+        if (!empty($sucursalOrigenId))  $builder->where('condoriri.envios.sucursal_origen_id',  (int)$sucursalOrigenId);
+        if (!empty($sucursalDestinoId)) $builder->where('condoriri.envios.sucursal_destino_id', (int)$sucursalDestinoId);
+        if (!empty($estadoId))          $builder->where('condoriri.envios.estado_id',           (int)$estadoId);
+        if (!empty($fechaInicio))       $builder->where('condoriri.envios.fecha_envio >=', $fechaInicio . ' 00:00:00');
+        if (!empty($fechaFin))          $builder->where('condoriri.envios.fecha_envio <=', $fechaFin   . ' 23:59:59');
+
+        // Ordenamiento
+        $orderMap = [
+            'fecha'  => 'condoriri.envios.fecha_envio',
+            'codigo' => 'condoriri.envios.code',
+            'estado' => 'condoriri.envios.estado_id',
+        ];
+        $orderCol = $orderMap[$sortBy] ?? $orderMap['fecha'];
+        $builder->orderBy($orderCol, strtoupper($sortDir));
+
+        $envios = $builder->get()->getResultArray();
+
+        // ── Productos por envío (una sola query para todos) ───────────────────
+        $db = \Config\Database::connect();
+        $productosMap = [];
+        if (!empty($envios)) {
+            $envioIds     = array_column($envios, 'id');
+            $placeholders = implode(',', array_fill(0, count($envioIds), '?'));
+            $rows = $db->query("
+                SELECT tp.envio_id,
+                       p.nombre                        AS producto_nombre,
+                       SUM(tp.cantidad)                AS cantidad,
+                       AVG(tp.precio_contado)          AS precio_contado,
+                       SUM(tp.cantidad * tp.precio_contado) AS subtotal
+                FROM condoriri.transferencias_productos tp
+                JOIN condoriri.productos p ON p.id = tp.producto_id
+                WHERE tp.envio_id IN ({$placeholders})
+                  AND tp.deleted_at IS NULL
+                GROUP BY tp.envio_id, p.nombre
+                ORDER BY tp.envio_id, p.nombre
+            ", $envioIds)->getResultArray();
+            foreach ($rows as $row) {
+                $productosMap[$row['envio_id']][] = $row;
+            }
+        }
+
+        // ── Cabecera HTTP ─────────────────────────────────────────────────────
+        $tipoLabel = $tipo === 'devolucion' ? 'Devoluciones' : 'Envios';
+        $filename  = 'reporte_' . $tipoLabel . '_' . date('Ymd_His') . '.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        // ── Texto de filtros ──────────────────────────────────────────────────
+        $filtrosTexto = [];
+        if (!empty($fechaInicio) || !empty($fechaFin)) {
+            $desde = !empty($fechaInicio) ? date('d/m/Y', strtotime($fechaInicio)) : '—';
+            $hasta = !empty($fechaFin)    ? date('d/m/Y', strtotime($fechaFin))    : '—';
+            $filtrosTexto[] = "Período: {$desde} al {$hasta}";
+        }
+        if (!empty($estadoId)) {
+            $estados = [1 => 'Pendiente', 2 => 'En Tránsito', 9 => 'Entregado', 11 => 'Observado'];
+            $filtrosTexto[] = 'Estado: ' . ($estados[(int)$estadoId] ?? $estadoId);
+        }
+        $sortLabels = ['fecha' => 'Fecha', 'codigo' => 'Código', 'estado' => 'Estado'];
+        $filtrosTexto[] = 'Orden: ' . ($sortLabels[$sortBy] ?? 'Fecha') . ' ' . strtoupper($sortDir);
+        $filtrosStr = implode('   |   ', $filtrosTexto) ?: 'Sin filtros adicionales';
+
+        // ── XML Excel ────────────────────────────────────────────────────────
+        echo "\xEF\xBB\xBF";
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+
+        // Estilos
+        echo '<Styles>';
+        echo '<Style ss:ID="titulo"><Font ss:Bold="1" ss:Size="14" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E79" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="subtitulo"><Font ss:Size="9" ss:Color="#FFFFFF"/><Interior ss:Color="#2E75B6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '<Style ss:ID="th"><Font ss:Bold="1" ss:Size="9" ss:Color="#FFFFFF"/><Interior ss:Color="#2E75B6" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/></Borders></Style>';
+        // Filas de envío (par / impar)
+        echo '<Style ss:ID="env_par"><Font ss:Bold="1" ss:Size="9"/><Interior ss:Color="#D6E4F0" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#AAAAAA"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#AAAAAA"/></Borders></Style>';
+        echo '<Style ss:ID="env_par_c"><Font ss:Bold="1" ss:Size="9"/><Interior ss:Color="#D6E4F0" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#AAAAAA"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#AAAAAA"/></Borders></Style>';
+        echo '<Style ss:ID="env_impar"><Font ss:Bold="1" ss:Size="9"/><Interior ss:Color="#EBF3FB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/></Borders></Style>';
+        echo '<Style ss:ID="env_impar_c"><Font ss:Bold="1" ss:Size="9"/><Interior ss:Color="#EBF3FB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/></Borders></Style>';
+        // Subfilas de productos (fondo más claro, itálica)
+        echo '<Style ss:ID="prod_par"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#EAF4FB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="prod_par_c"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#EAF4FB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="prod_par_r"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#EAF4FB" ss:Pattern="Solid"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="prod_impar"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#F5F9FE" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="prod_impar_c"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#F5F9FE" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="prod_impar_r"><Font ss:Size="8" ss:Italic="1"/><Interior ss:Color="#F5F9FE" ss:Pattern="Solid"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="sin_prod"><Font ss:Size="8" ss:Color="#999999" ss:Italic="1"/><Interior ss:Color="#F8F8F8" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDDDDD"/></Borders></Style>';
+        echo '<Style ss:ID="subtotal_envio"><Font ss:Bold="1" ss:Size="8" ss:Color="#1F4E79"/><Interior ss:Color="#D6E4F0" ss:Pattern="Solid"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#2E75B6"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2E75B6"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2E75B6"/></Borders></Style>';
+        echo '<Style ss:ID="subtotal_envio_l"><Font ss:Bold="1" ss:Size="8" ss:Color="#1F4E79"/><Interior ss:Color="#D6E4F0" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#2E75B6"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2E75B6"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2E75B6"/></Borders></Style>';
+        echo '<Style ss:ID="total"><Font ss:Bold="1" ss:Size="9" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E79" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>';
+        echo '</Styles>';
+
+        echo '<Worksheet ss:Name="' . htmlspecialchars($tipoLabel, ENT_XML1) . '">' . "\n";
+        echo '<Table>' . "\n";
+
+        // 11 columnas: N°|Código|Origen|Destino|Fecha|Estado|Transportista|Producto|Cant.|P.Unit.|Subtotal
+        foreach ([40, 130, 130, 130, 100, 90, 140, 160, 60, 70, 80] as $w) {
+            echo '<Column ss:Width="' . $w . '"/>' . "\n";
+        }
+
+        echo '<Row ss:Height="24"><Cell ss:MergeAcross="10" ss:StyleID="titulo"><Data ss:Type="String">REPORTE DE ' . strtoupper($tipoLabel) . '</Data></Cell></Row>' . "\n";
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="10" ss:StyleID="subtitulo"><Data ss:Type="String">' . htmlspecialchars($filtrosStr, ENT_XML1) . '</Data></Cell></Row>' . "\n";
+        echo '<Row ss:Height="18"><Cell ss:MergeAcross="10" ss:StyleID="subtitulo"><Data ss:Type="String">Total de envíos: ' . count($envios) . '   |   Generado: ' . date('d/m/Y H:i') . '</Data></Cell></Row>' . "\n";
+        echo '<Row></Row>' . "\n";
+
+        echo '<Row ss:Height="32">';
+        foreach (['N°', 'CÓDIGO', 'SUCURSAL ORIGEN', 'SUCURSAL DESTINO', 'FECHA ENVÍO', 'ESTADO', 'TRANSPORTISTA', 'PRODUCTO', 'CANT.', 'P. UNIT. (Bs)', 'SUBTOTAL (Bs)'] as $h) {
+            echo '<Cell ss:StyleID="th"><Data ss:Type="String">' . $h . '</Data></Cell>';
+        }
+        echo '</Row>' . "\n";
+
+        // Filas de datos con subfilas de productos
+        $par = true;
+        foreach ($envios as $i => $envio) {
+            $eL  = $par ? 'env_par'    : 'env_impar';
+            $eLc = $par ? 'env_par_c'  : 'env_impar_c';
+            $pL  = $par ? 'prod_par'   : 'prod_impar';
+            $pLc = $par ? 'prod_par_c' : 'prod_impar_c';
+            $pLr = $par ? 'prod_par_r' : 'prod_impar_r';
+
+            $fecha         = !empty($envio['fecha_envio']) ? date('d/m/Y H:i', strtotime($envio['fecha_envio'])) : '—';
+            $transportista = trim($envio['transporte_nombre_completo'] ?? '') ?: '—';
+            $productos     = $productosMap[$envio['id']] ?? [];
+
+            if (!empty($productos)) {
+                $subtotalEnvio = 0.0;
+
+                // Primera fila: datos del envío + primer producto en la misma línea
+                $primero = $productos[0];
+                $subtotalEnvio += (float)$primero['subtotal'];
+                echo '<Row ss:Height="18">';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="Number">' . ($i + 1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['code'] ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['sucursal_origen_nombre']  ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['sucursal_destino_nombre'] ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="String">' . htmlspecialchars($fecha, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="String">' . htmlspecialchars($envio['estado_nombre'] ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($transportista, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $pL  . '"><Data ss:Type="String">' . htmlspecialchars($primero['producto_nombre'], ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $pLc . '"><Data ss:Type="Number">' . (int)$primero['cantidad'] . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $pLr . '"><Data ss:Type="Number">' . number_format((float)$primero['precio_contado'], 2, '.', '') . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $pLr . '"><Data ss:Type="Number">' . number_format((float)$primero['subtotal'], 2, '.', '') . '</Data></Cell>';
+                echo '</Row>' . "\n";
+
+                // Subfilas para el resto de productos
+                for ($j = 1; $j < count($productos); $j++) {
+                    $prod = $productos[$j];
+                    $subtotalEnvio += (float)$prod['subtotal'];
+                    echo '<Row ss:Height="16">';
+                    for ($k = 0; $k < 7; $k++) {
+                        echo '<Cell ss:StyleID="' . $pL . '"><Data ss:Type="String"></Data></Cell>';
+                    }
+                    echo '<Cell ss:StyleID="' . $pL  . '"><Data ss:Type="String">' . htmlspecialchars($prod['producto_nombre'], ENT_XML1) . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $pLc . '"><Data ss:Type="Number">' . (int)$prod['cantidad'] . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $pLr . '"><Data ss:Type="Number">' . number_format((float)$prod['precio_contado'], 2, '.', '') . '</Data></Cell>';
+                    echo '<Cell ss:StyleID="' . $pLr . '"><Data ss:Type="Number">' . number_format((float)$prod['subtotal'], 2, '.', '') . '</Data></Cell>';
+                    echo '</Row>' . "\n";
+                }
+
+                // Fila de subtotal del envío
+                echo '<Row ss:Height="17">';
+                for ($k = 0; $k < 7; $k++) {
+                    echo '<Cell ss:StyleID="subtotal_envio_l"><Data ss:Type="String"></Data></Cell>';
+                }
+                echo '<Cell ss:MergeAcross="2" ss:StyleID="subtotal_envio_l"><Data ss:Type="String">SUBTOTAL ' . htmlspecialchars($envio['code'] ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="subtotal_envio"><Data ss:Type="Number">' . number_format($subtotalEnvio, 2, '.', '') . '</Data></Cell>';
+                echo '</Row>' . "\n";
+            } else {
+                // Envío sin productos registrados
+                echo '<Row ss:Height="18">';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="Number">' . ($i + 1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['code'] ?? '', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['sucursal_origen_nombre']  ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($envio['sucursal_destino_nombre'] ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="String">' . htmlspecialchars($fecha, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eLc . '"><Data ss:Type="String">' . htmlspecialchars($envio['estado_nombre'] ?? '—', ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:StyleID="' . $eL  . '"><Data ss:Type="String">' . htmlspecialchars($transportista, ENT_XML1) . '</Data></Cell>';
+                echo '<Cell ss:MergeAcross="3" ss:StyleID="sin_prod"><Data ss:Type="String">Sin productos registrados</Data></Cell>';
+                echo '</Row>' . "\n";
+            }
+
+            $par = !$par;
+        }
+
+        echo '<Row ss:Height="20"><Cell ss:MergeAcross="10" ss:StyleID="total"><Data ss:Type="String">TOTAL DE ENVÍOS: ' . count($envios) . '</Data></Cell></Row>' . "\n";
+
+        echo '</Table></Worksheet>' . "\n";
+        echo '</Workbook>';
+        exit;
+    }
 
     public function devIndex()
     {

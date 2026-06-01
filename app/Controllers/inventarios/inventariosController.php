@@ -67,7 +67,9 @@ class InventariosController extends BaseController
             $pager = null;
         } else {
             // Sin filtros: mostrar solo hoy por defecto, todos si se especifica
-            $builder = $this->inventarioModel->orderBy('created_at', 'DESC');
+            $builder = $this->inventarioModel
+                ->where('deleted_at', null)
+                ->orderBy('created_at', 'DESC');
 
             if (!$mostrarTodos) {
                 // Filtrar solo por el día de hoy (comportamiento por defecto)
@@ -154,17 +156,56 @@ class InventariosController extends BaseController
         $puedeEditarCantidad = $esUltimoDelUsuario && $esDehoy && !$tieneProductos;
         $puedeEditarCalidad  = in_array($rolId, [1, 3]);
 
+        // --- Último producto eliminable del usuario en este inventario ---
+        $ultimoProducto       = null;
+        $puedeEliminarProducto = false;
+
+        if ($tieneProductos) {
+            // Último producto del usuario en este inventario creado hoy
+            $ultimoProductoCandidate = $this->productoModel
+                ->where('inventario_id', $id)
+                ->where('user_id', $userId)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->first();
+
+            if ($ultimoProductoCandidate) {
+                $esDehoyProducto = date('Y-m-d', strtotime($ultimoProductoCandidate->created_at)) === $hoy;
+
+                // Sin subproductos
+                $tieneSubproductos = $this->productoModel
+                    ->where('parent_id', $ultimoProductoCandidate->id)
+                    ->where('deleted_at', null)
+                    ->countAllResults() > 0;
+
+                // Sin ventas: no existe detalle_venta activo con este producto_id
+                $db = \Config\Database::connect();
+                $tieneVentas = $db->query(
+                    "SELECT 1 FROM condoriri.detalle_venta WHERE producto_id = ? AND deleted_at IS NULL LIMIT 1",
+                    [(int)$ultimoProductoCandidate->id]
+                )->getRow() !== null;
+
+                $puedeEliminarProducto = $esDehoyProducto && !$tieneSubproductos && !$tieneVentas;
+
+                if ($puedeEliminarProducto) {
+                    $ultimoProducto = $ultimoProductoCandidate;
+                }
+            }
+        }
+
         $data = [
-            'inventario'          => $inventario,
-            'productos'           => $productosArbol,
-            'categoriasSelect'    => $categoriasSelect,
-            'unidadesSelect'      => $unidadesSelect,
-            'title'               => 'Detalles del Inventario',
-            'puedeEditarCantidad' => $puedeEditarCantidad,
-            'puedeEditarCalidad'  => $puedeEditarCalidad,
-            'tieneProductos'      => $tieneProductos,
-            'esUltimoDelUsuario'  => $esUltimoDelUsuario,
-            'esDehoy'             => $esDehoy,
+            'inventario'            => $inventario,
+            'productos'             => $productosArbol,
+            'categoriasSelect'      => $categoriasSelect,
+            'unidadesSelect'        => $unidadesSelect,
+            'title'                 => 'Detalles del Inventario',
+            'puedeEditarCantidad'   => $puedeEditarCantidad,
+            'puedeEditarCalidad'    => $puedeEditarCalidad,
+            'tieneProductos'        => $tieneProductos,
+            'esUltimoDelUsuario'    => $esUltimoDelUsuario,
+            'esDehoy'               => $esDehoy,
+            'ultimoProducto'        => $ultimoProducto,
+            'puedeEliminarProducto' => $puedeEliminarProducto,
         ];
 
         return view('inventarios/inventariosShow', $data);
@@ -275,8 +316,9 @@ class InventariosController extends BaseController
             $fechaActual->format('Y') . '-' .
             $fechaActual->format('H'); // Solo la hora, sin minutos
 
-        // Verificar si ya existe un código con esta base
+        // Verificar si ya existe un código con esta base (incluye soft-deleted para evitar colisiones)
         $existingCodes = $this->inventarioModel
+            ->withDeleted()
             ->like('code', $baseCode, 'after')
             ->orderBy('code', 'DESC')
             ->findAll();
@@ -857,6 +899,35 @@ class InventariosController extends BaseController
         ]);
     }
 
+    public function saldoCredito()
+    {
+        $tipo = $this->request->getGet('tipo');
+        $id   = (int) $this->request->getGet('id');
+
+        if (!in_array($tipo, ['uto', 'externo']) || $id <= 0) {
+            return $this->response->setJSON(['saldo_anterior' => 0, 'periodo' => '']);
+        }
+
+        $saldo = $this->ventaModel->getAcumuladoCreditoPeriodo($tipo, $id);
+        $hoy   = new \DateTime();
+        $dia   = (int) $hoy->format('d');
+        if ($dia >= 11) {
+            $ini = (new \DateTime($hoy->format('Y-m-11')))->format('d/m');
+            $fin = (new \DateTime($hoy->format('Y-m-11') . ' +1 month'))
+                ->modify('-1 day')->format('d/m');
+        } else {
+            $prev = (clone $hoy)->modify('-1 month');
+            $ini  = (new \DateTime($prev->format('Y-m-11')))->format('d/m');
+            $fin  = (new \DateTime($hoy->format('Y-m-10')))->format('d/m');
+        }
+
+        return $this->response->setJSON([
+            'saldo_anterior' => $saldo,
+            'periodo'        => $ini . ' al ' . $fin,
+        ]);
+    }
+
+
     public function credito()
     {
 
@@ -885,7 +956,7 @@ class InventariosController extends BaseController
         $pattern = '%' . $termino . '%';
 
         $sqlUto = "
-            SELECT
+            SELECT DISTINCT ON (p.id_persona)
                 p.id_persona,
                 p.nombre AS nombre,
                 p.dip,
@@ -895,12 +966,12 @@ class InventariosController extends BaseController
                 s.seccion,
                 'uto' AS tipo
             FROM public.personas p
-            LEFT JOIN rrhh.empleados e ON (p.id_persona = e.id_persona AND e.\"id_estado\")
-            LEFT JOIN rrhh.cargos c    ON (e.id_cargo = c.id_cargo)
-            LEFT JOIN rrhh.secciones s ON (e.id_seccion = s.id_seccion)
+            JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+            LEFT JOIN rrhh.cargos c    ON c.id_cargo = e.id_cargo
+            LEFT JOIN rrhh.secciones s ON s.id_seccion = e.id_seccion
             WHERE p.\"id_estado\" = true
-              AND e.\"id_estado\" = true
               AND (p.dip ILIKE ? OR p.nombre ILIKE ?)
+            ORDER BY p.id_persona, e.fec_ingreso DESC NULLS LAST, e.id_empleado DESC
             LIMIT 3
         ";
         $uto = $db->query($sqlUto, [$pattern, $pattern])->getResult();
@@ -934,13 +1005,21 @@ class InventariosController extends BaseController
             return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
         }
 
-        $nombre   = strtoupper(trim($this->request->getPost('nombre') ?? ''));
-        $dip      = trim($this->request->getPost('dip') ?? '');
-        $segmento = trim($this->request->getPost('segmento') ?? '');
+        $apellidoPaterno = strtoupper(trim($this->request->getPost('apellido_paterno') ?? ''));
+        $apellidoMaterno = strtoupper(trim($this->request->getPost('apellido_materno') ?? ''));
+        $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
+        $dip             = trim($this->request->getPost('dip') ?? '');
+        $segmento        = trim($this->request->getPost('segmento') ?? '');
 
-        if (empty($nombre) || empty($dip) || empty($segmento)) {
+        if (empty($apellidoPaterno) || empty($nombres)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        }
+
+        if (empty($dip) || empty($segmento)) {
             return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
         }
+
+        $nombre = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
 
         $existente = $this->clienteExternoModel
             ->where('dip', $dip)
@@ -1373,6 +1452,15 @@ class InventariosController extends BaseController
             ? trim(($usuarioGenerador['nombre'] ?? '') . ' ' . ($usuarioGenerador['apellidos'] ?? '')) 
             : 'Usuario Desconocido';
 
+        $acumuladoCredito = 0.0;
+        $saldoAnterior    = 0.0;
+        if (strtolower(trim($venta->tipo_pago)) === 'credito') {
+            $tipoReceptor = !empty($venta->personal_uto_id) ? 'uto' : 'externo';
+            $receptorId = !empty($venta->personal_uto_id) ? (int)$venta->personal_uto_id : (int)$venta->cliente_externo_id;
+            $acumuladoCredito = $this->ventaModel->getAcumuladoCreditoPeriodo($tipoReceptor, $receptorId);
+            $saldoAnterior    = max(0.0, $acumuladoCredito - (float)$venta->monto_total);
+        }
+
         // --- Pasar datos a la vista ---
         $data = [
             'title'          => 'Recibo de Venta #' . $ventaId,
@@ -1383,6 +1471,8 @@ class InventariosController extends BaseController
             'clienteExterno' => $clienteExterno,
             'sucursal'       => $sucursalInfo,
             'nombreUsuario'  => $nombreUsuario,
+            'acumuladoCredito' => $acumuladoCredito,
+            'saldoAnterior'    => $saldoAnterior,
         ];
 
         return view('inventarios/recibo_print', $data);
@@ -1609,6 +1699,90 @@ class InventariosController extends BaseController
                 'nuevo_monto' => $nuevoTotal,
                 'recibo_url'  => base_url('inventarios/recibo/' . $ventaId),
             ]);
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Elimina la última venta del usuario hoy (módulo lácteos planta).
+     * Devuelve stock_inve y hace soft-delete de detalles + soft-delete de la venta.
+     */
+    public function deleteUltimaVenta()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Método no permitido.']);
+        }
+
+        $userId     = (int)session()->get('id');
+        $sucursalId = 4;
+        $db         = \Config\Database::connect();
+
+        $ventaId = (int)$this->request->getPost('venta_id');
+        if ($ventaId <= 0) {
+            return $this->response->setJSON(['success' => false, 'error' => 'ID de venta inválido.']);
+        }
+
+        $venta = $db->query("
+            SELECT v.*
+            FROM condoriri.ventas v
+            WHERE v.id = ?
+              AND v.deleted_at IS NULL
+              AND v.user_id = ?
+              AND v.sucursal_id = ?
+              AND DATE(v.created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
+              )
+        ", [$ventaId, $userId, $sucursalId])->getRow();
+
+        if (!$venta) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Venta no encontrada o no eliminable.']);
+        }
+
+        $ultima = $db->query("
+            SELECT id FROM condoriri.ventas
+            WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
+              AND DATE(created_at) = CURRENT_DATE
+              AND NOT EXISTS (
+                  SELECT 1 FROM condoriri.detalle_venta dv
+                  WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
+              )
+            ORDER BY id DESC LIMIT 1
+        ", [$userId, $sucursalId])->getRow();
+
+        if (!$ultima || (int)$ultima->id !== $ventaId) {
+            return $this->response->setJSON(['success' => false, 'error' => 'Solo puede eliminar su última venta del día.']);
+        }
+
+        $db->transBegin();
+        try {
+            // 1. Leer detalles originales
+            $detalles = $db->query("
+                SELECT dv.id, dv.producto_id, dv.cantidad
+                FROM condoriri.detalle_venta dv
+                WHERE dv.venta_id = ? AND dv.deleted_at IS NULL
+            ", [$ventaId])->getResult();
+
+            // 2. Devolver stock_inve
+            foreach ($detalles as $det) {
+                $db->query("
+                    UPDATE condoriri.productos SET stock_inve = stock_inve + ? WHERE id = ?
+                ", [$det->cantidad, $det->producto_id]);
+            }
+
+            // 3. Soft-delete de detalles
+            foreach ($detalles as $det) {
+                $this->detalleModel->delete($det->id);
+            }
+
+            // 4. Soft-delete de la venta
+            $db->query("UPDATE condoriri.ventas SET deleted_at = NOW() WHERE id = ?", [$ventaId]);
+
+            $db->transCommit();
+            return $this->response->setJSON(['success' => true]);
         } catch (\Exception $e) {
             $db->transRollback();
             return $this->response->setJSON(['success' => false, 'error' => $e->getMessage()]);
@@ -2677,6 +2851,85 @@ class InventariosController extends BaseController
 
         $service = new \App\Services\Inventarios\ExportacionExcelVentasService();
         $service->exportar($fecha_inicio, $fecha_fin, $tipo);
+    }
+
+    /**
+     * Elimina (soft-delete) el último inventario registrado por el usuario hoy,
+     * solo si no tiene productos asociados.
+     * Si era LECHE, recalcula la reserva del inventario anterior de LECHE.
+     */
+    public function deleteUltimoInventario(): RedirectResponse
+    {
+        $userId     = session()->get('id');
+        $sucursalId = session()->get('sucursal_id');
+
+        $inventarioId = (int)$this->request->getPost('inventario_id');
+        if (!$inventarioId) {
+            return redirect()->back()->with('error', 'Solicitud inválida.');
+        }
+
+        $inventario = $this->inventarioModel->find($inventarioId);
+        if (!$inventario) {
+            return redirect()->to('/inventarios')->with('error', 'Inventario no encontrado.');
+        }
+
+        // Verificar que sea el último inventario del usuario hoy
+        $ultimo = $this->inventarioModel
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$ultimo || (int)$ultimo->id !== $inventarioId) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar el último inventario que usted registró.');
+        }
+
+        if (date('Y-m-d', strtotime($ultimo->created_at)) !== date('Y-m-d')) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Solo puede eliminar inventarios registrados el día de hoy.');
+        }
+
+        // Verificar que no tenga productos asociados
+        $tieneProductos = $this->productoModel
+            ->where('inventario_id', $inventarioId)
+            ->countAllResults();
+
+        if ($tieneProductos > 0) {
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'No se puede eliminar: este inventario ya tiene productos registrados.');
+        }
+
+        $db = \Config\Database::connect();
+        $db->transBegin();
+        try {
+            // Si era LECHE, recalcular la reserva del inventario anterior de LECHE
+            if (strtoupper($inventario->nombre) === 'LECHE') {
+                $anterior = $this->inventarioModel
+                    ->where('sucursal_id', $sucursalId)
+                    ->where('nombre', 'LECHE')
+                    ->where('id !=', $inventarioId)
+                    ->where('deleted_at', null)
+                    ->orderBy('id', 'DESC')
+                    ->first();
+
+                if ($anterior) {
+                    // La reserva del anterior vuelve a ser: su propia reserva anterior - el stock eliminado
+                    $reservaCorregida = (float)$anterior->reserva - (float)$inventario->stock;
+                    $this->inventarioModel->update($anterior->id, ['reserva' => max(0, $reservaCorregida)]);
+                }
+            }
+
+            // Soft-delete del inventario
+            $this->inventarioModel->delete($inventarioId);
+
+            $db->transCommit();
+            return redirect()->to('/inventarios')->with('success', 'Inventario eliminado correctamente.');
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return redirect()->to('/inventarios/show/' . $inventarioId)
+                ->with('error', 'Error al eliminar el inventario: ' . $e->getMessage());
+        }
     }
 
     /**

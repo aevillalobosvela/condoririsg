@@ -106,6 +106,7 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     transition: all 0.3s ease;
     border: 1.5px solid transparent;
+    cursor: pointer;
   }
 
   .quick-item:hover {
@@ -154,21 +155,39 @@
   <section class="quick">
     <div class="quick-title">Acceso Rápido</div>
     <div class="quick-grid">
-      <a href="<?= base_url('inventarios') ?>" class="quick-item blue" role="link" aria-label="Gestión de Inventario">
-        <div class="qi-icon"><i class="mdi mdi-warehouse"></i></div>
-        <div class="qi-title">Gestión de Inventario</div>
-        <div class="qi-sub">Administra productos y stock</div>
+
+      <a href="<?= base_url('inventarios') ?>" class="quick-link">
+        <div class="quick-item" style="background:#e8f5e9; border-color:#28a745;">
+          <div class="qi-icon" style="background:#28a745; color:#fff;"><i class="ri-drop-line"></i></div>
+          <div class="qi-title">Registro de Leche</div>
+          <div class="qi-sub">Registrar ingreso de materia prima</div>
+        </div>
       </a>
 
-      <a href="<?= base_url('envios') ?>" class="quick-item cyan" role="link" aria-label="Gestión de Envíos">
-        <div class="qi-icon"><i class="mdi mdi-truck-fast"></i></div>
-        <div class="qi-title">Gestión de Envíos</div>
-        <div class="qi-sub">Programa y monitorea envíos</div>
+      <a href="<?= base_url('stockinventario') ?>" class="quick-link">
+        <div class="quick-item" style="background:#e8f0fe; border-color:#0d6efd;">
+          <div class="qi-icon" style="background:#0d6efd; color:#fff;"><i class="ri-archive-stack-line"></i></div>
+          <div class="qi-title">Inventario / Stock</div>
+          <div class="qi-sub">Consultar y gestionar el stock de productos</div>
+        </div>
       </a>
 
-     
+      <a href="<?= base_url('envios') ?>" class="quick-link">
+        <div class="quick-item" style="background:#e0f5f7; border-color:#0097a7;">
+          <div class="qi-icon" style="background:#0097a7; color:#fff;"><i class="ri-truck-line"></i></div>
+          <div class="qi-title">Gestionar Envíos</div>
+          <div class="qi-sub">Programar y monitorear envíos</div>
+        </div>
+      </a>
 
-     
+      <a href="<?= base_url('inventarios/ventas') ?>" class="quick-link">
+        <div class="quick-item" style="background:#fff3e0; border-color:#f57c00;">
+          <div class="qi-icon" style="background:#f57c00; color:#fff;"><i class="ri-shopping-cart-line"></i></div>
+          <div class="qi-title">Ventas</div>
+          <div class="qi-sub">Registrar y consultar ventas de planta</div>
+        </div>
+      </a>
+
     </div>
   </section>
 

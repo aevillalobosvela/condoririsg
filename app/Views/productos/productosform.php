@@ -41,8 +41,8 @@
     border-color: #ffc107;
   }
   .calculation-result.alerta-critica {
-    background-color: #f8d7da;
-    border-color: #dc3545;
+    background-color: #fff3cd;
+    border-color: #ffc107;
   }
 
   .result-highlight {
@@ -67,7 +67,7 @@
     background-color: #28a745;
   }
   .reserva-bar.warn  { background-color: #ffc107; }
-  .reserva-bar.crit  { background-color: #dc3545; }
+  .reserva-bar.crit  { background-color: #ffc107; }
 
   /* Stock info */
   .stock-info {
@@ -115,6 +115,28 @@
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
+  }
+
+  /* Bandeja de presets */
+  .preset-btn {
+    white-space: pre-line;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    min-width: 76px;
+    padding: 0.3rem 0.5rem;
+    text-align: center;
+    border-color: #a3cfbb;
+    color: #1a6335;
+  }
+  .preset-btn:hover {
+    background-color: #d1f0de;
+    border-color: #28a745;
+    color: #155724;
+  }
+  .preset-btn.active {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
   }
 </style>
 <?= $this->endSection() ?>
@@ -181,6 +203,16 @@
                   <h5 class="card-title text-primary"><i class="ri-information-fill me-2"></i> Información Básica</h5>
                   <hr>
 
+                  <?php if (!isset($producto->id)): ?>
+                  <!-- Bandeja de presets — solo modo creación -->
+                  <div class="mb-4" id="presetBandeja">
+                    <label class="form-label text-muted" style="font-size:0.8rem;">
+                      <i class="ri-flashlight-line me-1"></i> Selección rápida <span class="fw-normal">(opcional — puede modificar los campos libremente)</span>
+                    </label>
+                    <div class="d-flex flex-wrap gap-2" id="presetBtns"></div>
+                  </div>
+                  <?php endif; ?>
+
                   <!-- Nombre y Unidad -->
                   <div class="row">
                     <div class="col-md-6">
@@ -193,6 +225,7 @@
                           name="nombre"
                           value="<?= old('nombre', $producto->nombre ?? '') ?>"
                           required
+                          style="text-transform:uppercase"
                           placeholder="Ingrese el nombre del producto">
                         <div class="invalid-feedback">
                           <?= validation_show_error('nombre') ?: 'El nombre del producto es obligatorio.' ?>
@@ -732,7 +765,7 @@
         if (pct >= 100) {
           reservaBar.className = 'reserva-bar crit';
           reservaBarTexto.textContent = 'Se usará toda la reserva disponible.';
-          reservaBarTexto.style.color = '#dc3545';
+          reservaBarTexto.style.color = '#856404';
         } else if (pct >= 90) {
           reservaBar.className = 'reserva-bar warn';
           reservaBarTexto.textContent = 'Se usará el ' + pct.toFixed(0) + '% de la reserva. Quedarán ' + reservaFinal.toFixed(2) + ' L.';
@@ -753,7 +786,7 @@
         // Badge
         if (unidades === 0 && (litros > 0 || porUnidad > 0)) {
           resultBadge.textContent = '0 unidades — revise los valores';
-          resultBadge.className = 'badge bg-danger';
+          resultBadge.className = 'badge bg-warning text-dark';
         } else if (pct >= 90) {
           resultBadge.textContent = 'Uso alto de reserva';
           resultBadge.className = 'badge bg-warning text-dark';
@@ -822,6 +855,57 @@
       document.getElementById('btnConfirmarGuardar').addEventListener('click', function() {
         productoForm.submit();
       });
+
+      // ── Bandeja de presets ──────────────────────────────────────────────
+      const PRESETS = [
+        { label: 'QUESO\n900 g',        nombre: 'QUESO 900 GRAMOS',         unidad_id: 22, precio_contado: 45.00,  precio_credito: 45.00  },
+        { label: 'REQUESÓN\n250 g',     nombre: 'REQUESON 250 GRAMOS',      unidad_id: 25, precio_contado: 10.00,  precio_credito: 10.00  },
+        { label: 'YOGURT\n1 L',         nombre: 'YOGURT 1 LITRO',           unidad_id: 21, precio_contado: 12.00,  precio_credito: 12.00  },
+        { label: 'LECHE\n1 L',          nombre: 'LECHE',                    unidad_id: 21, precio_contado:  8.00,  precio_credito:  8.00  },
+        { label: 'Q. SIN SAL\n500 g',   nombre: 'QUESO SIN SAL 500 GRAMOS', unidad_id: 24, precio_contado: 24.00,  precio_credito: 24.00  },
+        { label: 'Y. GRIEGO\n250 g',    nombre: 'YOGURT GRIEGO 250 GRAMOS', unidad_id: 25, precio_contado: 13.00,  precio_credito: 13.00  },
+        { label: 'YOGURT\n120 ml',      nombre: 'YOGURT 120 ML',            unidad_id: 23, precio_contado:  1.50,  precio_credito:  1.50  },
+      ];
+
+      const presetContainer = document.getElementById('presetBtns');
+      if (presetContainer) {
+        PRESETS.forEach((p, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-success preset-btn';
+          btn.dataset.idx = i;
+          btn.textContent = p.label;
+          btn.addEventListener('click', () => applyPreset(i));
+          presetContainer.appendChild(btn);
+        });
+      }
+
+      function applyPreset(idx) {
+        const p = PRESETS[idx];
+        const nombreEl   = document.getElementById('nombre');
+        const unidadEl   = document.getElementById('unidad_id');
+        const pcEl       = document.getElementById('precio_contado');
+        const pcrEl      = document.getElementById('precio_credito');
+
+        if (nombreEl)  nombreEl.value  = p.nombre;
+        if (unidadEl)  unidadEl.value  = p.unidad_id;
+        if (pcEl)      pcEl.value      = p.precio_contado.toFixed(2);
+        if (pcrEl)     pcrEl.value     = p.precio_credito.toFixed(2);
+
+        // Marcar botón activo
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.querySelector(`.preset-btn[data-idx="${idx}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+      }
+
+      // Deseleccionar visualmente si el operador edita nombre o unidad manualmente
+      ['nombre', 'unidad_id'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input',  () => document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active')));
+        el.addEventListener('change', () => document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active')));
+      });
+      // ── Fin bandeja de presets ──────────────────────────────────────────
     }
 
     // Toggle calidad (ambos modos)

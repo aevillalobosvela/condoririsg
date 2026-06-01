@@ -22,6 +22,7 @@ class ProductoAgroModel extends Model
         'precio_credito',
         'precio_contado',
         'cantidad_inve',
+        'imagen',
         'sucursal_id',
         'user_id',
         'estado'
@@ -46,6 +47,7 @@ class ProductoAgroModel extends Model
         'cantidad_inve'     => 'required|integer|greater_than_equal_to[0]',
         'sucursal_id'       => 'required|integer|greater_than[0]',
         'user_id'           => 'required|integer|greater_than[0]',
+        'imagen'            => 'permit_empty|max_length[255]',
         
     ];
 
@@ -89,6 +91,7 @@ class ProductoAgroModel extends Model
                 'productos_agro.cantidad_inve as stock_inve', // ✅ stock_inve (para compatibilidad)
                 'productos_agro.precio_contado',
                 'productos_agro.precio_credito',
+                'productos_agro.imagen',                      // ✅ imagen (nivel 1 cadena de prioridad)
                 'unidades.nombre as unidad'
             ])
             ->join('condoriri.unidades', 'unidades.id = productos_agro.unidad_id', 'left')

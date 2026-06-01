@@ -171,6 +171,7 @@ class ProductoModel extends Model
                     ->join('condoriri.categorias', 'condoriri.categorias.id = condoriri.productos.categoria_id')
                     ->join('condoriri.unidades', 'condoriri.unidades.id = condoriri.productos.unidad_id')
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->findAll();
     }
     
@@ -182,6 +183,7 @@ class ProductoModel extends Model
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
                     ->join('condoriri.usuarios', 'condoriri.usuarios.id = condoriri.productos.user_id')
                     ->where('condoriri.productos.id', $id)
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->first();
     }
     
@@ -219,7 +221,8 @@ class ProductoModel extends Model
         $this->select('condoriri.productos.*, categorias.nombre as categoria_nombre, unidades.nombre as unidad_nombre, inventarios.nombre as inventario_nombre')
              ->join('condoriri.categorias', 'condoriri.categorias.id = condoriri.productos.categoria_id')
              ->join('condoriri.unidades', 'condoriri.unidades.id = condoriri.productos.unidad_id')
-             ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id');
+             ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
+             ->where('condoriri.inventarios.deleted_at', null);
 
         if (!empty($filters['categoria_id'])) {
             $this->where('productos.categoria_id', $filters['categoria_id']);
@@ -278,8 +281,10 @@ class ProductoModel extends Model
             p.categoria_id,
             p.unidad_id
         ')
-        ->join('condoriri.productos p', 'p.id = i.producto_id')
-        ->where('i.sucursal_id', $sucursalId);
+        ->join('condoriri.productos p', 'p.inventario_id = i.id')
+        ->where('i.sucursal_id', $sucursalId)
+        ->where('i.deleted_at', null)
+        ->where('p.deleted_at', null);
 
     if ($query) {
         $builder->groupStart()
@@ -300,6 +305,7 @@ class ProductoModel extends Model
                     ->join('condoriri.inventarios', 'condoriri.inventarios.id = condoriri.productos.inventario_id')
                     ->join('condoriri.usuarios', 'condoriri.usuarios.id = condoriri.productos.user_id')
                     ->where('condoriri.productos.id', $id)
+                    ->where('condoriri.inventarios.deleted_at', null)
                     ->first();
     } catch (\Exception $e) {
         log_message('error', 'Error al obtener producto con relaciones: ' . $e->getMessage());
@@ -340,44 +346,55 @@ public function buildTree(array $productos, $parentId = null): array
 
 
 
- public function getStockTotalAgrupadoPorNombre()
+    /**
+     * Stock agrupado por nombre de producto — sin filtro de fecha.
+     * Incluye precio, lotes activos y fecha del último lote.
+     */
+    public function getStockTotalAgrupadoPorNombre(): array
     {
-        // Agrupar por 'nombre', sumar 'stock_inve' y contar el número de registros
-        $builder = $this->select('
-            nombre,
-            COUNT(id) as cantidad_registros,
-            SUM(stock_inve) as suma_stock_inve
-        ')
-        ->groupBy('nombre')
-        ->orderBy('nombre', 'ASC'); // Ordenar por nombre para mejor visualización
-
-        return $builder->findAll();
+        return $this->select('
+                nombre,
+                COUNT(id)                                        AS cantidad_registros,
+                SUM(stock_inve)                                  AS suma_stock_inve,
+                AVG(precio_contado)                              AS precio_contado,
+                COUNT(CASE WHEN stock_inve > 0 THEN 1 END)       AS lotes_con_stock,
+                MAX(created_at)                                  AS ultimo_lote
+            ')
+            ->where('deleted_at', null)
+            ->where('parent_id', null)
+            ->groupBy('nombre')
+            ->orderBy('suma_stock_inve', 'DESC')
+            ->orderBy('nombre', 'ASC')
+            ->findAll();
     }
 
     /**
-     * Obtiene el stock total agrupado por nombre, filtrado por rango de fechas de creación.
-     * * @param string|null $fechaInicio Fecha de inicio (YYYY-MM-DD).
-     * @param string|null $fechaFin Fecha de fin (YYYY-MM-DD).
-     * @return array|object[] Resultados del resumen de stock filtrado.
+     * Stock agrupado por nombre, filtrado por rango de fechas de creación.
+     * Incluye precio, lotes activos y fecha del último lote.
      */
-    public function getStockTotalFiltradoPorFecha(string $fechaInicio = null, string $fechaFin = null)
+    public function getStockTotalFiltradoPorFecha(string $fechaInicio = null, string $fechaFin = null): array
     {
         $builder = $this->select('
-            nombre,
-            COUNT(id) as cantidad_registros,
-            SUM(stock_inve) as suma_stock_inve
-        ')
-        ->groupBy('nombre');
+                nombre,
+                COUNT(id)                                        AS cantidad_registros,
+                SUM(stock_inve)                                  AS suma_stock_inve,
+                AVG(precio_contado)                              AS precio_contado,
+                COUNT(CASE WHEN stock_inve > 0 THEN 1 END)       AS lotes_con_stock,
+                MAX(created_at)                                  AS ultimo_lote
+            ')
+            ->where('deleted_at', null)
+            ->where('parent_id', null)
+            ->groupBy('nombre');
 
         if (!empty($fechaInicio) && !empty($fechaFin)) {
-            // Aplicar el filtro de rango de fechas al campo de creación
             $builder->where('created_at >=', $fechaInicio . ' 00:00:00')
                     ->where('created_at <=', $fechaFin . ' 23:59:59');
         }
 
-        $builder->orderBy('nombre', 'ASC');
-
-        return $builder->findAll();
+        return $builder
+            ->orderBy('suma_stock_inve', 'DESC')
+            ->orderBy('nombre', 'ASC')
+            ->findAll();
     }
 
 
