@@ -567,6 +567,7 @@
 
     // Nivel 2: imágenes locales por nombre de producto
     const LOCAL_IMAGE_MAP = {
+      'LECHE':                    '<?= base_url('assets/img/leche.png') ?>',
       'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
       'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
       'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',

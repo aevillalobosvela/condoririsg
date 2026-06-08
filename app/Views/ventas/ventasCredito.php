@@ -761,8 +761,80 @@
 
     // --- FUNCIONES DE PRODUCTOS Y CARRITO ---
 
-    function getProductImage(p) {
-      return '<?= base_url() ?>/assets/images/productos/' + p.producto + '.png';
+    const IMAGE_MAP = {
+      'LECHE': 1,
+      'QUESO 900 GRAMOS': 2,
+      'QUESO SIN SAL 500 GRAMOS': 3,
+      'REQUESON 250 GRAMOS': 4,
+      'YOGURT 1 LITRO': 5,
+      'YOGURT 120 ML': 6,
+      'YOGURT GRIEGO 250 GRAMOS': 7,
+      'LACTOFRUT 120 ML': 8,
+    };
+    const BASE_IMAGE_URL = 'https://www.uto.edu.bo/wp-content/uploads/2026/03/';
+
+    const resolvedImages = {};
+
+    // Nivel 2: imágenes locales por nombre de producto
+    const LOCAL_IMAGE_MAP = {
+      'LECHE':                    '<?= base_url('assets/img/leche.png') ?>',
+      'QUESO 900 GRAMOS':         '<?= base_url('assets/img/queso-900-gramos.png') ?>',
+      'QUESO SIN SAL 500 GRAMOS': '<?= base_url('assets/img/queso-sin-sal-500-gramos.png') ?>',
+      'REQUESON 250 GRAMOS':      '<?= base_url('assets/img/requeson-250-gramos.png') ?>',
+      'YOGURT 1 LITRO':           '<?= base_url('assets/img/yogurt-1-litro.jpg') ?>',
+      'YOGURT GRIEGO 250 GRAMOS': '<?= base_url('assets/img/yogurt-griego-250-gramos.jpg') ?>',
+    };
+
+    // Nivel 4: ícono/svg por categoría/nombre
+    function getCategoryIcon(nombre) {
+      const n = (nombre || '').toUpperCase();
+      if (n.includes('REQUESON') || n.includes('REQUESÓN')) return { type: 'ri', value: 'ri-bowl-line' };
+      if (n.includes('LECHE'))                               return { type: 'ri', value: 'ri-drop-line' };
+      if (n.includes('QUESO'))                               return { type: 'svg', value: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="36" height="36"><path d="M2 19h20v2H2v-2zm1.5-9L12 3l8.5 7H3.5zm3.3 1a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm7 2a1.5 1.5 0 1 0 3 0 1.5 1.5 0 0 0-3 0zm2-4a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg>' };
+      if (n.includes('YOGURT') || n.includes('LACTOFRUT'))   return { type: 'ri', value: 'ri-cup-line' };
+      return { type: 'ri', value: 'ri-shopping-basket-line' };
+    }
+
+    function probeImage(url) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => resolve(url);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    async function resolveAllImages() {
+      const nums = [...new Set(Object.values(IMAGE_MAP))];
+      await Promise.all(nums.map(async num => {
+        const png = BASE_IMAGE_URL + num + '.png';
+        const jpg = BASE_IMAGE_URL + num + '.jpg';
+        resolvedImages[num] = await probeImage(png) ?? await probeImage(jpg);
+      }));
+    }
+
+    // Resuelve imagen con cadena de prioridad de 4 niveles
+    function getProductImage(nombre, imagenBD) {
+      const key = (nombre || '').toUpperCase().trim();
+
+      // Nivel 1: imagen subida por usuario en BD
+      if (imagenBD && imagenBD !== 'jpg') {
+        return { type: 'url', src: '<?= base_url() ?>' + imagenBD };
+      }
+
+      // Nivel 2: imagen local por nombre
+      if (LOCAL_IMAGE_MAP[key]) {
+        return { type: 'url', src: LOCAL_IMAGE_MAP[key] };
+      }
+
+      // Nivel 3: imagen servidor externo UTO
+      const num = IMAGE_MAP[key];
+      if (num && resolvedImages[num]) {
+        return { type: 'url', src: resolvedImages[num] };
+      }
+
+      // Nivel 4: ícono por categoría
+      return { type: 'icon', icon: getCategoryIcon(nombre) };
     }
 
     function getProductColors(productName) {
@@ -812,14 +884,27 @@
              data-unidad="${p.unidad || 'und'}">
           <div class="card h-100 shadow-sm border-0 cursor-pointer" style="border-left: 4px solid ${colors.border} !important;">
             <div class="card-body text-center p-3" style="background: linear-gradient(135deg, ${colors.bg} 0%, #ffffff 100%);">
-              <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden" 
-                   style="width: 90px; height: 90px; background-color: ${colors.border}; position: relative;">
-                <img src="${getProductImage(p)}" 
-                     alt="${p.producto}" 
-                     style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <span class="fw-bold" style="font-size: 0.9rem; color: white; display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${p.producto.substring(0,2)}</span>
-              </div>
+              ${
+                (() => {
+                  const img = getProductImage(p.producto, p.imagen ?? null);
+                  if (img.type === 'url') {
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 overflow-hidden"
+                       style="width: 90px; height: 90px; background-color: ${colors.border}; position: relative;">
+                      <img src="${img.src}" alt="${p.producto}"
+                           style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>`;
+                  } else {
+                    const ic = img.icon;
+                    const inner = ic.type === 'svg'
+                      ? `<span style="display:flex;align-items:center;justify-content:center;color:#fff;">${ic.value}</span>`
+                      : `<i class="${ic.value}" style="font-size: 2rem;"></i>`;
+                    return `<div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2"
+                       style="width: 90px; height: 90px; background-color: ${colors.border}; color: white;">
+                      ${inner}
+                    </div>`;
+                  }
+                })()
+              }
               <h6 class="card-title mb-2" style="color: ${colors.text}; font-size: 0.8rem; line-height: 1.2;">${p.producto}</h6>
               <div class="mb-2">
                 <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
@@ -1160,9 +1245,11 @@
     });
 
     // Inicializar
-    renderProducts();
-    tipoPagoSelect.dispatchEvent(new Event('change'));
-    document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
+    resolveAllImages().then(() => {
+      renderProducts();
+      tipoPagoSelect.dispatchEvent(new Event('change'));
+      document.getElementById('categoryFilter').dispatchEvent(new Event('change'));
+    });
   });
 </script>
 
