@@ -5,6 +5,26 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 
 ---
 
+## 2026-06-08 ✅ COMPLETADO
+> Fuente: [`TAREAS_2026-06-08.md`](tareas/completadas/TAREAS_2026-06-08.md)
+
+### TAREA 25 — Sincronización del cargador de imágenes y mapeo de LECHE en pantallas de venta a crédito
+
+**Alcance:** Sincronización del cargador dinámico de imágenes con prioridad de 4 niveles en las pantallas de venta a crédito del módulo lácteos y mapeo de la imagen de Leche en `LOCAL_IMAGE_MAP`.
+
+**Decisiones clave:**
+- **Sincronización del cargador dinámico**: Replicado el flujo de prioridad asíncrono (BD, local, remoto UTO e iconos) en las vistas de crédito.
+- **Mapeo de LECHE**: Añadida la clave `LECHE` en el `LOCAL_IMAGE_MAP` apuntando al recurso local `leche.png`.
+- **Carga asíncrona**: Modificada la inicialización del POS de crédito para esperar por la resolución de imágenes mediante la promesa `resolveAllImages()`.
+
+**Archivos modificados:**
+- `app/Views/inventarios/ventasCredito.php`
+- `app/Views/inventarios/ventasIndex.php`
+- `app/Views/ventas/ventasCredito.php`
+- `app/Views/ventas/ventasIndex.php`
+
+---
+
 ## 2026-06-01 ✅ COMPLETADO
 > Fuente: [`TAREAS_2026-06-01.md`](tareas/completadas/TAREAS_2026-06-01.md)
 
