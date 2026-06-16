@@ -494,7 +494,7 @@
             style="text-transform:uppercase" placeholder="Ej: QUISPE">
         </div>
         <div class="mb-2">
-          <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+          <label class="form-label fw-semibold">Nombre(s)</label>
           <input type="text" class="form-control" id="extNombres"
             style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
         </div>
@@ -722,8 +722,8 @@
       const segmento = document.getElementById('extSegmento').value;
       const errDiv   = document.getElementById('nuevoExternoError');
 
-      if (!apellidoPaterno || !nombres || !dip || !segmento) {
-        errDiv.textContent = 'Apellido paterno, nombre(s), DIP y segmento son obligatorios.';
+      if (!apellidoPaterno || !dip || !segmento) {
+        errDiv.textContent = 'Apellido paterno, DIP y segmento son obligatorios.';
         errDiv.classList.remove('d-none');
         return;
       }

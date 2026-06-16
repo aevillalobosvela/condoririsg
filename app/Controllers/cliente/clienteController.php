@@ -264,12 +264,12 @@ class clienteController extends BaseController
         $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
         $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
 
-        if (empty($apellidoPaterno) || empty($nombres)) {
-            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        if (empty($apellidoPaterno)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno es obligatorio.');
         }
 
         if (empty($ciNit)) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+            return redirect()->back()->withInput()->with('error', 'El CI/NIT es obligatorio.');
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
@@ -307,12 +307,12 @@ class clienteController extends BaseController
         $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
         $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
 
-        if (empty($apellidoPaterno) || empty($nombres)) {
-            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        if (empty($apellidoPaterno)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno es obligatorio.');
         }
 
         if (empty($ciNit)) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+            return redirect()->back()->withInput()->with('error', 'El CI/NIT es obligatorio.');
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));
@@ -350,12 +350,12 @@ class clienteController extends BaseController
         $nombres         = strtoupper(trim($this->request->getPost('nombres') ?? ''));
         $ciNit           = strtoupper(trim($this->request->getPost('ci_nit') ?? ''));
 
-        if (empty($apellidoPaterno) || empty($nombres)) {
-            return redirect()->back()->withInput()->with('error', 'El apellido paterno y el nombre son obligatorios.');
+        if (empty($apellidoPaterno)) {
+            return redirect()->back()->withInput()->with('error', 'El apellido paterno es obligatorio.');
         }
 
         if (empty($ciNit)) {
-            return redirect()->back()->withInput()->with('error', 'El nombre completo y CI/NIT son obligatorios.');
+            return redirect()->back()->withInput()->with('error', 'El CI/NIT es obligatorio.');
         }
 
         $nombreCompleto = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));

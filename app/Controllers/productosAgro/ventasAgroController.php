@@ -327,12 +327,12 @@ class ventasAgroController extends BaseController
         $dip             = trim($this->request->getPost('dip') ?? '');
         $segmento        = trim($this->request->getPost('segmento') ?? '');
 
-        if (empty($apellidoPaterno) || empty($nombres)) {
-            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno y el nombre son obligatorios.']);
+        if (empty($apellidoPaterno)) {
+            return $this->response->setJSON(['success' => false, 'error' => 'El apellido paterno es obligatorio.']);
         }
 
         if (empty($dip) || empty($segmento)) {
-            return $this->response->setJSON(['success' => false, 'error' => 'Nombre, DIP y segmento son obligatorios.']);
+            return $this->response->setJSON(['success' => false, 'error' => 'El DIP y segmento son obligatorios.']);
         }
 
         $nombre = trim(implode(' ', array_filter([$apellidoPaterno, $apellidoMaterno, $nombres])));

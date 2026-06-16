@@ -396,8 +396,8 @@
               style="text-transform:uppercase" placeholder="Ej: QUISPE">
           </div>
           <div class="mb-2">
-            <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="nombres" required
+            <label class="form-label fw-semibold">Nombre(s)</label>
+            <input type="text" class="form-control" name="nombres"
               style="text-transform:uppercase" placeholder="Ej: JUAN CARLOS">
           </div>
           <div class="mb-2">
