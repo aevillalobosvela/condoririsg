@@ -552,14 +552,19 @@ class ventasController extends BaseController
         $termino = $this->request->getGet('dip');
         $pattern = '%' . $termino . '%';
 
+        $hasTelefono = $db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'personas' AND column_name = 'telefono'")->getRow() ? true : false;
+        $hasCelular  = $db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'personas' AND column_name = 'celular'")->getRow() ? true : false;
+        $colTelefono = $hasTelefono ? 'p.telefono' : 'NULL AS telefono';
+        $colCelular  = $hasCelular  ? 'p.celular'  : 'NULL AS celular';
+
         // Personal UTO
         $sqlUto = "
             SELECT DISTINCT ON (p.id_persona)
                 p.id_persona,
                 p.nombre AS nombre,
                 p.dip,
-                p.telefono,
-                p.celular,
+                {$colTelefono},
+                {$colCelular},
                 c.cargo,
                 s.seccion,
                 'uto' AS tipo
@@ -1097,8 +1102,12 @@ class ventasController extends BaseController
         $clienteExterno = null;
 
         if (!empty($venta->personal_uto_id)) {
+            $hasTelefono = $db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'personas' AND column_name = 'telefono'")->getRow() ? true : false;
+            $hasCelular  = $db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'personas' AND column_name = 'celular'")->getRow() ? true : false;
+            $selectCols  = 'p.nombre, p.dip, ' . ($hasTelefono ? 'p.telefono' : 'NULL AS telefono') . ', ' . ($hasCelular ? 'p.celular' : 'NULL AS celular') . ', c.cargo, s.seccion';
+
             $personal = $db->table('public.personas p')
-                ->select('p.nombre, p.dip, p.telefono, p.celular, c.cargo, s.seccion')
+                ->select($selectCols)
                 ->join('rrhh.empleados e', 'p.id_persona = e.id_persona', 'left')
                 ->join('rrhh.cargos c', 'e.id_cargo = c.id_cargo', 'left')
                 ->join('rrhh.secciones s', 'e.id_seccion = s.id_seccion', 'left')
@@ -1180,7 +1189,7 @@ class ventasController extends BaseController
             WHERE v.deleted_at IS NULL
               AND v.user_id = ?
               AND v.sucursal_id = ?
-              AND DATE(v.created_at) = CURRENT_DATE
+              AND DATE(v.created_at) = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date
               AND NOT EXISTS (
                   SELECT 1 FROM condoriri.detalle_venta dv
                   WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
@@ -1274,7 +1283,7 @@ class ventasController extends BaseController
               AND v.deleted_at IS NULL
               AND v.user_id = ?
               AND v.sucursal_id = ?
-              AND DATE(v.created_at) = CURRENT_DATE
+              AND DATE(v.created_at) = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date
               AND NOT EXISTS (
                   SELECT 1 FROM condoriri.detalle_venta dv
                   WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
@@ -1289,7 +1298,7 @@ class ventasController extends BaseController
         $ultima = $db->query("
             SELECT id FROM condoriri.ventas
             WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
-              AND DATE(created_at) = CURRENT_DATE
+              AND DATE(created_at) = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date
               AND NOT EXISTS (
                   SELECT 1 FROM condoriri.detalle_venta dv
                   WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
@@ -1430,7 +1439,7 @@ class ventasController extends BaseController
               AND v.deleted_at IS NULL
               AND v.user_id = ?
               AND v.sucursal_id = ?
-              AND DATE(v.created_at) = CURRENT_DATE
+              AND DATE(v.created_at) = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date
               AND NOT EXISTS (
                   SELECT 1 FROM condoriri.detalle_venta dv
                   WHERE dv.venta_id = v.id AND dv.producto_agro_id IS NOT NULL
@@ -1445,7 +1454,7 @@ class ventasController extends BaseController
         $ultima = $db->query("
             SELECT id FROM condoriri.ventas
             WHERE deleted_at IS NULL AND user_id = ? AND sucursal_id = ?
-              AND DATE(created_at) = CURRENT_DATE
+              AND DATE(created_at) = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date
               AND NOT EXISTS (
                   SELECT 1 FROM condoriri.detalle_venta dv
                   WHERE dv.venta_id = condoriri.ventas.id AND dv.producto_agro_id IS NOT NULL
