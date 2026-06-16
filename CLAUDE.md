@@ -70,14 +70,14 @@ PostgreSQL — connection config in `app/Config/Database.php`, environment varia
 
 Custom PDF classes live in `app/Libraries/`. They are instantiated directly in controllers to generate invoices, daily closing reports, and lacteos reports.
 
-## Documentation
-
 Extended documentation lives in `docs/`:
 
-- `docs/ARCHITECTURE.md` — conventions, roles, controller/model patterns, route definitions
-- `docs/PDF_REPORTS.md` — how to create PDF/Excel reports, base class methods, examples
-- `docs/VENTAS_AGRO.md` — agro sales module, differences vs lacteos, routes, DB tables
-- `docs/CODIGOS_VENTA.md` — sale code format, PostgreSQL sequences, SQL scripts
-- `docs/CHANGELOG.md` — full change history
+- `docs/README.md` — central index and navigation map
+- `docs/arquitectura/ARCHITECTURE.md` — conventions, roles, controller/model patterns, route definitions
+- `docs/arquitectura/PDF_REPORTS.md` — how to create PDF/Excel reports, base class methods, examples
+- `docs/modulos/VENTAS_AGRO.md` — agro sales module, differences vs lacteos, routes, DB tables
+- `docs/arquitectura/codigos_venta/CODIGOS_VENTA.md` — sale code format, PostgreSQL sequences, SQL scripts
+- `docs/historial/CHANGELOG.md` — full change history
+- `docs/historial/CHANGELOG_TAREAS.md` — chronological task changelog
 
 Docker files are in `docker/`.

@@ -5,8 +5,52 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 
 ---
 
+## 2026-06-16 ✅ COMPLETADO
+> Fuente: [`TAREAS_2026-06-16.md`](../tareas/completadas/TAREAS_2026-06-16.md)
+
+### TAREA 28 — Manejo dinámico de esquema de base de datos y zona horaria local en pantallas de venta
+
+**Alcance:** Corrección del error 500 al buscar personal mediante la detección dinámica de las columnas `telefono` y `celular` en `public.personas`. Ajuste de la zona horaria a `America/La_Paz` en la lógica de obtención de la última venta del día.
+
+**Archivos modificados:**
+- `app/Controllers/ventas/ventasController.php`
+- `app/Controllers/inventarios/inventariosController.php`
+- `app/Controllers/productosAgro/ventasAgroController.php`
+
+---
+
+### TAREA 27 — Flexibilización de campos obligatorios en el registro de clientes al contado/externos
+
+**Alcance:** Hacer opcional el campo de nombres al agregar clientes contado o externos desde las pantallas POS de venta. Únicamente el Apellido Paterno y el CI/DIP se mantienen obligatorios.
+
+**Archivos modificados:**
+- `app/Controllers/cliente/clienteController.php`
+- `app/Controllers/ventas/ventasController.php`
+- `app/Controllers/inventarios/inventariosController.php`
+- `app/Controllers/productosAgro/ventasAgroController.php`
+- `app/Views/ventas/ventasCredito.php`
+- `app/Views/ventas/ventasIndex.php`
+- `app/Views/inventarios/ventasCredito.php`
+- `app/Views/inventarios/ventasIndex.php`
+- `app/Views/productosAgro/ventasCredito.php`
+- `app/Views/productosAgro/ventasIndex.php`
+
+---
+
+### TAREA 26 — Deduplicación de empleados multi-cargo con DISTINCT ON
+
+**Alcance:** Evitar la duplicidad de registros de venta y reportes para personal UTO con múltiples cargos activos, utilizando `DISTINCT ON (id_persona)` en la unión con `rrhh.empleados`.
+
+**Archivos modificados:**
+- `app/Controllers/ventas/ventasController.php`
+- `app/Controllers/inventarios/inventariosController.php`
+- `app/Controllers/productosAgro/ventasAgroController.php`
+- `app/Models/Venta/VentaModel.php`
+
+---
+
 ## 2026-06-08 ✅ COMPLETADO
-> Fuente: [`TAREAS_2026-06-08.md`](tareas/completadas/TAREAS_2026-06-08.md)
+> Fuente: [`TAREAS_2026-06-08.md`](../tareas/completadas/TAREAS_2026-06-08.md)
 
 ### TAREA 25 — Sincronización del cargador de imágenes y mapeo de LECHE en pantallas de venta a crédito
 
@@ -26,7 +70,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ## 2026-06-01 ✅ COMPLETADO
-> Fuente: [`TAREAS_2026-06-01.md`](tareas/completadas/TAREAS_2026-06-01.md)
+> Fuente: [`TAREAS_2026-06-01.md`](../tareas/completadas/TAREAS_2026-06-01.md)
 
 ### TAREA 24 — Rediseño de la hoja secundaria "Balance General" en el Reporte General de Inventarios (Excel y PDF)
 
@@ -54,7 +98,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ## 2026-05-29 ✅ COMPLETADO
 
 ### TAREA 23 — Asegurar exclusión de inventarios eliminados en reportes y consultas
-> Fuente: [`TAREAS_2026-05-29h.md`](tareas/completadas/TAREAS_2026-05-29h.md)
+> Fuente: [`TAREAS_2026-05-29h.md`](../tareas/completadas/TAREAS_2026-05-29h.md)
 
 **Alcance:** Extender el filtro `deleted_at IS NULL` aplicado en la Tarea 12 a todos los métodos de consulta de inventarios que no lo incluían, garantizando que los registros eliminados nunca aparezcan en reportes, resúmenes ni en la generación de archivos Excel/PDF.
 
@@ -63,7 +107,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 22 — Priorizar columna de LECHE al inicio de los productos dinámicos
-> Fuente: [`TAREAS_2026-05-29g.md`](tareas/completadas/TAREAS_2026-05-29g.md)
+> Fuente: [`TAREAS_2026-05-29g.md`](../tareas/completadas/TAREAS_2026-05-29g.md)
 
 **Alcance:** En los reportes PDF (`ReporteLacteos`) y Excel (`ExportacionExcelService`), el producto `LECHE` (columna simple `LECHE (L)`) ahora siempre aparece en la primera posición de las columnas dinámicas, independientemente del orden alfabético. El resto de productos se ordena alfabéticamente a continuación.
 
@@ -72,7 +116,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 21 — Formato de decimales y reajuste de totales (Reserva y Alineación)
-> Fuente: [`TAREAS_2026-05-29f.md`](tareas/completadas/TAREAS_2026-05-29f.md)
+> Fuente: [`TAREAS_2026-05-29f.md`](../tareas/completadas/TAREAS_2026-05-29f.md)
 
 **Alcance:** Ajustes de presentación numérica en columnas dinámicas de PDF y Excel:
 - Columna de leche utilizada: 1 decimal.
@@ -85,7 +129,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 20 — Fusión de encabezados y subencabezados de productos en PDF y Excel
-> Fuente: [`TAREAS_2026-05-29e.md`](tareas/completadas/TAREAS_2026-05-29e.md)
+> Fuente: [`TAREAS_2026-05-29e.md`](../tareas/completadas/TAREAS_2026-05-29e.md)
 
 **Alcance:** Los reportes mostraban nombres de producto repetidos en celdas adyacentes para cada subcolumna (`[PRODUCTO] Stk` / `[PRODUCTO] Prod`). Se restructuró el encabezado para mostrar el nombre del producto centrado y combinado sobre las dos subcolumnas (Leche utilizada + Producción), con subencabezados en una segunda fila. En PDF se implementó con posicionamiento manual `SetXY`; en Excel con `MergeAcross`.
 
@@ -94,7 +138,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 19 — Tratamiento especial del producto LECHE en el Reporte General
-> Fuente: [`TAREAS_2026-05-29d.md`](tareas/completadas/TAREAS_2026-05-29d.md)
+> Fuente: [`TAREAS_2026-05-29d.md`](../tareas/completadas/TAREAS_2026-05-29d.md)
 
 **Alcance:** El producto `LECHE` en `condoriri.productos` corresponde a materia prima (no producto terminado), por lo que no tiene columna `Stock` ni `MERMA/AGREGA`. Se implementó la lógica `esProductoSimple()` para renderizarlo como columna simple (`LECHE (L)`) con solo `cantidad_produccion` (litros), sin las subcolumnas de Stock, MERMA y AGREGA.
 
@@ -103,7 +147,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 18 — Mejoras al Reporte General de inventario (Excel + PDF)
-> Fuente: [`TAREAS_2026-05-29c.md`](tareas/completadas/TAREAS_2026-05-29c.md)
+> Fuente: [`TAREAS_2026-05-29c.md`](../tareas/completadas/TAREAS_2026-05-29c.md)
 
 **Alcance:** Conjunto de mejoras sobre los reportes ya existentes:
 - Separadores visuales entre días (borde grueso en la primera fila de cada nuevo día).
@@ -117,7 +161,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 17 — Acceso del rol `almacen` a la pantalla de gestión de clientes
-> Fuente: [`TAREAS_2026-05-29b.md`](tareas/completadas/TAREAS_2026-05-29b.md)
+> Fuente: [`TAREAS_2026-05-29b.md`](../tareas/completadas/TAREAS_2026-05-29b.md)
 
 **Alcance:** El rol `almacen` ahora puede acceder a `/cliente/lista` desde el sidebar y tiene permisos para editar clientes al contado (`cliente/update/:id`). El rol `almacen` no puede crear ni eliminar clientes.
 
@@ -126,7 +170,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 16 — Agregar columna `imagen` a `productos_agro`
-> Fuente: [`TAREAS_2026-05-29.md`](tareas/completadas/TAREAS_2026-05-29.md)
+> Fuente: [`TAREAS_2026-05-29.md`](../tareas/completadas/TAREAS_2026-05-29.md)
 
 **Alcance:** Soporte de imagen para productos agropecuarios. La imagen es opcional (NULL en BD). Se muestra en las tarjetas del grid de ventas POS (`/productosagro/ventas`). Incluye subida de archivo en el formulario de creación/edición y vista previa inline.
 
@@ -137,7 +181,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ## 2026-05-28 ✅ COMPLETADO
 
 ### TAREA 15 — Mejoras visuales en pantallas de venta (3 módulos POS contado)
-> Fuente: [`TAREAS_2026-05-28d.md`](tareas/completadas/TAREAS_2026-05-28d.md)
+> Fuente: [`TAREAS_2026-05-28d.md`](../tareas/completadas/TAREAS_2026-05-28d.md)
 
 **Alcance:** Tres mejoras en las pantallas de venta al contado de los 3 módulos (tienda, inventarios, agro):
 1. Tarjetas de productos con imagen de portada si está disponible.
@@ -149,7 +193,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 14 — Mejoras a la pantalla `/stockinventario`
-> Fuente: [`TAREAS_2026-05-28c.md`](tareas/completadas/TAREAS_2026-05-28c.md)
+> Fuente: [`TAREAS_2026-05-28c.md`](../tareas/completadas/TAREAS_2026-05-28c.md)
 
 **Alcance:** Múltiples mejoras visuales y funcionales a la pantalla de resumen de inventario agrupado:
 - Cards de resumen por producto con color de borde según nivel de stock.
@@ -162,7 +206,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 13 — Bandeja de presets en formulario de creación de productos
-> Fuente: [`TAREAS_2026-05-28b.md`](tareas/completadas/TAREAS_2026-05-28b.md)
+> Fuente: [`TAREAS_2026-05-28b.md`](../tareas/completadas/TAREAS_2026-05-28b.md)
 
 **Alcance:** En el formulario `/productos/register/:inventarioId`, se agrega una bandeja horizontal de chips (presets) con los últimos 5 productos registrados por el usuario en la misma sucursal. Al hacer clic en un chip, se autocompletan todos los campos excepto la cantidad, y el foco se mueve al input de cantidad. Incluye textos de ayuda para usuarios no técnicos.
 
@@ -171,7 +215,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 12 — Inventarios eliminados siguen visibles en `/inventarios`
-> Fuente: [`TAREAS_2026-05-28.md`](tareas/completadas/TAREAS_2026-05-28.md)
+> Fuente: [`TAREAS_2026-05-28.md`](../tareas/completadas/TAREAS_2026-05-28.md)
 
 **Alcance:** Tras hacer soft-delete de un inventario desde `/inventarios/show/{id}`, el registro aparecía nuevamente en la tabla principal. Se añadió el filtro `deleted_at IS NULL` en `inventariosController::index()` y en `InventarioModel::getFilteredInventarios()`.
 
@@ -182,7 +226,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ## 2026-05-27 ✅ COMPLETADO
 
 ### TAREA 11 — Deduplicación de empleados en búsqueda de receptor para ventas a crédito
-> Fuente: [`TAREAS_2026-05-27e.md`](tareas/completadas/TAREAS_2026-05-27e.md)
+> Fuente: [`TAREAS_2026-05-27e.md`](../tareas/completadas/TAREAS_2026-05-27e.md)
 
 **Alcance:** En la búsqueda de receptor UTO para ventas a crédito, una misma persona podía aparecer múltiples veces porque tiene varios registros activos en `rrhh.empleados` (multi-cargo). Se corrigió la query para usar `DISTINCT ON (p.id_persona)` y seleccionar el registro activo con mayor `id` (más reciente), eliminando los duplicados en los resultados.
 
@@ -191,7 +235,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 10 — Control de duplicidad del CI/DIP entre fuentes de datos
-> Fuente: [`TAREAS_2026-05-27d.md`](tareas/completadas/TAREAS_2026-05-27d.md)
+> Fuente: [`TAREAS_2026-05-27d.md`](../tareas/completadas/TAREAS_2026-05-27d.md)
 
 **Alcance:** Prevenir la creación de perfiles con el mismo CI/DIP en `condoriri.clientes` y `condoriri.clientes_externos`. Se añadió un constraint `UNIQUE` parcial en `clientes_externos.dip` y validación en el controller antes de insertar un nuevo cliente contado (`clientes.ci_nit`). Corrección manual de duplicados existentes en BD.
 
@@ -200,7 +244,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 9 — Normalización de nombres en formularios de registro de clientes
-> Fuente: [`TAREAS_2026-05-27c.md`](tareas/completadas/TAREAS_2026-05-27c.md)
+> Fuente: [`TAREAS_2026-05-27c.md`](../tareas/completadas/TAREAS_2026-05-27c.md)
 
 **Alcance:** Los nombres registrados para clientes ahora deben cumplir el formato institucional: `APELLIDO_PATERNO APELLIDO_MATERNO NOMBRE(S)` (mínimo 3 palabras, todo en mayúsculas). Se reemplazó el input único por 3 inputs separados (ap. paterno, ap. materno, nombres) con validación JS en tiempo real. El backend concatena y valida antes de insertar.
 
@@ -209,7 +253,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 8 — Resumen de crédito del receptor en POS de venta a crédito y recibos
-> Fuente: [`TAREAS_2026-05-27b.md`](tareas/completadas/TAREAS_2026-05-27b.md)
+> Fuente: [`TAREAS_2026-05-27b.md`](../tareas/completadas/TAREAS_2026-05-27b.md)
 
 **Alcance:** En las 3 pantallas de venta a crédito y en los 3 recibos, mostrar un resumen del estado crediticio del receptor en el período activo (del día 11 del mes anterior al día 10 del mes actual). El panel muestra: N° ventas del período, monto acumulado y saldo estimado. En el recibo se imprime como sección adicional de "Estado de cuenta".
 
@@ -218,7 +262,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ### TAREA 7 — Normalización y completitud del nombre de receptor en reportes Excel de ventas
-> Fuente: [`TAREAS_2026-05-27.md`](tareas/completadas/TAREAS_2026-05-27.md)
+> Fuente: [`TAREAS_2026-05-27.md`](../tareas/completadas/TAREAS_2026-05-27.md)
 
 **Alcance:** Los reportes Excel de ventas a crédito mostraban nombres truncados o en formato incorrecto (nombres primero, en lugar de `PATERNO MATERNO NOMBRES`). Se corrigió el `COALESCE` en `VentaModel` para usar `p.nombre` (campo de concatenación correcta `PATERNO MATERNO NOMBRES`) en lugar de `p.nombre_completo` o `p.nombres`.
 
@@ -227,7 +271,7 @@ Cada entrada referencia el archivo fuente correspondiente y resume el alcance, a
 ---
 
 ## 2026-05-26 ✅ COMPLETADO
-> Fuente: [`TAREAS_2026-05-26.md`](tareas/completadas/TAREAS_2026-05-26.md)
+> Fuente: [`TAREAS_2026-05-26.md`](../tareas/completadas/TAREAS_2026-05-26.md)
 
 ### TAREA 6 — Columna "Categoría" en reportes PDF y Excel de ventas a crédito
 
@@ -250,7 +294,7 @@ Solo aplica a reportes de **crédito**; los reportes de contado y general no se 
 Las siguientes tareas están documentadas en archivos independientes (sin numeración secuencial) y corresponden a trabajo completado antes de la serie TAREAS_2026-05-xx:
 
 ### Edición del Último Registro — Inventarios y Clientes ✅
-> Fuente: [`EDICION_ULTIMO_REGISTRO.md`](tareas/completadas/EDICION_ULTIMO_REGISTRO.md)
+> Fuente: [`EDICION_ULTIMO_REGISTRO.md`](../tareas/completadas/EDICION_ULTIMO_REGISTRO.md)
 
 **Alcance:** Implementación del flujo completo de edición del último registro del día para el módulo de inventarios y clientes. Reglas de negocio: solo el propio usuario puede editar su último registro del día; la edición de cantidad de leche recalcula la reserva; la edición de calidad está restringida por rol.
 
@@ -259,7 +303,7 @@ Las siguientes tareas están documentadas en archivos independientes (sin numera
 ---
 
 ### Edición del Último Registro — Módulo Ventas (3 módulos) ✅
-> Fuente: [`VENTAS_EDICION_ULTIMO_REGISTRO.md`](tareas/completadas/VENTAS_EDICION_ULTIMO_REGISTRO.md)
+> Fuente: [`VENTAS_EDICION_ULTIMO_REGISTRO.md`](../tareas/completadas/VENTAS_EDICION_ULTIMO_REGISTRO.md)
 
 **Alcance:** Flujo de edición de la última venta registrada en los 3 módulos de ventas (tienda CEAC, planta lácteos, agropecuario), tanto para ventas a contado como a crédito. La operación es una transacción atómica: devolver stock → soft-delete de detalles anteriores → insertar nuevos detalles → descontar stock → actualizar monto. Panel "Última venta" visible en las 6 vistas de venta (3 contado + 3 crédito) con modal de confirmación.
 
@@ -268,7 +312,7 @@ Las siguientes tareas están documentadas en archivos independientes (sin numera
 ---
 
 ### Mejoras a Reportes del Módulo Inventarios ✅
-> Fuente: [`REPORTES_INVENTARIOS.md`](tareas/completadas/REPORTES_INVENTARIOS.md)
+> Fuente: [`REPORTES_INVENTARIOS.md`](../tareas/completadas/REPORTES_INVENTARIOS.md)
 
 **Alcance:** Primera iteración de mejoras a los reportes del módulo de inventarios. Definición del alcance inicial, separación de reportes LECHE vs "Suero y Otros", orden por turno AM/PM dentro del día, paleta visual suave. Punto de partida para las tareas 18–23 de la serie 2026-05-29.
 
