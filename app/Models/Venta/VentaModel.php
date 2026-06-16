@@ -251,7 +251,7 @@ class VentaModel extends Model
         LEFT JOIN
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN
-            rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = true
+            (SELECT DISTINCT ON (id_persona) id_persona, id_tipo_empleado, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN
             rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN
@@ -314,8 +314,13 @@ class VentaModel extends Model
 
         FROM condoriri.ventas v
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        -- Unir con empleados y filtrar solo activos para la bandera es_empleado_uto (CORRECCIÓN: Se asume que 1 es ACTIVO)
-        LEFT JOIN rrhh.empleados e ON p.id_persona = e.id_persona AND e.\"id_estado\" = 1 
+        -- Unir con empleados y filtrar solo activos para la bandera es_empleado_uto
+        LEFT JOIN (
+            SELECT DISTINCT ON (id_persona) id_persona, id_cargo, id_seccion, id_estado
+            FROM rrhh.empleados
+            WHERE id_estado = true
+            ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC
+        ) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
         LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
         LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
@@ -487,7 +492,7 @@ class VentaModel extends Model
         LEFT JOIN
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN
-            rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado
+            (SELECT DISTINCT ON (id_persona) id_persona, id_tipo_empleado, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN
             rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN
@@ -647,7 +652,7 @@ class VentaModel extends Model
         LEFT JOIN
             public.personas p ON p.id_persona = v.personal_uto_id
         LEFT JOIN
-            rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = true
+            (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN
             rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
@@ -708,7 +713,7 @@ class VentaModel extends Model
         LEFT JOIN condoriri.detalle_venta vd ON vd.venta_id = v.id
         LEFT JOIN condoriri.stock_sucursales ss ON ss.id = vd.stock_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -769,7 +774,7 @@ class VentaModel extends Model
         LEFT JOIN condoriri.stock_sucursales ss ON ss.id = vd.stock_id
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -831,7 +836,7 @@ class VentaModel extends Model
         LEFT JOIN condoriri.productos prod ON prod.id = vd.producto_id
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -905,7 +910,7 @@ public function getDailySalesReportData11(
         LEFT JOIN condoriri.detalle_venta vd ON vd.venta_id = v.id
         LEFT JOIN condoriri.stock_sucursales ss ON ss.id = vd.stock_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -977,7 +982,7 @@ public function getDailySalesReportData22(
         LEFT JOIN condoriri.stock_sucursales ss ON ss.id = vd.stock_id
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -1049,7 +1054,7 @@ public function getDailySalesReportData3(
         LEFT JOIN condoriri.productos ss ON ss.id = vd.producto_id
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE
             v.deleted_at IS NULL
@@ -1127,7 +1132,7 @@ public function getDailySalesReportDataAdmin(
         LEFT JOIN condoriri.productos prod ON prod.id = vd.producto_id
         LEFT JOIN condoriri.productos_agro pa ON pa.id = vd.producto_agro_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.id_estado = TRUE  
+        LEFT JOIN (SELECT DISTINCT ON (id_persona) id_persona, id_tipo_empleado, id_seccion FROM rrhh.empleados WHERE id_estado = true ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.tipos_empleados te ON te.id_tipo_empleado = e.id_tipo_empleado
         LEFT JOIN rrhh.secciones se ON se.id_seccion = e.id_seccion
         WHERE

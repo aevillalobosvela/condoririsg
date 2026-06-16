@@ -616,7 +616,12 @@ class InventariosController extends BaseController
         LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
         LEFT JOIN condoriri.clientes_externos ce ON ce.id = v.cliente_externo_id
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+        LEFT JOIN (
+            SELECT DISTINCT ON (id_persona) id_persona, id_cargo, id_seccion
+            FROM rrhh.empleados
+            WHERE id_estado = true
+            ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC
+        ) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
         LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
         WHERE v.deleted_at IS NULL 
@@ -825,7 +830,12 @@ class InventariosController extends BaseController
         LEFT JOIN condoriri.clientes c ON c.id = v.cliente_id
         -- JOIN con personal UTO
         LEFT JOIN public.personas p ON p.id_persona = v.personal_uto_id
-        LEFT JOIN rrhh.empleados e ON e.id_persona = p.id_persona AND e.\"id_estado\" = true
+        LEFT JOIN (
+            SELECT DISTINCT ON (id_persona) id_persona, id_cargo, id_seccion
+            FROM rrhh.empleados
+            WHERE id_estado = true
+            ORDER BY id_persona, fec_ingreso DESC, id_empleado DESC
+        ) e ON e.id_persona = p.id_persona
         LEFT JOIN rrhh.cargos cargos ON cargos.id_cargo = e.id_cargo
         LEFT JOIN rrhh.secciones secciones ON secciones.id_seccion = e.id_seccion
         WHERE v.deleted_at IS NULL 
