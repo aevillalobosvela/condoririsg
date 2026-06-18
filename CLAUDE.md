@@ -77,7 +77,8 @@ Extended documentation lives in `docs/`:
 - `docs/arquitectura/PDF_REPORTS.md` — how to create PDF/Excel reports, base class methods, examples
 - `docs/modulos/VENTAS_AGRO.md` — agro sales module, differences vs lacteos, routes, DB tables
 - `docs/arquitectura/codigos_venta/CODIGOS_VENTA.md` — sale code format, PostgreSQL sequences, SQL scripts
-- `docs/historial/CHANGELOG.md` — full change history
-- `docs/historial/CHANGELOG_TAREAS.md` — chronological task changelog
+- `docs/historial/CHANGELOG_1.md` — integrated history Fase 1 (Feb–Mar 2026)
+- `docs/historial/CHANGELOG_2.md` — integrated history Fase 2 (Abr–May 2026)
+- `docs/historial/CHANGELOG_3.md` — integrated history Fase 3 (May–Jun 2026 - Actual)
 
 Docker files are in `docker/`.

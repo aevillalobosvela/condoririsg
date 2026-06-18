@@ -24,6 +24,7 @@ Seguimiento y bitácoras del desarrollo.
 
 ### 4. [Historial y Changelogs](historial/)
 Registro ordenado de cambios y versiones del sistema.
-* [**Changelog del Sistema** (historial/CHANGELOG.md)](historial/CHANGELOG.md): Registro cronológico de versiones y cambios mayores a nivel de código de la aplicación.
-* [**Changelog de Tareas Completadas** (historial/CHANGELOG_TAREAS.md)](historial/CHANGELOG_TAREAS.md): Registro cronológico detallado de todas las tareas técnicas completadas.
+* [**Changelog — Fase 1** (historial/CHANGELOG_1.md)](historial/CHANGELOG_1.md): Cimientos y primer lanzamiento (Febrero – Marzo 2026).
+* [**Changelog — Fase 2** (historial/CHANGELOG_2.md)](historial/CHANGELOG_2.md): Consolidación, reportes y tareas 6 a 14 (Abril – Mayo 2026).
+* [**Changelog — Fase 3** (historial/CHANGELOG_3.md)](historial/CHANGELOG_3.md): Optimización POS, imágenes y tareas 15 a 30 (Mayo – Junio 2026 - Actual).
 
