@@ -914,7 +914,8 @@
                 <span class="fw-bold" style="color: ${colors.badge}; font-size: 0.9rem;">Bs. ${parseFloat(p.precio_contado).toFixed(2)}</span>
               </div>
               <div class="mb-2">
-                <span class="badge" style="background-color: ${colors.border}; font-size: 0.65rem;">${p.stock} ${p.unidad || 'und'}</span>
+                <span style="font-size: 1.05rem; font-weight: 700; color: ${colors.badge}; line-height: 1;">${p.stock}</span>
+                <span style="font-size: 0.72rem; font-weight: 400; color: ${colors.text};"> ${p.unidad || 'und'}</span>
               </div>
             </div>
           </div>
