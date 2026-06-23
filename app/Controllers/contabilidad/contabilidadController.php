@@ -348,7 +348,7 @@ class contabilidadController extends BaseController
 
         $pagerLinks = '';
         if ($totalPages > 1) {
-            $baseUrl = base_url('ventas');
+            $baseUrl = base_url('contabilidad/ventas');
             $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
 
             $prevPage = $page - 1;

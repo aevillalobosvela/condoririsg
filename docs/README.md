@@ -26,5 +26,5 @@ Seguimiento y bitácoras del desarrollo.
 Registro ordenado de cambios y versiones del sistema.
 * [**Changelog — Fase 1** (historial/CHANGELOG_1.md)](historial/CHANGELOG_1.md): Cimientos y primer lanzamiento (Febrero – Marzo 2026).
 * [**Changelog — Fase 2** (historial/CHANGELOG_2.md)](historial/CHANGELOG_2.md): Consolidación, reportes y tareas 6 a 14 (Abril – Mayo 2026).
-* [**Changelog — Fase 3** (historial/CHANGELOG_3.md)](historial/CHANGELOG_3.md): Optimización POS, imágenes y tareas 15 a 30 (Mayo – Junio 2026 - Actual).
+* [**Changelog — Fase 3** (historial/CHANGELOG_3.md)](historial/CHANGELOG_3.md): Optimización POS, imágenes y tareas 15 a 31 (Mayo – Junio 2026 - Actual).
 

@@ -651,7 +651,7 @@ class InventariosController extends BaseController
 
         $pagerLinks = '';
         if ($totalPages > 1) {
-            $baseUrl = base_url('ventas');
+            $baseUrl = base_url('inventarios/ventas');
             $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
 
             $prevPage = $page - 1;
@@ -863,7 +863,7 @@ class InventariosController extends BaseController
 
         $pagerLinks = '';
         if ($totalPages > 1) {
-            $baseUrl = base_url('ventas');
+            $baseUrl = base_url('inventarios/ventas');
             $pagerLinks = '<nav aria-label="Paginación"><ul class="pagination justify-content-center mb-0">';
 
             $prevPage = $page - 1;

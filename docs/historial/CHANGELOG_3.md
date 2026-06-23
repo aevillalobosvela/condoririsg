@@ -8,6 +8,19 @@ Historial integrado de cambios generales y bitácora de tareas completadas corre
 
 Las siguientes tareas e integraciones secuenciales corresponden a esta fase reciente de optimización y mejoras visuales del sistema:
 
+### 2026-06-23 ✅ COMPLETADO
+
+### TAREA 31 — Corrección de redirección en paginación de ventas para el rol de almacén
+* **Alcance:** Corrección del error que redirigía a los usuarios con rol `almacen` al panel de inicio al navegar por las páginas de la tabla de ventas realizadas.
+* **Detalles del trabajo:**
+  1. Se cambió la dirección base de paginación `$baseUrl` de `base_url('ventas')` a `base_url('inventarios/ventas')` en `inventariosController::indexVenta` y `indexVenta1`. Esto evita que el filtro de autenticación por roles bloquee a los usuarios con rol `almacen` (quienes tienen acceso a `/inventarios/ventas` pero no al grupo general de `/ventas`).
+  2. Se actualizó de manera preventiva la URL de paginación en `contabilidadController::indexLactos` a `base_url('contabilidad/ventas')`.
+* **Archivos modificados:**
+  - `app/Controllers/inventarios/inventariosController.php`
+  - `app/Controllers/contabilidad/contabilidadController.php`
+
+---
+
 ### 2026-06-18 ✅ COMPLETADO
 
 ### TAREA 30 — División e integración de archivos de historial (Changelogs)
